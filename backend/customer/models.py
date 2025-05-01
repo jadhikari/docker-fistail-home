@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django_countries.fields import CountryField
+from django_countries.fields import CountryField  # type: ignore
 
 
 User = get_user_model()
