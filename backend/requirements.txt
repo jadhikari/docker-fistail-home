@@ -1,4 +1,11 @@
-Django>=4.2,<5.0
-gunicorn
-psycopg2-binary
-dj-database-url
+asgiref==3.8.1
+dj-database-url==2.3.0
+Django==4.2.20
+django-countries==7.6.1
+gunicorn==23.0.0
+packaging==25.0
+pillow==11.2.1
+psycopg2-binary==2.9.10
+pycountry==24.6.1
+sqlparse==0.5.3
+typing_extensions==4.13.2

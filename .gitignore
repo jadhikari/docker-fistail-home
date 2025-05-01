@@ -172,3 +172,8 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+
+# Ignore migration files except for __init__.py
+backend/**/migrations/*.py
+!backend/**/migrations/__init__.py
