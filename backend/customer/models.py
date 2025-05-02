@@ -101,7 +101,7 @@ class BedAssignment(TimeStampedUserModel):
         related_name='assignments'
     )
     assigned_from = models.DateField()
-    assigned_until = models.DateField()
+    assigned_until = models.DateField(blank=True, null=True)
 
     def is_active(self):
         """Returns True if today is between assigned_from and assigned_until."""
