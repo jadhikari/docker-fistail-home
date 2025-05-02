@@ -1,31 +1,30 @@
 from django.db import models
-from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from django_countries.fields import CountryField  # type: ignore
+from django.contrib.auth import get_user_model
 
+from hostel.models import Bed
 
 User = get_user_model()
 
 class TimeStampedUserModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
+        User, on_delete=models.SET_NULL,
         related_name="%(class)s_created_by",
-        null=True,
-        blank=True
+        null=True, blank=True
     )
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
+        User, on_delete=models.SET_NULL,
         related_name="%(class)s_updated_by",
-        null=True,
-        blank=True
+        null=True, blank=True
     )
 
     class Meta:
         abstract = True
+
 
 def visa_type_choices():
     return [
@@ -50,35 +49,113 @@ class Customer(TimeStampedUserModel):
     nationality = CountryField()
     home_address = models.TextField()
     parent_phone_number = models.CharField(max_length=20)
-
-    visa_type = models.CharField(
-        max_length=100,
-        choices=visa_type_choices(),
-        blank=True,
-        null=True
-    )
-
+    visa_type = models.CharField(max_length=100, choices=visa_type_choices(), blank=True, null=True)
     workplace_or_school_name = models.CharField(max_length=255, blank=True, null=True)
     workplace_or_school_address = models.TextField(blank=True, null=True)
     workplace_or_school_phone = models.CharField(max_length=20, blank=True, null=True)
-
     zairyu_card_number = models.CharField(max_length=50)
     zairyu_card_expire_date = models.DateField()
     zairyu_card_url = models.URLField()
     passport_url = models.URLField()
     student_card_url = models.URLField(blank=True, null=True)
 
+    def is_expired(self):
+        latest_assignment = self.assignments.order_by('-assigned_until').first()
+        return latest_assignment and latest_assignment.assigned_until < timezone.now().date()
+
     def clean(self):
         if self.nationality.code != 'JP' and not self.visa_type:
             raise ValidationError({'visa_type': 'Visa type is required for non-Japanese nationals.'})
-
         if self.visa_type == 'Student' and not self.student_card_url:
             raise ValidationError({'student_card_url': 'Student card URL is required for Student visa holders.'})
+        if self.pk and self.is_expired():
+            raise ValidationError("This customer's record is locked and cannot be modified.")
 
     def __str__(self):
         return self.name
-    
+
+    @property
+    def current_bed_assignment(self):
+        today = timezone.now().date()
+        return self.assignments.filter(assigned_from__lte=today, assigned_until__gte=today).first()
+
+    @property
+    def is_active(self):
+        return self.current_bed_assignment is not None
+
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['name', 'date_of_birth'], name='unique_customer_name_dob')
+            models.UniqueConstraint(fields=['id','name', 'date_of_birth'], name='unique_customer_name_dob_id')
         ]
+
+
+class BedAssignment(TimeStampedUserModel):
+    bed = models.ForeignKey(
+        'hostel.Bed',
+        on_delete=models.CASCADE,
+        related_name='assignments'
+    )
+    customer = models.ForeignKey(
+        'Customer',
+        on_delete=models.CASCADE,
+        related_name='assignments'
+    )
+    assigned_from = models.DateField()
+    assigned_until = models.DateField()
+
+    def is_active(self):
+        """Returns True if today is between assigned_from and assigned_until."""
+        today = timezone.now().date()
+        return self.assigned_from <= today <= self.assigned_until
+
+    def clean(self):
+        today = timezone.now().date()
+
+        if self.pk:
+            original = BedAssignment.objects.get(pk=self.pk)
+            if original.assigned_until < today:
+                raise ValidationError("You cannot modify a past bed assignment.")
+
+        # Prevent overlapping bed assignments
+        overlapping = BedAssignment.objects.filter(
+            bed=self.bed,
+            assigned_until__gte=self.assigned_from,
+            assigned_from__lte=self.assigned_until
+        ).exclude(pk=self.pk)
+
+        if overlapping.exists():
+            raise ValidationError('This bed is already assigned during the selected period.')
+
+        # Prevent reassigning a customer who had an expired assignment
+        customer_has_expired = BedAssignment.objects.filter(
+            customer=self.customer,
+            assigned_until__lt=today
+        ).exists()
+
+        if customer_has_expired:
+            raise ValidationError("This customer already had a bed assignment in the past and is now locked.")
+
+        # Prevent overlapping assignments for customer
+        overlapping_customer = BedAssignment.objects.filter(
+            customer=self.customer,
+            assigned_until__gte=self.assigned_from,
+            assigned_from__lte=self.assigned_until
+        ).exclude(pk=self.pk)
+
+        if overlapping_customer.exists():
+            raise ValidationError('This customer already has a bed assigned during this time.')
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if self.assigned_until < timezone.now().date():
+            raise ValidationError("You cannot delete a past bed assignment.")
+        super().delete(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.customer.name} → {self.bed.bed_num} ({self.assigned_from} - {self.assigned_until})"
+
+    class Meta:
+        ordering = ['-assigned_from']

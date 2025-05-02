@@ -2,7 +2,8 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.validators import RegexValidator
 from django.core.exceptions import ValidationError
-from customer.models import Customer
+from django.core.validators import MinValueValidator
+from decimal import Decimal
 
 User = get_user_model()
 
@@ -57,6 +58,11 @@ class Hostel(TimeStampedUserModel):
     contract_end_date = models.DateField(blank=True, null=True)
     house_owner = models.CharField(max_length=100, blank=True, null=True)
     hw_contact_num = models.CharField(max_length=15, blank=True, null=True)
+    deposit_fee = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.00'))])
+    initial_fee = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.00'))])
+    internet_fee = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.00'))])
+    utilities_fee = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.00'))])
+    rent = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.00'))])
     hostel_manager = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
