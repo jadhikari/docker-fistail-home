@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'accounts', #include custom app 
     'hostel',
     'customer',
+    'finance',
     'django_countries', # this is for display all the country name
 ]
 

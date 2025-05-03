@@ -165,7 +165,12 @@ class BedAssignment(TimeStampedUserModel):
         super().delete(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.customer.name} → {self.bed.bed_num} ({self.assigned_from} - {self.assigned_until})"
+        try:
+            hostel_name = self.bed.unit.hostel.name
+            room_num = self.bed.unit.bedroom_num
+        except AttributeError:
+            hostel_name = "Unknown Hostel"
+        return f"{self.customer.name} →{hostel_name} - {room_num} - {self.bed.bed_num}"
 
     class Meta:
         ordering = ['-assigned_from']
