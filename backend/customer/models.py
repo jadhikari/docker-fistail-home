@@ -3,6 +3,8 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django_countries.fields import CountryField  # type: ignore
 from django.contrib.auth import get_user_model
+from datetime import date
+
 
 from hostel.models import Bed
 
@@ -104,29 +106,35 @@ class BedAssignment(TimeStampedUserModel):
     assigned_until = models.DateField(blank=True, null=True)
 
     def is_active(self):
-        """Returns True if today is between assigned_from and assigned_until."""
+        """Returns True if today is between assigned_from and assigned_until (or open-ended)."""
         today = timezone.now().date()
-        return self.assigned_from <= today <= self.assigned_until
+        if self.assigned_until:
+            return self.assigned_from <= today <= self.assigned_until
+        return self.assigned_from <= today
 
     def clean(self):
         today = timezone.now().date()
 
         if self.pk:
             original = BedAssignment.objects.get(pk=self.pk)
-            if original.assigned_until < today:
+            if original.assigned_until and original.assigned_until < today:
                 raise ValidationError("You cannot modify a past bed assignment.")
 
-        # Prevent overlapping bed assignments
+        # Normalize end date for open-ended ranges
+        assigned_until = self.assigned_until or date.max
+
+        # Check for overlapping bed assignments
         overlapping = BedAssignment.objects.filter(
             bed=self.bed,
-            assigned_until__gte=self.assigned_from,
-            assigned_from__lte=self.assigned_until
+            assigned_from__lte=assigned_until,
+        ).filter(
+            models.Q(assigned_until__gte=self.assigned_from) | models.Q(assigned_until__isnull=True)
         ).exclude(pk=self.pk)
 
         if overlapping.exists():
-            raise ValidationError('This bed is already assigned during the selected period.')
+            raise ValidationError("This bed is already assigned during the selected period.")
 
-        # Prevent reassigning a customer who had an expired assignment
+        # Check for expired assignments
         customer_has_expired = BedAssignment.objects.filter(
             customer=self.customer,
             assigned_until__lt=today
@@ -135,15 +143,17 @@ class BedAssignment(TimeStampedUserModel):
         if customer_has_expired:
             raise ValidationError("This customer already had a bed assignment in the past and is now locked.")
 
-        # Prevent overlapping assignments for customer
+        # Overlapping assignment for customer
         overlapping_customer = BedAssignment.objects.filter(
             customer=self.customer,
-            assigned_until__gte=self.assigned_from,
-            assigned_from__lte=self.assigned_until
+            assigned_from__lte=assigned_until,
+        ).filter(
+            models.Q(assigned_until__gte=self.assigned_from) | models.Q(assigned_until__isnull=True)
         ).exclude(pk=self.pk)
 
         if overlapping_customer.exists():
-            raise ValidationError('This customer already has a bed assigned during this time.')
+            raise ValidationError("This customer already has a bed assigned during this time.")
+
 
     def save(self, *args, **kwargs):
         self.clean()
