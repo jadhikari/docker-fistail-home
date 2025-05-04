@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Revenue
+from .models import Revenue,Expense
 
 @admin.register(Revenue)
 class RevenueAdmin(admin.ModelAdmin):
@@ -23,3 +23,18 @@ class RevenueAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.select_related('customer')
+
+@admin.register(Expense)
+class ExpenseAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'hostel',
+        'purchased_date',
+        'purchased_by',
+        'amount_before_tax',
+        'amount_tax',
+        'amount_total',
+    )
+    list_filter = ('hostel', 'purchased_date')
+    search_fields = ('purchased_by', 'memo')
+    readonly_fields = ('amount_total',)

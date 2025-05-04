@@ -1,6 +1,9 @@
 from django.db import models
+from decimal import Decimal
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from customer.models import BedAssignment  # adjust the import if necessary
+from hostel.models import Hostel 
 
 User = get_user_model()
 
@@ -54,7 +57,6 @@ class Revenue(TimeStampedUserModel):
     memo = models.TextField(blank=True, null=True)
 
     def clean(self):
-        from django.core.exceptions import ValidationError
 
         if self.title == 'registration_fee':
             if self.deposit is None or self.initial_fee is None:
@@ -80,3 +82,22 @@ class Revenue(TimeStampedUserModel):
 
     def __str__(self):
         return f"{self.get_title_display()} for {self.customer}"
+
+class Expense(TimeStampedUserModel):
+    hostel = models.ForeignKey(Hostel, on_delete=models.CASCADE)
+    purchased_date = models.DateField()
+    purchased_by = models.CharField(max_length=255)
+    bill_url = models.URLField()
+    image_url = models.URLField()
+    memo = models.TextField()
+
+    amount_before_tax = models.DecimalField(max_digits=10, decimal_places=2)
+    amount_tax = models.DecimalField(max_digits=10, decimal_places=2)
+    amount_total = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
+
+    def save(self, *args, **kwargs):
+        self.amount_total = (self.amount_before_tax or Decimal("0.00")) + (self.amount_tax or Decimal("0.00"))
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Expense by {self.purchased_by} on {self.purchased_date} for {self.hostel.name}"
