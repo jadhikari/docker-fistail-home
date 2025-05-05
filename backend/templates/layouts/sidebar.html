@@ -1,0 +1,30 @@
+<div id="sidebar" class="sidebar bg-light" >
+    <!-- Toggle Below Header -->
+    <div class="text-center p-2 border-bottom">
+        <button class="btn btn-sm btn-outline-secondary" id="sidebarToggle" title="Toggle Menu">☰</button>
+    </div>
+
+    <ul class="nav nav-pills flex-column text-center">
+        <li class="nav-item">
+            <a href="{% url 'hostel:dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'hostel' %}active{% endif %}">
+                🏠 <span class="link-text">Hostel</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{% url 'finance:dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'finance' %}active{% endif %}">
+                💰 <span class="link-text">Finance</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{% url 'customer:dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'customer' %}active{% endif %}">
+                👥 <span class="link-text">Customer</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="#" class="nav-link">
+                ⚙️ <span class="link-text">Settings</span>
+            </a>
+        </li>
+    </ul>
+</div>
+
