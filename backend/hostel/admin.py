@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Hostel, Unit, Bed
+from .models import Hostel, Unit, Bed, BedAssignmentHistory
 
 
 @admin.register(Hostel)
@@ -57,8 +57,23 @@ class UnitAdmin(admin.ModelAdmin):
 @admin.register(Bed)
 class BedAdmin(admin.ModelAdmin):
     list_display = (
-        'bed_num',
         'unit',
+        'bed_num',
+        'customer',
+        'created_at',
+        'created_by',
+        'updated_at',
+        'updated_by',
+    )
+    readonly_fields = ('created_at', 'updated_at')
+
+@admin.register(BedAssignmentHistory)
+class BedAssignmentHistoryAdmin(admin.ModelAdmin):
+    list_display = (
+        'bed',
+        'customer',
+        'assigned_date',
+        'released_date',
         'created_at',
         'created_by',
         'updated_at',

@@ -234,3 +234,11 @@ docker logs postgres-db-dev
 ```
 
 ---
+
+
+
+# Development environment variables
+DJANGO_SECRET_KEY=django-insecure-dev-key
+DJANGO_DEBUG=True
+DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 0.0.0.0
+

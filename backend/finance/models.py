@@ -2,8 +2,7 @@ from django.db import models
 from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from customer.models import BedAssignment  # adjust the import if necessary
-from hostel.models import Hostel 
+from hostel.models import Hostel, Bed
 
 User = get_user_model()
 
@@ -35,7 +34,7 @@ class Revenue(TimeStampedUserModel):
     ]
 
     title = models.CharField(max_length=20, choices=REVENUE_TYPE_CHOICES)
-    customer = models.ForeignKey(BedAssignment, on_delete=models.CASCADE)
+    customer = models.ForeignKey(Bed, on_delete=models.CASCADE)
 
     # Fields for registration fee
     deposit = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)

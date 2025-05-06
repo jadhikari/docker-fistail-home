@@ -1,8 +1,119 @@
 {% extends "base.html" %}
 
-{% block title %}Hostel Dashboard{% endblock %}
+{% block title %}Customer Dashboard{% endblock %}
 
 {% block content %}
-<h2>customer Dashboard</h2>
-<p>Welcome to the hostel section.</p>
+<div class="container-fluid mt-2s">
+    {% comment %} Display the error massage. {% endcomment %}
+    {% if messages %}
+        <div>
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert" style="font-size: 0.85rem; line-height: 1.2;">
+                {{ message }}
+                <button type="button button-sm" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.7rem;"></button>
+            </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Customer Dashboard</h2>
+         <a href="{% url 'customer:customer_create' %}" class="btn btn-primary">+ Add Customer</a>
+    </div>
+
+    <form method="get" class="row g-2 mb-4">
+        <div class="col-md-4">
+            <input type="text" name="q" placeholder="Search by name or phone" class="form-control" value="{{ query }}">
+        </div>
+    
+        <div class="col-md-2">
+            <select name="status" class="form-select">
+                <option value="">All Status</option>
+                <option value="active" {% if status_filter == "active" %}selected{% endif %}>Active</option>
+                <option value="inactive" {% if status_filter == "inactive" %}selected{% endif %}>Inactive</option>
+            </select>
+        </div>
+    
+        <div class="col-md-3">
+            <select name="country" class="form-select">
+                <option value="">All Countries</option>
+                {% for code, name in country_choices %}
+                    <option value="{{ code }}" {% if code == country_filter %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-success w-100">Search</button>
+        </div>
+    </form>
+    
+
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-6 g-4">
+        {% for customer in page_obj %}
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">{{ customer.name }}</h5>
+                    <p class="card-text mb-1"><strong>Phone:</strong> {{ customer.phone_number }}</p>
+                    <p class="card-text mb-1"><strong>Status:</strong>
+                        {% if customer.status %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                    </p>
+                    <p class="card-text"><strong>Nationality:</strong> {{ customer.nationality.name }}</p>
+                </div>
+                <div class="card-footer d-flex justify-content-between">
+                    <a href="{% url 'customer:customer_detail' customer.id %}" class="btn btn-sm btn-outline-info">View</a>
+                    <a href="{% url 'customer:customer_edit' customer.id %}" class="btn btn-sm btn-outline-warning">Edit</a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <p>No customers found.</p>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination Controls -->
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ query }}&status={{ status_filter }}">Previous</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">Previous</span></li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}&q={{ query }}&status={{ status_filter }}">{{ num }}</a>
+            </li>
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ query }}&status={{ status_filter }}">Next</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">Next</span></li>
+            {% endif %}
+        </ul>
+    </nav>
+
+    {% comment %} Script to display massage just for 4 second {% endcomment %}
+    <script>
+        // Auto-dismiss messages after 5 seconds
+        setTimeout(() => {
+          const alerts = document.querySelectorAll('.auto-dismiss');
+          alerts.forEach(alert => {
+            const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+            bsAlert.close();
+          });
+        }, 4000);
+    </script>
+
+</div>
 {% endblock %}

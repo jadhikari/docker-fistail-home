@@ -3,28 +3,84 @@
 {% block title %}Unit Details{% endblock %}
 
 {% block content %}
-<div class="container py-3">
+<div class="container-fluid py-3">
   <a href="{% url 'hostel:hostel_detail' unit.hostel.pk %}" class="btn btn-sm btn-outline-secondary mb-2">← Back to Hostel</a>
   <h5 class="mb-3">{{ unit }}</h5>
 
-  {% if unit.image %}
-    <div class="mb-3 text-center">
-      <img src="{{ unit.image.url }}" class="img-fluid rounded" style="max-height: 300px;" alt="Unit Image">
-    </div>
-  {% endif %}
 
+  <div class="mb-3 text-center">
+    {% if unit.image %}
+        <img src="{{ unit.image.url }}" class="img-fluid rounded" style="max-height: 300px;" alt="Unit Image">
+    {% else %}
+      <p class=" small">No image available.</p>
+    {% endif %}
+  </div>
+
+  <!-- Unit Type as Centered Header Below Image -->
+  <h4 class="text-center mb-1">{{ unit.get_unit_type_display }}</h4>
+  <div class="border-top my-2"></div>
   <div class="row small">
     <div class="col-md-6">
-      <p><strong>Type:</strong> {{ unit.get_unit_type_display }}</p>
-      <p><strong>Unit ID:</strong> {{ unit.unit_id|default:"-" }}</p>
+      <p><strong>Unit ID:</strong> {{ unit.id|default:"-" }}</p>
       <p><strong>Bedroom No.:</strong> {{ unit.bedroom_num|default:"-" }}</p>
       <p><strong>Number of Beds:</strong> {{ unit.num_of_beds|default:"-" }}</p>
+      <p><strong>Memo:</strong> {{ unit.memo|default:"-" }}</p>
     </div>
     <div class="col-md-6">
-      <p><strong>Memo:</strong> {{ unit.memo|default:"-" }}</p>
       <p><strong>Created:</strong> {{ unit.created_at }}</p>
+      <p><strong>Created By:</strong> {{ unit.created_by }}</p>
       <p><strong>Updated:</strong> {{ unit.updated_at }}</p>
+      <p><strong>Updated By:</strong> {{ unit.updated_by }}</p>
     </div>
   </div>
+
+  {% comment %} Table to display the bed details  {% endcomment %}
+    {% if unit.unit_type == 'bedroom' %}
+        <div class="border-top my-2"></div>
+        <h5 class="mt-4">Beds in this Room</h5>
+
+        {% for bed in unit.beds.all %}
+            <div class="mb-3 border p-3 rounded small">
+            <p>
+                🛏️ <strong>Bed Number:</strong> {{ bed.bed_num }} |
+                👤 <strong>Assigned to:</strong> {{ bed.customer|default:"Not Assigned" }} |
+                📅 <strong>Assigned Date:</strong> {{ bed.assigned_date|default:"None" }} |
+                📅 <strong>Released Date:</strong> {{ bed.released_date|default:"None" }}
+            </p>
+
+            {% with bed.bedassignmenthistory_set.all as history %}
+                {% if history %}
+                <h6 class="mt-0">Beds Assigned History</h6>
+                <table class="table table-sm table-bordered mt-2 text-center">
+                    <thead>
+                    <tr>
+                        <th>Customer</th>
+                        <th>Assigned Date</th>
+                        <th>Released Date</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for record in history %}
+                        <tr>
+                        <td>{{ record.customer }}</td>
+                        <td>{{ record.assigned_date }}</td>
+                        <td>{{ record.released_date }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-muted">No assignment history for this bed.</p>
+                {% endif %}
+            {% endwith %}
+            </div>
+        {% empty %}
+            <p class="text-muted">No beds in this room.</p>
+        {% endfor %}
+    {% endif %}
+
+
+
 </div>
+
 {% endblock %}

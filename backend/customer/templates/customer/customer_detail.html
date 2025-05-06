@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Customer Detail{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">{{ customer.name }}</h4>
+            {% if customer.status %}
+                <span class="badge bg-success">Active</span>
+            {% else %}
+                <span class="badge bg-secondary">Inactive</span>
+            {% endif %}
+        </div>
+
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <strong>Email:</strong> <p>{{ customer.email }}</p>
+                </div>
+                <div class="col-md-6">
+                    <strong>Phone:</strong> <p>{{ customer.phone_number }}</p>
+                </div>
+                <div class="col-md-6">
+                    <strong>Date of Birth:</strong> <p>{{ customer.date_of_birth }}</p>
+                </div>
+                <div class="col-md-6">
+                    <strong>Nationality:</strong> <p>{{ customer.nationality.name }}</p>
+                </div>
+                <div class="col-md-12">
+                    <strong>Home Address:</strong> <p>{{ customer.home_address }}</p>
+                </div>
+                <div class="col-md-6">
+                    <strong>Parent Phone:</strong> <p>{{ customer.parent_phone_number }}</p>
+                </div>
+                <div class="col-md-6">
+                    <strong>Visa Type:</strong> <p>{{ customer.visa_type }}</p>
+                </div>
+                <div class="col-md-6">
+                    <strong>Workplace/School Name:</strong> <p>{{ customer.workplace_or_school_name }}</p>
+                </div>
+                <div class="col-md-6">
+                    <strong>Workplace/School Phone:</strong> <p>{{ customer.workplace_or_school_phone }}</p>
+                </div>
+                <div class="col-md-12">
+                    <strong>Workplace/School Address:</strong> <p>{{ customer.workplace_or_school_address }}</p>
+                </div>
+                <div class="col-md-6">
+                    <strong>Zairyu Card No:</strong> <p>{{ customer.zairyu_card_number }}</p>
+                </div>
+                <div class="col-md-6">
+                    <strong>Zairyu Card Expiry:</strong> <p>{{ customer.zairyu_card_expire_date }}</p>
+                </div>
+                <div class="col-md-6">
+                    <strong>Zairyu Card:</strong> 
+                    <a href="{{ customer.zairyu_card_url }}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>
+                </div>
+                <div class="col-md-6">
+                    <strong>Passport:</strong> 
+                    <a href="{{ customer.passport_url }}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>
+                </div>
+                {% if customer.student_card_url %}
+                <div class="col-md-6">
+                    <strong>Student Card:</strong> 
+                    <a href="{{ customer.student_card_url }}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card-footer d-flex justify-content-between">
+            <a href="{% url 'customer:customer_edit' customer.pk %}" class="btn btn-warning">Edit</a>
+            <a href="{% url 'customer:dashboard' %}" class="btn btn-secondary">Back to Dashboard</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
