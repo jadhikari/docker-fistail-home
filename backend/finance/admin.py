@@ -4,7 +4,7 @@ from .models import Revenue,Expense
 @admin.register(Revenue)
 class RevenueAdmin(admin.ModelAdmin):
     list_display = [
-        'title', 'customer',
+        'title', 'customer','year','month',
         'deposit', 'deposit_discount_percent', 'deposit_after_discount',
         'initial_fee', 'initial_fee_discount_percent', 'initial_fee_after_discount',
         'internet', 'utilities',

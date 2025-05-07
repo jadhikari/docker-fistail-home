@@ -4,6 +4,8 @@ from django_countries.fields import Country
 from django_countries import countries
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Customer
+from hostel.models import Bed
+from finance.models import Revenue  # Assuming app name is `finance`
 from .forms import CustomerForm
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -16,7 +18,7 @@ def dashboard(request):
     status_filter = request.GET.get('status', '')
     country_filter = request.GET.get('country', '')
 
-    customers = Customer.objects.all()
+    customers = Customer.objects.all().order_by('-id')
 
     if query:
         customers = customers.filter(
@@ -88,4 +90,14 @@ def customer_edit(request, pk):
 @login_required
 def customer_detail(request, pk):
     customer = get_object_or_404(Customer, pk=pk)
-    return render(request, 'customer/customer_detail.html', {'customer': customer})
+    c_id = customer.id
+    # Assigned bed (if any)
+    assigned_bed = getattr(customer, 'bed_assignment', None)
+    # Rent payment history
+    rent_history = Revenue.objects.filter(id=c_id).order_by('-created_at')
+    context = {
+        'customer': customer,
+        'assigned_bed': assigned_bed,
+        'rent_history': rent_history,
+    }
+    return render(request, 'customer/customer_detail.html', context)

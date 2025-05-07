@@ -5,12 +5,12 @@
 {% block content %}
 <div class="container mt-4">
     <a href="{% url 'customer:dashboard' %}" class="btn btn-sm btn-outline-secondary mb-2">← Back </a>
-    <h2 class="mb-4 text-center">{% if is_edit %}Edit{% else %}Add{% endif %} Customer</h2>
+    <h4 class="mb-4 text-center">{% if is_edit %}Edit{% else %}Add{% endif %} Customer</h4>
 
     <form method="post" novalidate>
         {% csrf_token %}
         {% for field in form %}
-            <div class="mb-3">
+            <div class="mb-1">
                 <label for="{{ field.id_for_label }}" class="form-label">
                     {{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
                 </label>
@@ -23,6 +23,7 @@
                 {% endfor %}
             </div>
         {% endfor %}
+        <br/>
         <button type="submit" class="btn btn-primary">Submit</button>
         <a href="{% url 'customer:dashboard' %}" class="btn btn-secondary">Cancel</a>
     </form>

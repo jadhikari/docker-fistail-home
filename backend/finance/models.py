@@ -2,7 +2,9 @@ from django.db import models
 from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from hostel.models import Hostel, Bed
+from hostel.models import Hostel
+from customer.models import Customer
+import datetime
 
 User = get_user_model()
 
@@ -27,6 +29,13 @@ class TimeStampedUserModel(models.Model):
     class Meta:
         abstract = True
 
+
+def current_year():
+    return datetime.date.today().year
+
+def year_choices():
+    return [(r, r) for r in range(2000, datetime.date.today().year + 10)]
+
 class Revenue(TimeStampedUserModel):
     REVENUE_TYPE_CHOICES = [
         ('registration_fee', 'Registration Fee'),
@@ -34,7 +43,9 @@ class Revenue(TimeStampedUserModel):
     ]
 
     title = models.CharField(max_length=20, choices=REVENUE_TYPE_CHOICES)
-    customer = models.ForeignKey(Bed, on_delete=models.CASCADE)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
+    year = models.IntegerField(choices=year_choices(), default=current_year)
+    month = models.IntegerField(choices=[(i, i) for i in range(1, 13)])
 
     # Fields for registration fee
     deposit = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)

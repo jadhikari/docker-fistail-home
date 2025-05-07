@@ -4,9 +4,10 @@
 
 {% block content %}
 <div class="container mt-4">
+    <h4 class="mb-4 text-center">Customer Details </h4>
     <div class="card shadow-sm">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h4 class="mb-0">{{ customer.name }}</h4>
+            <h5 class="mb-0">{{ customer.name }}</h5>
             {% if customer.status %}
                 <span class="badge bg-success">Active</span>
             {% else %}
@@ -15,64 +16,151 @@
         </div>
 
         <div class="card-body">
-            <div class="row g-3">
+            <div class="row g-1">
                 <div class="col-md-6">
-                    <strong>Email:</strong> <p>{{ customer.email }}</p>
+                    <p><strong>Email:</strong> {{ customer.email }}</p>
                 </div>
                 <div class="col-md-6">
-                    <strong>Phone:</strong> <p>{{ customer.phone_number }}</p>
+                    <p><strong>Phone:</strong> {{ customer.phone_number }}</p>
                 </div>
                 <div class="col-md-6">
-                    <strong>Date of Birth:</strong> <p>{{ customer.date_of_birth }}</p>
+                    <p><strong>Date of Birth:</strong> {{ customer.date_of_birth }}</p>
                 </div>
                 <div class="col-md-6">
-                    <strong>Nationality:</strong> <p>{{ customer.nationality.name }}</p>
+                    <p><strong>Nationality:</strong> {{ customer.nationality.name }}</p>
                 </div>
                 <div class="col-md-12">
-                    <strong>Home Address:</strong> <p>{{ customer.home_address }}</p>
+                    <p><strong>Home Address:</strong> {{ customer.home_address }}</p>
                 </div>
                 <div class="col-md-6">
-                    <strong>Parent Phone:</strong> <p>{{ customer.parent_phone_number }}</p>
+                    <p><strong>Parent Phone Num.:</strong> {{ customer.parent_phone_number }}</p>
                 </div>
                 <div class="col-md-6">
-                    <strong>Visa Type:</strong> <p>{{ customer.visa_type }}</p>
+                    <p><strong>Visa Type:</strong> {{ customer.visa_type }}</p>
                 </div>
                 <div class="col-md-6">
-                    <strong>Workplace/School Name:</strong> <p>{{ customer.workplace_or_school_name }}</p>
+                    <p><strong>Workplace/School Name:</strong> {{ customer.workplace_or_school_name }}</p>
                 </div>
                 <div class="col-md-6">
-                    <strong>Workplace/School Phone:</strong> <p>{{ customer.workplace_or_school_phone }}</p>
+                    <p><strong>Workplace/School Phone Num.:</strong> {{ customer.workplace_or_school_phone }}</p>
                 </div>
                 <div class="col-md-12">
-                    <strong>Workplace/School Address:</strong> <p>{{ customer.workplace_or_school_address }}</p>
+                    <p><strong>Workplace/School Address:</strong> {{ customer.workplace_or_school_address }}</p>
                 </div>
                 <div class="col-md-6">
-                    <strong>Zairyu Card No:</strong> <p>{{ customer.zairyu_card_number }}</p>
+                    <p><strong>Zairyu Card Num.:</strong> {{ customer.zairyu_card_number }}</p>
                 </div>
                 <div class="col-md-6">
-                    <strong>Zairyu Card Expiry:</strong> <p>{{ customer.zairyu_card_expire_date }}</p>
+                    <p><strong>Zairyu Card Expiry:</strong> {{ customer.zairyu_card_expire_date }}</p>
                 </div>
-                <div class="col-md-6">
-                    <strong>Zairyu Card:</strong> 
-                    <a href="{{ customer.zairyu_card_url }}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>
+                
+                <div class="col-md-4">
+                    <p><strong>Passport:</strong> 
+                    <a href="{{ customer.passport_url }}" target="_blank" class="btn btn-sm btn-outline-primary">View</a> <p>
                 </div>
-                <div class="col-md-6">
-                    <strong>Passport:</strong> 
-                    <a href="{{ customer.passport_url }}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>
+                <div class="col-md-4">
+                    <p><strong>Zairo Card:</strong> 
+                    <a href="{{ customer.zairyu_card_url }}" target="_blank" class="btn btn-sm btn-outline-primary">View</a> <p>
                 </div>
                 {% if customer.student_card_url %}
-                <div class="col-md-6">
-                    <strong>Student Card:</strong> 
-                    <a href="{{ customer.student_card_url }}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>
-                </div>
+                    <div class="col-md-4">
+                        <p>
+                            <strong>Student Card:</strong> 
+                            <a href="{{ customer.student_card_url }}" target="_blank" class="btn btn-sm btn-outline-primary">View</a> 
+                        <p>
+                    </div>
                 {% endif %}
+                <div class="col-md-12">
+                    <strong>Memo:</strong> <p>{{ customer.meno }}</p>
+                </div>
+                <div class="col-md-12 text-end">
+                    <p class="" style="font-size: 12px">
+                        Created by: {{ customer.created_by }} | Created at: {{ customer.created_at }} | 
+                        Updated by: {{ custome.updated_by }} | Updated at: {{ customer.updated_at }} 
+                    </p>
+                </div>
+                
             </div>
+            
         </div>
 
         <div class="card-footer d-flex justify-content-between">
-            <a href="{% url 'customer:customer_edit' customer.pk %}" class="btn btn-warning">Edit</a>
+            <a href="{% url 'customer:customer_edit' customer.id %}" class="btn btn-warning">Edit</a>
             <a href="{% url 'customer:dashboard' %}" class="btn btn-secondary">Back to Dashboard</a>
         </div>
     </div>
+
+
+    {% if assigned_bed %}
+        <div class="card shadow-sm mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Bed Assignment</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-1">
+                    <div class="col-md-3">
+                        <p><strong>Hostel:</strong> {{ assigned_bed.unit.hostel.name  }}</p>
+                    </div>
+                    <div class="col-md-3">
+                        <p><strong>Bedroom No:</strong> {{ assigned_bed.unit.bedroom_num }}</p>
+                    </div>
+                    <div class="col-md-3">
+                        <p><strong>Bed No:</strong> {{ acassigned_bed.bed_num }}</p>
+                    </div>
+                    <div class="col-md-3">
+                        <p><strong>Assigned Date:</strong> {{ assigned_bed.assigned_date }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <p>No bed assigned.</p>
+    {% endif %}
+
+
+    {% if assigned_bed %}
+        <div class="card shadow-sm mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Payment History</h5>
+            </div>
+            <div class="card-body table-responsive">
+                <table class="table table-sm table-bordered text-center">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Payment Month</th>
+                            <th>Initial</th>
+                            <th>Deposit</th>
+                            <th>Internet</th>
+                            <th>Utilities</th>
+                            <th>Rent</th>
+                            <th>Meno</th>
+                            <th>Created At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rent in rent_history %}
+                            <tr>
+                                <td>{{ rent.year }}-{{ rent.month|stringformat:"02d" }}</td>
+                                <td>¥{{ rent.initial_fee_after_discount }}</td>
+                                <td>¥{{ rent.deposit_after_discount }}</td>
+                                <td>¥{{ rent.internet }}</td>
+                                <td>¥{{ rent.utilities }}</td>
+                                <td>¥{{ rent.rent }}</td>
+                                <td>
+                                    {{ rent.memo|slice:":20" }}{% if rent.memo|length > 20 %} ... {% endif %}
+                                </td>
+                                <td>{{ rent.created_at }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% else %}
+        <p>No rent payment records found.</p>
+    {% endif %}
+
+
+
 </div>
 {% endblock %}

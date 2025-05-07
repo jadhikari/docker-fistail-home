@@ -66,7 +66,7 @@ class Customer(TimeStampedUserModel):
             raise ValidationError({'student_card_url': 'Student card URL is required for Student visa holders.'})
 
     def __str__(self):
-        return self.name
+        return f"{self.name} - {self.date_of_birth}"
 
     class Meta:
         constraints = [
