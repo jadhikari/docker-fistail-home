@@ -3,7 +3,7 @@
 {% block title %}Customer Dashboard{% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-2s">
+<div class="container-fluid mt-3">
     {% comment %} Display the error massage. {% endcomment %}
     {% if messages %}
         <div>
@@ -17,16 +17,16 @@
     {% endif %}
 
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2>Customer Dashboard</h2>
-         <a href="{% url 'customer:customer_create' %}" class="btn btn-primary">+ Add Customer</a>
+        <h4>Customer Dashboard</h4>
+         <a href="{% url 'customer:customer_create' %}" class="btn btn-sm btn-primary">+</a>
     </div>
-
-    <form method="get" class="row g-2 mb-4">
-        <div class="col-md-4">
+    <div class="border-top my-2"></div>
+    <form method="get" class="row g-2 mb-2">
+        <div class="col-sm-4">
             <input type="text" name="q" placeholder="Search by name or phone" class="form-control" value="{{ query }}">
         </div>
     
-        <div class="col-md-2">
+        <div class="col-sm-2">
             <select name="status" class="form-select">
                 <option value="">All Status</option>
                 <option value="active" {% if status_filter == "active" %}selected{% endif %}>Active</option>
@@ -34,7 +34,7 @@
             </select>
         </div>
     
-        <div class="col-md-3">
+        <div class="col-sm-3">
             <select name="country" class="form-select">
                 <option value="">All Countries</option>
                 {% for code, name in country_choices %}
@@ -43,11 +43,12 @@
             </select>
         </div>
     
-        <div class="col-md-3">
+        <div class="col-sm-3">
             <button type="submit" class="btn btn-success w-100">Search</button>
         </div>
     </form>
     
+    <div class="border-top my-2 mb-4"></div>
 
     <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-6 g-4">
         {% for customer in page_obj %}
