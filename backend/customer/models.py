@@ -70,5 +70,5 @@ class Customer(TimeStampedUserModel):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['id','name', 'date_of_birth'], name='unique_customer_name_dob_id')
+            models.UniqueConstraint(fields=['status','name', 'date_of_birth'], name='unique_customer_name_dob_status')
         ]

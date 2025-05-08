@@ -4,12 +4,11 @@ from django_countries.fields import Country
 from django_countries import countries
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Customer
-from hostel.models import Bed
+from hostel.models import BedAssignmentHistory
 from finance.models import Revenue  # Assuming app name is `finance`
 from .forms import CustomerForm
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import HttpResponseForbidden
 
 
 
@@ -89,15 +88,20 @@ def customer_edit(request, pk):
 
 @login_required
 def customer_detail(request, pk):
-    customer = get_object_or_404(Customer, pk=pk)
-    c_id = customer.id
+    h_customer = get_object_or_404(Customer, pk=pk)
+    c_id = h_customer.id
     # Assigned bed (if any)
-    assigned_bed = getattr(customer, 'bed_assignment', None)
+    assigned_bed = getattr(h_customer, 'bed_assignment', None)
     # Rent payment history
     rent_history = Revenue.objects.filter(id=c_id).order_by('-created_at')
+
+    assigned_bed_history = None
+    assigned_bed_history = BedAssignmentHistory.objects.filter(customer=c_id).all()
+
     context = {
-        'customer': customer,
+        'customer': h_customer,
         'assigned_bed': assigned_bed,
         'rent_history': rent_history,
+        'bed_history': assigned_bed_history,
     }
     return render(request, 'customer/customer_detail.html', context)

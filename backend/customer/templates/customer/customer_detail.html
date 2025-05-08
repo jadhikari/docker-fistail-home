@@ -76,7 +76,7 @@
                 <div class="col-md-12 text-end">
                     <p class="" style="font-size: 12px">
                         Created by: {{ customer.created_by }} | Created at: {{ customer.created_at }} | 
-                        Updated by: {{ custome.updated_by }} | Updated at: {{ customer.updated_at }} 
+                        Updated by: {{ customer.updated_by }} | Updated at: {{ customer.updated_at }} 
                     </p>
                 </div>
                 
@@ -105,7 +105,7 @@
                         <p><strong>Bedroom No:</strong> {{ assigned_bed.unit.bedroom_num }}</p>
                     </div>
                     <div class="col-md-3">
-                        <p><strong>Bed No:</strong> {{ acassigned_bed.bed_num }}</p>
+                        <p><strong>Bed No:</strong> {{ assigned_bed.bed_num }}</p>
                     </div>
                     <div class="col-md-3">
                         <p><strong>Assigned Date:</strong> {{ assigned_bed.assigned_date }}</p>
@@ -113,10 +113,41 @@
                 </div>
             </div>
         </div>
-    {% else %}
-        <p>No bed assigned.</p>
     {% endif %}
 
+    {% if bed_history %}
+        <div class="card shadow-sm mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Bed Assignment History</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm text-center">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Hostel</th>
+                                <th>Bedroom No</th>
+                                <th>Bed No</th>
+                                <th>Assigned Date</th>
+                                <th>Released Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in bed_history %}
+                                <tr>
+                                    <td>{{ record.bed.unit.hostel.name }}</td>
+                                    <td>{{ record.bed.unit.bedroom_num }}</td>
+                                    <td>{{ record.bed.bed_num }}</td>
+                                    <td>{{ record.assigned_date }}</td>
+                                    <td>{{ record.released_date }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% endif %}
 
     {% if assigned_bed %}
         <div class="card shadow-sm mt-4">
@@ -127,7 +158,7 @@
                 <table class="table table-sm table-bordered text-center">
                     <thead class="table-light">
                         <tr>
-                            <th>Payment Month</th>
+                            <th>Year-Month</th>
                             <th>Initial</th>
                             <th>Deposit</th>
                             <th>Internet</th>
@@ -156,8 +187,6 @@
                 </table>
             </div>
         </div>
-    {% else %}
-        <p>No rent payment records found.</p>
     {% endif %}
 
 
