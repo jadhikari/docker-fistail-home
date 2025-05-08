@@ -14,9 +14,20 @@
     }
 </style>
 <div class="container-fluid py-3">
+  {% comment %} Display the error massage. {% endcomment %}
+    {% if messages %}
+        <div>
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert" style="font-size: 0.85rem; line-height: 1.2;">
+                {{ message }}
+                <button type="button button-sm" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.7rem;"></button>
+            </div>
+            {% endfor %}
+        </div>
+    {% endif %}
     <div class="d-flex justify-content-between align-items-center mb-2">
-      <h4>Hostel Dashboard</h4>
-      {% comment %} <a href="{% url 'hostel_add' %}" class="btn btn-primary">Add Hostel</a> {% endcomment %}
+        <h4>Hostel Dashboard</h4>
+        <a href="{% url 'hostel:hostel_add' %}" class="btn btn-primary">Add Hostel</a>
     </div>
   
     <div id="hostel-table-wrapper" class="table-responsive border rounded">
@@ -49,7 +60,7 @@
             <td>{{ hostel.contract_start_date }}</td>
             <td>{{ hostel.contract_end_date }}</td>
             <td>{{ hostel.rent }}</td>
-            {% comment %} <td><a href="{% url 'hostel_edit' hostel.id %}" class="btn btn-sm btn-warning">Edit</a></td> {% endcomment %}
+            <td><a href="{% url 'hostel:hostel_edit' hostel.id %}" class="btn btn-sm btn-warning">Edit</a></td>
           </tr>
           {% endfor %}
         </tbody>
@@ -106,6 +117,16 @@
         map.panTo([lat, lng]);
       });
     });
+
+    // Auto-dismiss messages after 5 seconds
+    setTimeout(() => {
+        const alerts = document.querySelectorAll('.auto-dismiss');
+        alerts.forEach(alert => {
+          const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+          bsAlert.close();
+        });
+      }, 4000);
+
   </script>
   
 

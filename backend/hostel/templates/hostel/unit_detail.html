@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container-fluid py-3">
   <a href="{% url 'hostel:hostel_detail' unit.hostel.pk %}" class="btn btn-sm btn-outline-secondary mb-2">← Back to Hostel</a>
-  <h5 class="mb-3">{{ unit }}</h5>
+  <h5 class="mb-3">{{ unit.hostel.name }}-{{ unit.get_unit_type_display }}</h5>
 
 
   <div class="mb-3 text-center">
@@ -21,7 +21,7 @@
   <div class="border-top my-2"></div>
   <div class="row small">
     <div class="col-md-6">
-      <p><strong>Unit ID:</strong> {{ unit.id|default:"-" }}</p>
+      <p><strong>Unit ID:</strong> {{ unit.unit_id|default:"-" }}</p>
       <p><strong>Bedroom No.:</strong> {{ unit.bedroom_num|default:"-" }}</p>
       <p><strong>Number of Beds:</strong> {{ unit.num_of_beds|default:"-" }}</p>
       <p><strong>Memo:</strong> {{ unit.memo|default:"-" }}</p>

@@ -19,6 +19,7 @@ class CustomerForm(forms.ModelForm):
             'home_address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'workplace_or_school_address': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'status': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'memo': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
 
     def __init__(self, *args, **kwargs):

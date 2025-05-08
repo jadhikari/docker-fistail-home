@@ -93,7 +93,8 @@ def customer_detail(request, pk):
     # Assigned bed (if any)
     assigned_bed = getattr(h_customer, 'bed_assignment', None)
     # Rent payment history
-    rent_history = Revenue.objects.filter(id=c_id).order_by('-created_at')
+    rent_history = Revenue.objects.filter(customer=c_id).all().order_by('-created_at')
+
 
     assigned_bed_history = None
     assigned_bed_history = BedAssignmentHistory.objects.filter(customer=c_id).all()

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{% if is_edit %}Edit{% else %}Add{% endif %} Unit{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <a href="{% url 'hostel:hostel_detail' hostel.id %}" class="btn btn-sm btn-outline-secondary mb-2">← Back </a>
+    <div class= "card shadow-sm p-1">
+        <h4 class=" text-center">{% if is_edit %}Edit{% else %}Add{% endif %} Unit</h4>
+        <div class="border-top mb-2"></div>
+        <p class="text-danger mb-3">If you select Bed Room only input the bed room number and bed no need unit id. It is for other. </p> 
+        <form method="post" enctype="multipart/form-data" novalidate class="ms-3">
+            {% csrf_token %}
+            <div class="row">
+                {% for field in form %}
+                    <div class="mb-3 col-12 ">
+                        <label for="{{ field.id_for_label }}" class="form-label">
+                            {{ field.label }}:{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
+                        </label>
+                        {{ field }}
+                        {% if field.help_text %}
+                            <div class="form-text">{{ field.help_text }}</div>
+                        {% endif %}
+                        {% for error in field.errors %}
+                            <div class="text-danger">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
+            <br />
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="{% url 'hostel:hostel_detail' hostel.id %}" class="btn btn-secondary">Cancel</a>
+            <br />
+        </form>
+    </div>
+</div>
+{% endblock %}

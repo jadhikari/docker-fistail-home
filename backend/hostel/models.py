@@ -89,7 +89,10 @@ class Unit(TimeStampedUserModel):
     memo = models.TextField(blank=True, null=True)
 
     def clean(self):
-        # Bedroom validation
+        # ✅ SAFELY check if 'hostel' is already set
+        if self.__dict__.get("hostel") is None:
+            return  # skip validation until hostel is assigned
+
         if self.unit_type == 'bedroom':
             if self.bedroom_num is None:
                 raise ValidationError({'bedroom_num': 'This field is required when unit type is Bedroom.'})
@@ -97,7 +100,6 @@ class Unit(TimeStampedUserModel):
                 raise ValidationError({'num_of_beds': 'This field is required when unit type is Bedroom.'})
             self.unit_id = None
 
-            # Enforce uniqueness of (hostel, bedroom_num)
             if Unit.objects.filter(
                 hostel=self.hostel,
                 bedroom_num=self.bedroom_num,
@@ -105,32 +107,26 @@ class Unit(TimeStampedUserModel):
             ).exclude(pk=self.pk).exists():
                 raise ValidationError({'bedroom_num': 'A bedroom with this number already exists in this hostel.'})
 
-            # Check existing bed count if updating
             if self.pk:
-                existing_beds = self.beds.count()  # 'beds' is the related_name from Bed model
+                existing_beds = self.beds.count()
                 if self.num_of_beds < existing_beds:
                     raise ValidationError({
                         'num_of_beds': f"Cannot set number of beds to {self.num_of_beds}. "
-                                       f"There are already {existing_beds} bed(s) assigned to this unit. "
-                                       f"Please delete beds before reducing the count."
+                                    f"There are already {existing_beds} bed(s) assigned to this unit."
                     })
+
         else:
             if not self.unit_id:
                 raise ValidationError({'unit_id': 'This field is required when unit type is not Bedroom.'})
             self.bedroom_num = None
             self.num_of_beds = None
 
-            # Enforce uniqueness of (hostel, unit_id)
             if Unit.objects.filter(
                 hostel=self.hostel,
                 unit_id=self.unit_id
             ).exclude(pk=self.pk).exists():
                 raise ValidationError({'unit_id': 'A unit with this ID already exists in this hostel.'})
 
-    def __str__(self):
-        if self.unit_type == 'bedroom':
-            return f"Bedroom {self.bedroom_num} - {self.hostel.name}"
-        return f"{self.get_unit_type_display()} ({self.unit_id}) - {self.hostel.name}"
 
     
 

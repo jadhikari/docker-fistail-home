@@ -4,108 +4,118 @@
 
 {% block content %}
 <div class="container-fluid py-2">
-  <div class="d-flex justify-content-between align-items-center mb-2">
-    <a href="{% url 'hostel:dashboard' %}" class="btn btn-sm btn-outline-secondary">← Back</a>
-    <div class="flex-grow-1 text-center">
-      <h5 class="mb-0">Hostel: {{ hostel.name|upper }}</h5>
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <a href="{% url 'hostel:dashboard' %}" class="btn btn-sm btn-outline-secondary">← Back</a>
+        <div class="flex-grow-1 text-center">
+            <h5 class="mb-0">Hostel: {{ hostel.name|upper }}</h5>
+        </div>
+        <div style="width: 100px;"></div> <!-- Placeholder to balance the layout -->
     </div>
-    <div style="width: 100px;"></div> <!-- Placeholder to balance the layout -->
-  </div>
-  <div class="mb-3 text-center">
-    {% if hostel.image %}
-        <img src="{{ hostel.image.url }}" class="img-fluid rounded" style="max-height: 300px;" alt="hostel Image">
-    {% else %}
-      <p class=" small">No image available.</p>
-    {% endif %}
-  </div>
+    <div class="mb-3 text-center">
+        {% if hostel.image %}
+            <img src="{{ hostel.image.url }}" class="img-fluid rounded" style="max-height: 300px;" alt="hostel Image">
+        {% else %}
+        <p class=" small">No image available.</p>
+        {% endif %}
+    </div>
 
 
-  <div class="row g-3 small">
-    <div class="col-md-6">
-      <h6 class=" border-bottom pb-1 text-primary text-center">Overview</h6>
-      <p><strong>Common Name:</strong> {{ hostel.common_name|default:"-" }}</p>
-      <p><strong>Type:</strong> {{ hostel.get_hostel_type_display }}</p>
-      <p><strong>Total Rooms:</strong> {{ hostel.total_rooms }}</p>
-      
+    <div class="row g-3 small">
+        <div class="col-md-6">
+            <h6 class=" border-bottom pb-1 text-primary text-center">Overview</h6>
+            <p><strong>Common Name:</strong> {{ hostel.common_name|default:"-" }}</p>
+            <p><strong>Type:</strong> {{ hostel.get_hostel_type_display }}</p>
+            <p><strong>Total Rooms:</strong> {{ hostel.total_rooms }}</p>
+        </div>
+        <div class="col-md-6">
+            <h6 class=" border-bottom pb-1 text-primary text-center">Contract Info</h6>
+            <p><strong>Manager:</strong> {{ hostel.hostel_manager.get_full_name|default:"-" }}</p>
+            <p><strong>Memo:</strong> {{ hostel.memo|default:"-" }}</p>
+        </div>
     </div>
-    <div class="col-md-6">
-      <h6 class=" border-bottom pb-1 text-primary text-center">Contract Info</h6>
-      <p><strong>Manager:</strong> {{ hostel.hostel_manager.get_full_name|default:"-" }}</p>
-      <p><strong>Memo:</strong> {{ hostel.memo|default:"-" }}</p>
+
+    <div class="border-top my-2"></div>
+
+    <h6 class=" border-bottom pb-1 text-primary text-center">Fees</h6>
+    <div class="row g-2 small">
+        <div class="col-6 col-md-3"><strong>Deposit:</strong> ¥{{ hostel.deposit_fee }}</div>
+        <div class="col-6 col-md-3"><strong>Initial:</strong> ¥{{ hostel.initial_fee }}</div>
+        <div class="col-6 col-md-3"><strong>Internet:</strong> ¥{{ hostel.internet_fee }}</div>
+        <div class="col-6 col-md-3"><strong>Utilities:</strong> ¥{{ hostel.utilities_fee }}</div>
+        <div class="col-12 mt-1"><strong>Rent:</strong> ¥{{ hostel.rent }}</div>
     </div>
-  </div>
+
+    <div class="border-top my-2"></div>
+
+    <div class="row g-3 small">
+        <div class="col-md-6">
+            <h6 class=" border-bottom pb-1 text-primary text-center">Location</h6>
+            <p><strong>Address:</strong> {{ hostel.address }}</p>
+            <p><strong>Latitude:</strong> {{ hostel.latitude }}</p>
+            <p><strong>Longitude:</strong> {{ hostel.longitude }}</p>
+        </div>
+        <div class="col-md-6">
+        <h6 class=" border-bottom pb-1 text-primary text-center">Owner & Contract Info</h6>
+            <p><strong>Owner:</strong> {{ hostel.house_owner|default:"-" }}</p>
+            <p><strong>Contact:</strong> {{ hostel.hw_contact_num|default:"-" }}</p>
+            <p><strong>Start Date:</strong> {{ hostel.contract_start_date|date:"Y-m-d" }}</p>
+            <p><strong>End Date:</strong> {{ hostel.contract_end_date|date:"Y-m-d" }}</p>
+        </div>
+    </div>
 
   <div class="border-top my-2"></div>
 
-  <h6 class=" border-bottom pb-1 text-primary text-center">Fees</h6>
-  <div class="row g-2 small">
-    <div class="col-6 col-md-3"><strong>Deposit:</strong> ¥{{ hostel.deposit_fee }}</div>
-    <div class="col-6 col-md-3"><strong>Initial:</strong> ¥{{ hostel.initial_fee }}</div>
-    <div class="col-6 col-md-3"><strong>Internet:</strong> ¥{{ hostel.internet_fee }}</div>
-    <div class="col-6 col-md-3"><strong>Utilities:</strong> ¥{{ hostel.utilities_fee }}</div>
-    <div class="col-12 mt-1"><strong>Rent:</strong> ¥{{ hostel.rent }}</div>
-  </div>
-
-  <div class="border-top my-2"></div>
-
-  <div class="row g-3 small">
-    <div class="col-md-6">
-      <h6 class=" border-bottom pb-1 text-primary text-center">Location</h6>
-      <p><strong>Address:</strong> {{ hostel.address }}</p>
-      <p><strong>Latitude:</strong> {{ hostel.latitude }}</p>
-      <p><strong>Longitude:</strong> {{ hostel.longitude }}</p>
+    <h6 class=" border-bottom pb-1 text-primary text-center">Info</h6>
+    <div class="row g-2 small">
+        <div class="col-6 col-md-3"><strong>Created:</strong> {{ hostel.created_at }}</div>
+        <div class="col-6 col-md-3"><strong>Created By:</strong> {{ hostel.created_by }}</div>
+        <div class="col-6 col-md-3"><strong>Updated:</strong> {{ hostel.updated_at }}</div>
+        <div class="col-6 col-md-3"><strong>Updated By:</strong> {{ hostel.updated_by }}</div>
     </div>
-    <div class="col-md-6">
-      <h6 class=" border-bottom pb-1 text-primary text-center">Owner & Contract Info</h6>
-      <p><strong>Owner:</strong> {{ hostel.house_owner|default:"-" }}</p>
-      <p><strong>Contact:</strong> {{ hostel.hw_contact_num|default:"-" }}</p>
-      <p><strong>Start Date:</strong> {{ hostel.contract_start_date|date:"Y-m-d" }}</p>
-      <p><strong>End Date:</strong> {{ hostel.contract_end_date|date:"Y-m-d" }}</p>
+
+    <div class="border-top my-2"></div>
+  
+    <div class="card shadow-sm mt-4 p-2"> 
+        <div class="row">
+            <div class="col-6">
+                <h5 class="text-primary">Units</h5>
+            </div>
+            <div class="col-6 ">
+                <a href="{% url 'hostel:unit_create' hostel.id %}" class="btn float-end btn-sm btn-primary mb-2">➕ Add Unit</a>
+            </div>
+        </div>
+        {% if units %}
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered small text-center">
+                    <thead class="table-light">
+                        <tr>
+                            <th>S/N</th>
+                            <th>Type</th>
+                            <th>Bedroom No.</th>
+                            <th>Beds</th>
+                            <th>Others</th>
+                            <th>Memo</th>
+                            <th>Edit </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for unit in units %}
+                            <tr>
+                            <td><a href="{% url 'hostel:unit_detail' unit.pk %}">{{ forloop.counter }}</a></td>
+                            <td>{{ unit.get_unit_type_display }}</td>
+                            <td>{{ unit.bedroom_num|default:"-" }}</td>
+                            <td>{{ unit.num_of_beds|default:"-" }}</td>
+                            <td>{{ unit.unit_id|default:"-" }}</td>
+                            <td>{{ unit.memo|default:"-" }}</td>
+                            <td><a href="{% url 'hostel:unit_edit' unit.id %}" class="btn btn-sm btn-outline-primary">Edit</a></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted small">No units available for this hostel.</p>
+        {% endif %}
     </div>
-  </div>
-  <div class="border-top my-2"></div>
-  <h6 class=" border-bottom pb-1 text-primary text-center">Info</h6>
-  <div class="row g-2 small">
-    <div class="col-6 col-md-3"><strong>Created:</strong> ¥{{ hostel.created_at }}</div>
-    <div class="col-6 col-md-3"><strong>Created By:</strong> ¥{{ hostel.created_by }}</div>
-    <div class="col-6 col-md-3"><strong>Updated:</strong> ¥{{ hostel.updated_at }}</div>
-    <div class="col-6 col-md-3"><strong>Updated By:</strong> ¥{{ hostel.updated_by }}</div>
-  </div>
-    
-  <div class="border-top my-3"></div>
-
-<h6 class="border-bottom pb-1 text-primary">Units</h6>
-
-{% if units %}
-  <div class="table-responsive">
-    <table class="table table-sm table-bordered small text-center">
-      <thead class="table-light">
-        <tr>
-          <th>S/N</th>
-          <th>Type</th>
-          <th>ID</th>
-          <th>Bedroom No.</th>
-          <th>Beds</th>
-          <th>Memo</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for unit in units %}
-          <tr>
-            <td><a href="{% url 'hostel:unit_detail' unit.pk %}">{{ forloop.counter }}</a></td>
-            <td>{{ unit.get_unit_type_display }}</td>
-            <td>{{ unit.unit_id|default:"-" }}</td>
-            <td>{{ unit.bedroom_num|default:"-" }}</td>
-            <td>{{ unit.num_of_beds|default:"-" }}</td>
-            <td>{{ unit.memo|default:"-" }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-{% else %}
-  <p class="text-muted small">No units available for this hostel.</p>
-{% endif %}
-
 </div>
 {% endblock %}
