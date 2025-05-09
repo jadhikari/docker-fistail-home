@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <a href="{% url 'hostel:unit_detail' bed.unit.id %}" class="btn btn-sm btn-outline-secondary mb-2">← Back</a>
+    <div class="card shadow-sm p-3">
+        <h4 class="text-center">{{ title }} for {{ bed.bed_num }}</h4>
+        <div class="border-top mb-3"></div>
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                {{ form.released_date.label_tag }}
+                {{ form.released_date }}
+                {{ form.released_date.errors }}
+            </div>
+            <br />
+            <button type="submit" class="btn btn-success">Save</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

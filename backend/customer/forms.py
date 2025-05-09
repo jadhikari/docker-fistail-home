@@ -25,6 +25,8 @@ class CustomerForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.fields['status'].disabled = True
+
         for field in self.fields:
             if field not in self.Meta.widgets and not isinstance(self.fields[field].widget, (forms.CheckboxInput, CountrySelectWidget)):
                 self.fields[field].widget.attrs.update({'class': 'form-control'})

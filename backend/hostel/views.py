@@ -1,6 +1,8 @@
 from django.shortcuts import get_object_or_404, render,redirect
-from .models import Hostel, Unit, Bed
-from .forms import HostelForm, UnitForm, BedForm, BedAssignmentForm
+from django.utils import timezone
+from .models import Hostel, Unit, Bed, BedAssignmentHistory
+from customer.models import Customer
+from .forms import HostelForm, UnitForm, BedForm, BedAssignmentForm, EditReleasedDateForm
 from django.contrib import messages
 
 def dashboard(request):
@@ -59,6 +61,7 @@ def unit_create(request, hostel_id):
         form = UnitForm(request.POST, request.FILES, hostel=hostel)
         if form.is_valid():
             unit = form.save(commit=False)
+            unit.hostel = hostel  # Set FK explicitly
             unit.created_by = request.user
             unit.updated_by = request.user
             unit.save()
@@ -89,52 +92,61 @@ def unit_edit(request, pk):
 def add_bed(request, unit_id):
     unit = get_object_or_404(Unit, id=unit_id)
     if request.method == 'POST':
-        form = BedForm(request.POST)
+        form = BedForm(request.POST, unit=unit)
         if form.is_valid():
             bed = form.save(commit=False)
             bed.unit = unit
             bed.save()
-            
-            # Update unit created_by and updated_by
-            unit.created_by = request.user
+
+            # Optional: update unit tracking
             unit.updated_by = request.user
             unit.save()
 
             return redirect('hostel:unit_detail', unit.id)
-        else:
-            form.instance.unit = unit
     else:
-        form = BedForm()
+        form = BedForm(unit=unit)
 
-    return render(request, 'hostel/bed_form.html', {'form': form, 'title': 'Add Bed'})
-
-
-def edit_bed(request, bed_id):
-    bed = get_object_or_404(Bed, id=bed_id)
-    if request.method == 'POST':
-        form = BedForm(request.POST, instance=bed)
-        if form.is_valid():
-            form.save()
-
-            # Update unit updated_by
-            bed.unit.updated_by = request.user
-            bed.unit.save()
-
-            return redirect('hostel:unit_detail', bed.unit.id)
-    else:
-        form = BedForm(instance=bed)
-
-    return render(request, 'hostel/bed_form.html', {'form': form, 'title': 'Edit Bed'})
+    return render(request, 'hostel/bed_form.html', {
+        'form': form,
+        'unit': unit,
+        'title': 'Add Bed'
+    })
 
 
 def assign_bed(request, bed_id):
     bed = get_object_or_404(Bed, id=bed_id)
+
     if request.method == 'POST':
         form = BedAssignmentForm(request.POST, instance=bed)
-        if form.is_valid():
-            form.save()
 
-            # Update unit updated_by
+        if form.is_valid():
+            old_customer = bed.customer
+            old_assigned_date = bed.assigned_date
+            old_released_date = bed.released_date
+
+            bed = form.save(commit=False)
+
+            if form.fields['customer'].disabled:
+                customer_id = request.POST.get('customer')
+                if customer_id:
+                    bed.customer = get_object_or_404(Customer, id=customer_id)
+
+            if bed.released_date and bed.released_date <= timezone.now().date():
+                if old_customer and old_assigned_date:
+                    BedAssignmentHistory.objects.create(
+                        bed=bed,
+                        customer=old_customer,
+                        assigned_date=old_assigned_date,
+                        released_date=bed.released_date
+                    )
+                    old_customer.status = False
+                    old_customer.save()
+
+                bed.customer = None
+                bed.assigned_date = None
+                bed.released_date = None
+
+            bed.save()
             bed.unit.updated_by = request.user
             bed.unit.save()
 
@@ -142,9 +154,35 @@ def assign_bed(request, bed_id):
     else:
         form = BedAssignmentForm(instance=bed)
 
-    return render(request, 'hostel/assign_bed.html', {'form': form, 'title': 'Assign/Edit Bed'})
+    return render(request, 'hostel/assign_bed.html', {
+        'form': form,
+        'title': 'Assign/Edit Bed',
+        'bed': bed
+    })
 
 
+def edit_released_date(request, bed_id):
+    bed = get_object_or_404(Bed, id=bed_id)
 
+    if not bed.customer or not bed.assigned_date:
+        return redirect('hostel:unit_detail', bed.unit.id)
 
+    if request.method == 'POST':
+        form = EditReleasedDateForm(request.POST, instance=bed)
+        if form.is_valid():
+            bed = form.save(commit=False)
 
+            if bed.customer:
+                bed.customer.status = True
+                bed.customer.save()
+
+            bed.save()
+            return redirect('hostel:unit_detail', bed.unit.id)
+    else:
+        form = EditReleasedDateForm(instance=bed)
+
+    return render(request, 'hostel/edit_released_date.html', {
+        'form': form,
+        'title': 'Edit Released Date',
+        'bed': bed
+    })

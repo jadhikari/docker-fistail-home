@@ -1,3 +1,4 @@
+import re
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.validators import RegexValidator
@@ -5,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from decimal import Decimal
 from customer.models import Customer
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -65,6 +67,22 @@ class Hostel(TimeStampedUserModel):
     )   # 👇 ForeignKey to a staff user
     
 
+    def normalize_name(self, name):
+        # Lowercase and remove all spaces
+        return re.sub(r'\s+', '', name.lower())
+
+    def clean(self):
+        norm_new = self.normalize_name(self.name)
+        existing = Hostel.objects.exclude(pk=self.pk)
+        for hostel in existing:
+            if self.normalize_name(hostel.name) == norm_new:
+                raise ValidationError({'name': 'A hostel with a similar name already exists (ignores case and spacing).'})
+
+    def save(self, *args, **kwargs):
+        self.name = self.name.strip()
+        self.full_clean()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.name
     
@@ -88,45 +106,24 @@ class Unit(TimeStampedUserModel):
     image = models.ImageField(upload_to='unit_images/', blank=True, null=True)
     memo = models.TextField(blank=True, null=True)
 
-    def clean(self):
-        # ✅ SAFELY check if 'hostel' is already set
-        if self.__dict__.get("hostel") is None:
-            return  # skip validation until hostel is assigned
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['hostel', 'bedroom_num'],
+                condition=models.Q(unit_type='bedroom'),
+                name='unique_bedroom_per_hostel'
+            ),
+            models.UniqueConstraint(
+                fields=['hostel', 'unit_id'],
+                condition=~models.Q(unit_type='bedroom'),
+                name='unique_unit_id_per_hostel'
+            ),
+        ]
 
+    def __str__(self):
         if self.unit_type == 'bedroom':
-            if self.bedroom_num is None:
-                raise ValidationError({'bedroom_num': 'This field is required when unit type is Bedroom.'})
-            if self.num_of_beds is None:
-                raise ValidationError({'num_of_beds': 'This field is required when unit type is Bedroom.'})
-            self.unit_id = None
-
-            if Unit.objects.filter(
-                hostel=self.hostel,
-                bedroom_num=self.bedroom_num,
-                unit_type='bedroom'
-            ).exclude(pk=self.pk).exists():
-                raise ValidationError({'bedroom_num': 'A bedroom with this number already exists in this hostel.'})
-
-            if self.pk:
-                existing_beds = self.beds.count()
-                if self.num_of_beds < existing_beds:
-                    raise ValidationError({
-                        'num_of_beds': f"Cannot set number of beds to {self.num_of_beds}. "
-                                    f"There are already {existing_beds} bed(s) assigned to this unit."
-                    })
-
-        else:
-            if not self.unit_id:
-                raise ValidationError({'unit_id': 'This field is required when unit type is not Bedroom.'})
-            self.bedroom_num = None
-            self.num_of_beds = None
-
-            if Unit.objects.filter(
-                hostel=self.hostel,
-                unit_id=self.unit_id
-            ).exclude(pk=self.pk).exists():
-                raise ValidationError({'unit_id': 'A unit with this ID already exists in this hostel.'})
-
+            return f"{self.hostel.name} - Bedroom {self.bedroom_num}"
+        return f"{self.hostel.name} - {self.unit_type} ({self.unit_id})"
 
     
 class Bed(TimeStampedUserModel):
@@ -155,59 +152,37 @@ class Bed(TimeStampedUserModel):
     assigned_date = models.DateField(blank=True, null=True)
     released_date = models.DateField(blank=True, null=True)
 
-    def clean(self):
-        # Normalize bed_num to uppercase early
-        if self.bed_num:
-            self.bed_num = self.bed_num.upper()
-
-        if not self.unit_id:
-            return  # Skip validation if unit not selected
-
-        if self.unit.unit_type != 'bedroom':
-            raise ValidationError({'unit': 'Only bedroom-type units can be assigned beds.'})
-
-        current_bed_count = Bed.objects.filter(unit=self.unit).exclude(pk=self.pk).count()
-        if self.unit.num_of_beds is not None and current_bed_count >= self.unit.num_of_beds:
-            raise ValidationError({'bed_num': f"This unit can only have {self.unit.num_of_beds} beds."})
-
-        # Case-insensitive uniqueness check (important)
-        if Bed.objects.filter(unit=self.unit, bed_num__iexact=self.bed_num).exclude(pk=self.pk).exists():
-            raise ValidationError({'bed_num': 'This bed number already exists in this unit.'})
-
-        if self.customer:
-            if not self.assigned_date:
-                raise ValidationError({'assigned_date': 'Assigned date is required when a customer is assigned.'})
-            if not self.customer.status:
-                raise ValidationError({'customer': 'This customer is inactive and cannot be assigned a bed.'})
-
     def save(self, *args, **kwargs):
-        # Normalize again (for safety)
-        if self.bed_num:
-            self.bed_num = self.bed_num.upper()
+        today = timezone.now().date()
 
-        if self.pk:
-            old = Bed.objects.get(pk=self.pk)
-            if self.released_date and (old.released_date != self.released_date):
-                BedAssignmentHistory.objects.create(
-                    bed=self,
-                    customer=self.customer,
-                    assigned_date=self.assigned_date,
-                    released_date=self.released_date
-                )
-                self.customer = None
-                self.assigned_date = None
-                self.released_date = None
+        # If existing bed and released_date is passed
+        if (
+            self.pk and
+            self.released_date and
+            self.released_date <= today and
+            self.customer and
+            self.assigned_date
+        ):
+            from .models import BedAssignmentHistory
+
+            # Move to history
+            BedAssignmentHistory.objects.create(
+                bed=self,
+                customer=self.customer,
+                assigned_date=self.assigned_date,
+                released_date=self.released_date
+            )
+
+            # Mark customer inactive
+            self.customer.status = False
+            self.customer.save()
+
+            # Clear bed assignment
+            self.customer = None
+            self.assigned_date = None
+            self.released_date = None
 
         super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f"Bed {self.bed_num} in {self.unit.hostel.name} - {self.unit}"
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=['unit', 'bed_num'], name='unique_bed_per_unit')
-        ]
-    
     
 class BedAssignmentHistory(TimeStampedUserModel):
     bed = models.ForeignKey(Bed, on_delete=models.CASCADE)

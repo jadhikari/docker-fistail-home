@@ -45,17 +45,21 @@
         {% for bed in unit.beds.all %}
             <div class="mb-3 border p-3 rounded small">
             <p>
-                🛏️ <strong>Bed Number:</strong> {{ bed.bed_num }} |
-                👤 <strong>Assigned to:</strong> 
-                  {% if bed.customer %}
-                      <a href="{% url 'customer:customer_detail' bed.customer.id %}">{{ bed.customer }}</a>
-                  {% else %}
-                      Not assigned
-                  {% endif %}|
-                📅 <strong>Assigned Date:</strong> {{ bed.assigned_date|default:"None" }} |
-                📅 <strong>Released Date:</strong> {{ bed.released_date|default:"None" }} |
-                <a href="{% url 'hostel:edit_bed' bed.id %}">✏️ Edit</a> |
-                <a href="{% url 'hostel:assign_bed' bed.id %}">👤 Assign</a>
+              🛏️ <strong>Bed Number:</strong> {{ bed.bed_num }} |
+              👤 <strong>Assigned to:</strong> 
+              {% if bed.customer %}
+                  <a href="{% url 'customer:customer_detail' bed.customer.id %}">{{ bed.customer }}</a>
+              {% else %}
+                  Not assigned
+              {% endif %} |
+              📅 <strong>Assigned Date:</strong> {{ bed.assigned_date|default:"None" }} |
+              📅 <strong>Released Date:</strong> {{ bed.released_date|default:"None" }} |
+              
+              {% if bed.customer %}
+                  <a href="{% url 'hostel:edit_released_date' bed.id %}" class="btn btn-sm btn-warning">✏️ Edit Released Date</a>
+              {% else %}
+                  <a href="{% url 'hostel:assign_bed' bed.id %}" class="btn btn-sm btn-primary">👤 Assign Bed</a>
+              {% endif %}
             </p>
 
             {% with bed.bedassignmenthistory_set.all as history %}

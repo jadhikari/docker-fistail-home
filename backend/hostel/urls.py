@@ -12,8 +12,8 @@ urlpatterns = [
     path('hostel/<int:hostel_id>/units/add/', views.unit_create, name='unit_create'),
     path('unit/<int:pk>/edit/', views.unit_edit, name='unit_edit'),
     path('unit/<int:unit_id>/bed/add/', views.add_bed, name='add_bed'),
-    path('bed/<int:bed_id>/edit/', views.edit_bed, name='edit_bed'),
-    path('bed/<int:bed_id>/assign/', views.assign_bed, name='assign_bed'),
+    path('beds/<int:bed_id>/assign/', views.assign_bed, name='assign_bed'),
+    path('beds/<int:bed_id>/edit-released/', views.edit_released_date, name='edit_released_date'),
 
 
 ]

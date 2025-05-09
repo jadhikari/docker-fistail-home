@@ -1,18 +1,50 @@
 {% extends "base.html" %}
-{% block title %}Assign Bed{% endblock %}
+{% block title %}{{ title }}{% endblock %}
 {% block content %}
 <div class="container mt-4">
-    <a href="javascript:history.back()" class="btn btn-sm btn-outline-secondary mb-2">← Back </a>
-    <div class= "card shadow-sm p-1">
+    <a href="{% url 'hostel:unit_detail' bed.unit.id %}" class="btn btn-sm btn-outline-secondary mb-2">← Back</a>
+    <div class="card shadow-sm p-3">
         <h4 class="text-center">{{ title }}</h4>
         <div class="border-top mb-4"></div>
         <form method="post">
             {% csrf_token %}
-            {{ form.as_p }}
+
+            {% if form.fields.customer.disabled %}
+                <div class="form-group">
+                    <label>Customer</label>
+                    <p class="form-control-plaintext">{{ form.instance.customer }}</p>
+                    <input type="hidden" name="customer" value="{{ form.instance.customer.id }}">
+                </div>
+            {% else %}
+                <div class="form-group">
+                    {{ form.customer.label_tag }}
+                    {{ form.customer }}
+                    {{ form.customer.errors }}
+                </div>
+            {% endif %}
+
+            {% if form.fields.assigned_date.disabled %}
+                <div class="form-group">
+                    <label>Assigned Date</label>
+                    <p class="form-control-plaintext">{{ form.instance.assigned_date }}</p>
+                </div>
+            {% else %}
+                <div class="form-group">
+                    {{ form.assigned_date.label_tag }}
+                    {{ form.assigned_date }}
+                    {{ form.assigned_date.errors }}
+                </div>
+            {% endif %}
+
+            <div class="form-group">
+                {{ form.released_date.label_tag }}
+                {{ form.released_date }}
+                {{ form.released_date.errors }}
+            </div>
+
             <br />
             <button type="submit" class="btn btn-primary">Save</button>
-            <a href="javascript:history.back()" class="btn btn-secondary">Cancel</a>
-            <br />
+            <a href="{% url 'hostel:unit_detail' bed.unit.id %}" class="btn btn-secondary">Cancel</a>
         </form>
     </div>
 </div>
