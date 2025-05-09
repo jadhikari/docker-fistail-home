@@ -11,13 +11,19 @@
             </a>
         </li>
         <li class="nav-item">
-            <a href="{% url 'finance:dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'finance' %}active{% endif %}">
-                💰 <span class="link-text">Finance</span>
+            <a href="{% url 'customer:dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'customer' %}active{% endif %}">
+                👥 <span class="link-text">Customer</span>
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a href="{% url 'finance:revenues' %}" class="nav-link {% if request.resolver_match.url_name == 'revenues' %}active{% endif %}">
+                💵 <span class="link-text">Revenues</span>
             </a>
         </li>
         <li class="nav-item">
-            <a href="{% url 'customer:dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'customer' %}active{% endif %}">
-                👥 <span class="link-text">Customer</span>
+            <a href="{% url 'finance:expenses' %}" class="nav-link {% if request.resolver_match.url_name == 'expenses' %}active{% endif %}">
+                🧾 <span class="link-text">Expenses</span>
             </a>
         </li>
         <li class="nav-item">
