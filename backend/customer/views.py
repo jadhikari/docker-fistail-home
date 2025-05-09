@@ -11,7 +11,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 
 
-
+@login_required(login_url='/accounts/login/')
 def dashboard(request):
     query = request.GET.get('q', '')
     status_filter = request.GET.get('status', '')
@@ -48,7 +48,7 @@ def dashboard(request):
     }
     return render(request, 'customer/dashboard.html', context)
 
-@login_required
+@login_required(login_url='/accounts/login/')
 def customer_create(request):
     if request.method == 'POST':
         form = CustomerForm(request.POST)
@@ -64,7 +64,7 @@ def customer_create(request):
     return render(request, 'customer/customer_form.html', {'form': form, 'is_edit': False})
 
 
-@login_required
+@login_required(login_url='/accounts/login/')
 def customer_edit(request, pk):
     customer = get_object_or_404(Customer, pk=pk)
 
@@ -86,7 +86,7 @@ def customer_edit(request, pk):
     
     return render(request, 'customer/customer_form.html', {'form': form, 'is_edit': True})
 
-@login_required
+@login_required(login_url='/accounts/login/')
 def customer_detail(request, pk):
     h_customer = get_object_or_404(Customer, pk=pk)
     c_id = h_customer.id

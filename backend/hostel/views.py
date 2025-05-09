@@ -1,10 +1,12 @@
 from django.shortcuts import get_object_or_404, render,redirect
 from django.utils import timezone
+from django.contrib.auth.decorators import login_required
 from .models import Hostel, Unit, Bed, BedAssignmentHistory
 from customer.models import Customer
 from .forms import HostelForm, UnitForm, BedForm, BedAssignmentForm, EditReleasedDateForm
 from django.contrib import messages
 
+@login_required(login_url='/accounts/login/')
 def dashboard(request):
     query = request.GET.get('q', '')
     if query:
@@ -13,13 +15,13 @@ def dashboard(request):
         hostels = Hostel.objects.all()
     return render(request, 'hostel/dashboard.html', {'hostels': hostels, 'query': query})
 
-
+@login_required(login_url='/accounts/login/')
 def hostel_detail(request, pk):
     hostel = get_object_or_404(Hostel, pk=pk)
     units = hostel.units.all()  # related_name='units'
     return render(request, 'hostel/hostel_detail.html', {'hostel': hostel, 'units': units})
 
-
+@login_required(login_url='/accounts/login/')
 def hostel_create(request):
     if request.method == 'POST':
         form = HostelForm(request.POST, request.FILES)
@@ -34,6 +36,7 @@ def hostel_create(request):
         form = HostelForm()
     return render(request, 'hostel/hostel_form.html', {'form': form, 'title': 'Add Hostel'})
 
+@login_required(login_url='/accounts/login/')
 def hostel_update(request, pk):
     hostel = get_object_or_404(Hostel, pk=pk)
     if request.method == 'POST':
@@ -49,12 +52,12 @@ def hostel_update(request, pk):
     return render(request, 'hostel/hostel_form.html', {'form': form, 'title': 'Edit Hostel'})
 
 
-
+@login_required(login_url='/accounts/login/')
 def unit_detail(request, pk):
     unit = get_object_or_404(Unit, pk=pk)
     return render(request, 'hostel/unit_detail.html', {'unit': unit})
 
-
+@login_required(login_url='/accounts/login/')
 def unit_create(request, hostel_id):
     hostel = get_object_or_404(Hostel, pk=hostel_id)
     if request.method == 'POST':
@@ -71,7 +74,7 @@ def unit_create(request, hostel_id):
     return render(request, 'hostel/unit_form.html', {'form': form, 'hostel': hostel})
 
 
-
+@login_required(login_url='/accounts/login/')
 def unit_edit(request, pk):
     unit = get_object_or_404(Unit, pk=pk)
     hostel = unit.hostel
@@ -88,7 +91,7 @@ def unit_edit(request, pk):
 
 
 
-
+@login_required(login_url='/accounts/login/')
 def add_bed(request, unit_id):
     unit = get_object_or_404(Unit, id=unit_id)
     if request.method == 'POST':
@@ -112,7 +115,7 @@ def add_bed(request, unit_id):
         'title': 'Add Bed'
     })
 
-
+@login_required(login_url='/accounts/login/')
 def assign_bed(request, bed_id):
     bed = get_object_or_404(Bed, id=bed_id)
 
@@ -156,11 +159,11 @@ def assign_bed(request, bed_id):
 
     return render(request, 'hostel/assign_bed.html', {
         'form': form,
-        'title': 'Assign/Edit Bed',
+        'title': 'Assign Bed',
         'bed': bed
     })
 
-
+@login_required(login_url='/accounts/login/')
 def edit_released_date(request, bed_id):
     bed = get_object_or_404(Bed, id=bed_id)
 

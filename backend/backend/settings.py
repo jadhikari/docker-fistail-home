@@ -50,6 +50,9 @@ INSTALLED_APPS = [
 
 AUTH_USER_MODEL = 'accounts.CustomUser' #for the custom user
 
+LOGIN_URL = '/accounts/login/'  # or your actual login path
+LOGIN_REDIRECT_URL = ''  # where to go after successful login
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="container d-flex justify-content-center align-items-center">
+    <div class="card shadow-lg p-4" style="width: 100%; max-width: 400px; margin-top:100px; margin-left:-17%;">
+        <h3 class="text-center mb-4">Login</h3>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            <div class="mb-3">
+                <label for="id_username" class="form-label">Email address</label>
+                <input type="email" name="username" class="form-control" id="id_username" placeholder="you@fishtail.jp" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="id_password" class="form-label">Password</label>
+                <input type="password" name="password" class="form-control" id="id_password" placeholder="••••••••" required>
+            </div>
+
+            <div class="d-grid mb-2">
+                <button type="submit" class="btn btn-primary">Login</button>
+            </div>
+
+            <div class="text-center">
+                <small class="text-muted">Only <strong>@fishtail.jp</strong> email addresses are allowed</small>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
