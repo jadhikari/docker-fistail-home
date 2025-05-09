@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}{% if is_edit %}Edit{% else %}Add{% endif %} Bed{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <a href="javascript:history.back()" class="btn btn-sm btn-outline-secondary mb-2">← Back </a>
+    <div class= "card shadow-sm p-1">
+        <h4 class="text-center">{{ title }}</h4>
+        <div class="border-top mb-4"></div>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <br />
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="javascript:history.back()" class="btn btn-secondary">Cancel</a>
+            <br />
+        </form>
+    </div>
+</div>
+{% endblock %}

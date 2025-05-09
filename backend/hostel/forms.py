@@ -1,5 +1,5 @@
 from django import forms
-from .models import Hostel, Unit
+from .models import Hostel, Unit, Bed
 
 class HostelForm(forms.ModelForm):
     class Meta:
@@ -41,3 +41,13 @@ class UnitForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+    
+class BedForm(forms.ModelForm):
+    class Meta:
+        model = Bed
+        fields = ['bed_num']
+
+class BedAssignmentForm(forms.ModelForm):
+    class Meta:
+        model = Bed
+        fields = ['customer', 'assigned_date', 'released_date']

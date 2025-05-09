@@ -129,7 +129,6 @@ class Unit(TimeStampedUserModel):
 
 
     
-
 class Bed(TimeStampedUserModel):
     unit = models.ForeignKey(
         Unit,
@@ -157,6 +156,13 @@ class Bed(TimeStampedUserModel):
     released_date = models.DateField(blank=True, null=True)
 
     def clean(self):
+        # Normalize bed_num to uppercase early
+        if self.bed_num:
+            self.bed_num = self.bed_num.upper()
+
+        if not self.unit_id:
+            return  # Skip validation if unit not selected
+
         if self.unit.unit_type != 'bedroom':
             raise ValidationError({'unit': 'Only bedroom-type units can be assigned beds.'})
 
@@ -164,30 +170,30 @@ class Bed(TimeStampedUserModel):
         if self.unit.num_of_beds is not None and current_bed_count >= self.unit.num_of_beds:
             raise ValidationError({'bed_num': f"This unit can only have {self.unit.num_of_beds} beds."})
 
-        if Bed.objects.filter(unit=self.unit, bed_num=self.bed_num).exclude(pk=self.pk).exists():
+        # Case-insensitive uniqueness check (important)
+        if Bed.objects.filter(unit=self.unit, bed_num__iexact=self.bed_num).exclude(pk=self.pk).exists():
             raise ValidationError({'bed_num': 'This bed number already exists in this unit.'})
 
         if self.customer:
             if not self.assigned_date:
                 raise ValidationError({'assigned_date': 'Assigned date is required when a customer is assigned.'})
-
             if not self.customer.status:
                 raise ValidationError({'customer': 'This customer is inactive and cannot be assigned a bed.'})
 
     def save(self, *args, **kwargs):
+        # Normalize again (for safety)
+        if self.bed_num:
+            self.bed_num = self.bed_num.upper()
+
         if self.pk:
             old = Bed.objects.get(pk=self.pk)
-
             if self.released_date and (old.released_date != self.released_date):
-                # Save to BedAssignmentHistory
                 BedAssignmentHistory.objects.create(
                     bed=self,
                     customer=self.customer,
                     assigned_date=self.assigned_date,
                     released_date=self.released_date
                 )
-
-                # Clear bed fields (bed becomes available again)
                 self.customer = None
                 self.assigned_date = None
                 self.released_date = None
@@ -196,6 +202,12 @@ class Bed(TimeStampedUserModel):
 
     def __str__(self):
         return f"Bed {self.bed_num} in {self.unit.hostel.name} - {self.unit}"
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['unit', 'bed_num'], name='unique_bed_per_unit')
+        ]
+    
     
 class BedAssignmentHistory(TimeStampedUserModel):
     bed = models.ForeignKey(Bed, on_delete=models.CASCADE)

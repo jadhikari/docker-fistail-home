@@ -4,8 +4,8 @@
 
 {% block content %}
 <div class="container-fluid py-3">
-  <a href="{% url 'hostel:hostel_detail' unit.hostel.pk %}" class="btn btn-sm btn-outline-secondary mb-2">← Back to Hostel</a>
-  <h5 class="mb-3">{{ unit.hostel.name }}-{{ unit.get_unit_type_display }}</h5>
+  <a href="{% url 'hostel:hostel_detail' unit.hostel.pk %}" class="btn btn-sm btn-outline-secondary mb-2">← Back </a>
+  <h5 class="mb-3">{{ unit.hostel.name }} - {{ unit.get_unit_type_display }}</h5>
 
 
   <div class="mb-3 text-center">
@@ -37,15 +37,25 @@
   {% comment %} Table to display the bed details  {% endcomment %}
     {% if unit.unit_type == 'bedroom' %}
         <div class="border-top my-2"></div>
-        <h5 class="mt-4">Beds in this Room</h5>
+        <div class="d-flex justify-content-between align-items-center mt-4 mb-2">
+          <h5 class="mb-0">Beds in this Room</h5>
+          <a href="{% url 'hostel:add_bed' unit.id %}" class="btn btn-sm btn-outline-primary">➕ Add Bed</a>
+        </div>
 
         {% for bed in unit.beds.all %}
             <div class="mb-3 border p-3 rounded small">
             <p>
                 🛏️ <strong>Bed Number:</strong> {{ bed.bed_num }} |
-                👤 <strong>Assigned to:</strong> {{ bed.customer|default:"Not Assigned" }} |
+                👤 <strong>Assigned to:</strong> 
+                  {% if bed.customer %}
+                      <a href="{% url 'customer:customer_detail' bed.customer.id %}">{{ bed.customer }}</a>
+                  {% else %}
+                      Not assigned
+                  {% endif %}|
                 📅 <strong>Assigned Date:</strong> {{ bed.assigned_date|default:"None" }} |
-                📅 <strong>Released Date:</strong> {{ bed.released_date|default:"None" }}
+                📅 <strong>Released Date:</strong> {{ bed.released_date|default:"None" }} |
+                <a href="{% url 'hostel:edit_bed' bed.id %}">✏️ Edit</a> |
+                <a href="{% url 'hostel:assign_bed' bed.id %}">👤 Assign</a>
             </p>
 
             {% with bed.bedassignmenthistory_set.all as history %}
@@ -62,7 +72,7 @@
                     <tbody>
                     {% for record in history %}
                         <tr>
-                        <td>{{ record.customer }}</td>
+                        <td><a href="{% url 'customer:customer_detail' record.customer.id %}">{{ record.customer }}</a></td>
                         <td>{{ record.assigned_date }}</td>
                         <td>{{ record.released_date }}</td>
                         </tr>

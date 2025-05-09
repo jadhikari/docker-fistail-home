@@ -1,11 +1,16 @@
 from django.shortcuts import get_object_or_404, render,redirect
-from .models import Hostel, Unit
-from .forms import HostelForm, UnitForm
+from .models import Hostel, Unit, Bed
+from .forms import HostelForm, UnitForm, BedForm, BedAssignmentForm
 from django.contrib import messages
 
 def dashboard(request):
-    hostels = Hostel.objects.all()
-    return render(request, 'hostel/dashboard.html', {'hostels': hostels})
+    query = request.GET.get('q', '')
+    if query:
+        hostels = Hostel.objects.filter(name__icontains=query)
+    else:
+        hostels = Hostel.objects.all()
+    return render(request, 'hostel/dashboard.html', {'hostels': hostels, 'query': query})
+
 
 def hostel_detail(request, pk):
     hostel = get_object_or_404(Hostel, pk=pk)
@@ -77,6 +82,68 @@ def unit_edit(request, pk):
     else:
         form = UnitForm(instance=unit, hostel=hostel)
     return render(request, 'hostel/unit_form.html', {'form': form, 'unit': unit, 'hostel': hostel})
+
+
+
+
+def add_bed(request, unit_id):
+    unit = get_object_or_404(Unit, id=unit_id)
+    if request.method == 'POST':
+        form = BedForm(request.POST)
+        if form.is_valid():
+            bed = form.save(commit=False)
+            bed.unit = unit
+            bed.save()
+            
+            # Update unit created_by and updated_by
+            unit.created_by = request.user
+            unit.updated_by = request.user
+            unit.save()
+
+            return redirect('hostel:unit_detail', unit.id)
+        else:
+            form.instance.unit = unit
+    else:
+        form = BedForm()
+
+    return render(request, 'hostel/bed_form.html', {'form': form, 'title': 'Add Bed'})
+
+
+def edit_bed(request, bed_id):
+    bed = get_object_or_404(Bed, id=bed_id)
+    if request.method == 'POST':
+        form = BedForm(request.POST, instance=bed)
+        if form.is_valid():
+            form.save()
+
+            # Update unit updated_by
+            bed.unit.updated_by = request.user
+            bed.unit.save()
+
+            return redirect('hostel:unit_detail', bed.unit.id)
+    else:
+        form = BedForm(instance=bed)
+
+    return render(request, 'hostel/bed_form.html', {'form': form, 'title': 'Edit Bed'})
+
+
+def assign_bed(request, bed_id):
+    bed = get_object_or_404(Bed, id=bed_id)
+    if request.method == 'POST':
+        form = BedAssignmentForm(request.POST, instance=bed)
+        if form.is_valid():
+            form.save()
+
+            # Update unit updated_by
+            bed.unit.updated_by = request.user
+            bed.unit.save()
+
+            return redirect('hostel:unit_detail', bed.unit.id)
+    else:
+        form = BedAssignmentForm(instance=bed)
+
+    return render(request, 'hostel/assign_bed.html', {'form': form, 'title': 'Assign/Edit Bed'})
+
 
 
 
