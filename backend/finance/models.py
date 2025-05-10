@@ -66,6 +66,14 @@ class Revenue(TimeStampedUserModel):
 
     memo = models.TextField(blank=True, null=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['title', 'customer', 'year', 'month'],
+                name='unique_revenue_transaction'
+            )
+        ]
+
     def clean(self):
 
         if self.title == 'registration_fee':

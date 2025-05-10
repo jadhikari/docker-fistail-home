@@ -1,8 +1,80 @@
 {% extends "base.html" %}
+{% load static %}
 
-{% block title %}Hostel Dashboard{% endblock %}
+{% block title %}Revenues Dashboard{% endblock %}
 
 {% block content %}
-<h2>Revenues Dashboard</h2>
-<p>Welcome to the hostel section.</p>
+<div class="container-fluid mt-3">
+    {% if messages %}
+        <div>
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert" style="font-size: 0.85rem; line-height: 1.2;">
+                {{ message }}
+                <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.7rem;"></button>
+            </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>Revenues Dashboard</h4>
+        <a href="{% url 'finance:revenue_add' %}" class="btn btn-sm btn-primary">Add Revenue</a>
+    </div>
+
+    <!-- Search Form by Customer Name -->
+    <form method="get" class="row g-2 mb-4">
+        <div class="col-md-4">
+            <input type="text" name="q" class="form-control form-control-sm" placeholder="Search by customer name" value="{{ q }}">
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-sm btn-outline-primary w-100">Search</button>
+        </div>
+        <div class="col-md-2">
+            <a href="{% url 'finance:revenues' %}" class="btn btn-sm btn-outline-secondary w-100">Reset</a>
+        </div>
+    </form>
+
+    <!-- Revenue Table -->
+    <table class="table table-sm table-bordered text-center">
+        <thead class="table-dark">
+            <tr>
+                <th>Customer</th>
+                <th>Type</th>
+                <th>Year-Month</th>
+                <th>Amount (¥)</th>
+                <th>Memo</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for revenue in revenues %}
+            <tr>
+                <td>
+                    <a href="{% url 'customer:customer_detail' revenue.customer.id %}">{{ revenue.customer.name }}</a>
+                </td>
+                <td>{{ revenue.get_title_display }}</td>
+                <td>{{ revenue.year }}-{{ revenue.month }}</td>
+                <td>
+                    {% if revenue.title == 'registration_fee' %}
+                        {{ revenue.deposit_after_discount|default:"-" }} + {{ revenue.initial_fee_after_discount|default:"-" }}
+                    {% elif revenue.title == 'rent' %}
+                        {{ revenue.internet|default:"-" }} + {{ revenue.utilities|default:"-" }} 
+                        {% if revenue.rent_after_discount %}
+                            + {{ revenue.rent_after_discount|default:"-" }}
+                        {% else %}
+                            + {{ revenue.rent|default:"-" }}
+                        {% endif %}
+                    {% endif %}
+                </td>
+                <td>{{ revenue.memo|truncatechars:30 }}</td>
+                <td>
+                    <a href="{% url 'finance:revenue_detail' revenue.pk %}" class="btn btn-sm btn-primary">Details</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6">No revenue records available.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}

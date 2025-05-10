@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Revenue Detail{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <a href="{% url 'finance:revenues' %}" class="btn btn-sm btn-outline-secondary mb-3">← Back to Dashboard</a>
+
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Revenue Detail</h4>
+        </div>
+        <div class="card-body">
+
+            <div class="row mb-2">
+                <div class="col-md-6">
+                    <strong>Customer:</strong> <a href="{% url 'customer:customer_detail' revenue.customer.id %}">{{ revenue.customer.name }}</a>
+                </div>
+                <div class="col-md-6">
+                    <strong>Type:</strong> {{ revenue.get_title_display }}
+                </div>
+            </div>
+
+            <div class="row mb-2">
+                <div class="col-md-6">
+                    <strong>Year/Month:</strong> {{ revenue.year }}/{{ revenue.month }}
+                </div>
+                <div class="col-md-6">
+                    <strong>Memo:</strong> {{ revenue.memo|default:"—" }}
+                </div>
+            </div>
+
+            {% if revenue.title == 'registration_fee' %}
+            <hr>
+            <h5 class="text-muted">Registration Fee</h5>
+            <div class="row mb-2">
+                <div class="col-md-4"><strong>Deposit:</strong> {{ revenue.deposit }}</div>
+                <div class="col-md-4"><strong>Deposit Discount %:</strong> {{ revenue.deposit_discount_percent }}</div>
+                <div class="col-md-4"><strong>Deposit After Discount:</strong> {{ revenue.deposit_after_discount }}</div>
+            </div>
+            <div class="row mb-2">
+                <div class="col-md-4"><strong>Initial Fee:</strong> {{ revenue.initial_fee }}</div>
+                <div class="col-md-4"><strong>Initial Fee Discount %:</strong> {{ revenue.initial_fee_discount_percent }}</div>
+                <div class="col-md-4"><strong>Initial Fee After Discount:</strong> {{ revenue.initial_fee_after_discount }}</div>
+            </div>
+            {% elif revenue.title == 'rent' %}
+            <hr>
+            <h5 class="text-muted">Rent</h5>
+            <div class="row mb-2">
+                <div class="col-md-4"><strong>Internet:</strong> {{ revenue.internet }}</div>
+                <div class="col-md-4"><strong>Utilities:</strong> {{ revenue.utilities }}</div>
+                <div class="col-md-4"><strong>Rent:</strong> {{ revenue.rent }}</div>
+            </div>
+            <div class="row mb-2">
+                <div class="col-md-6"><strong>Rent Discount %:</strong> {{ revenue.rent_discount_percent }}</div>
+                <div class="col-md-6"><strong>Rent After Discount:</strong> {{ revenue.rent_after_discount }}</div>
+            </div>
+            {% endif %}
+
+            <hr>
+            <h5 class="text-muted">Audit Info</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <strong>Created At:</strong> {{ revenue.created_at|date:"Y-m-d H:i" }}<br>
+                    <strong>Created By:</strong> {{ revenue.created_by|default:"—" }}
+                </div>
+                <div class="col-md-6">
+                    <strong>Updated At:</strong> {{ revenue.updated_at|date:"Y-m-d H:i" }}<br>
+                    <strong>Updated By:</strong> {{ revenue.updated_by|default:"—" }}
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
