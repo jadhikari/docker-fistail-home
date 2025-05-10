@@ -4,7 +4,8 @@
     min-height: calc(100vh - 56px); /* header height */
     transition: width 0s;
     position: fixed;
-    margin-top:50px;
+    margin-top:67px;
+    background-color:rgb(148, 212, 247);
 }
 
 .sidebar.collapsed {
