@@ -26,6 +26,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "unsafe-secret-key")
 
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DJANGO_DEBUG", "False") == "True"
 
@@ -118,7 +119,6 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'Asia/Tokyo'
-USE_TZ = True
 
 USE_I18N = True
 
@@ -147,7 +147,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'companyfishtail@gmail.com'
-EMAIL_HOST_PASSWORD = 'astyivzezwuehaxl'  # Your Gmail App Password with NO SPACES
-DEFAULT_FROM_EMAIL = 'companyfishtail@gmail.com'
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "test@example.com")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 
