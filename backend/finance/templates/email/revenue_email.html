@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; padding: 20px;">
+
+    <p>Dear {{ revenue.customer.name }},</p>
+
+    <p>
+        This is a confirmation of your payment details for 
+        <strong>{{ revenue.get_title_display }}</strong> 
+        for the period of <strong>{{ revenue.year }}/{{ revenue.month }}</strong>.
+        <br>
+        Kindly find the breakdown of the payment below, as recorded by <strong>Fishtail Home</strong>.
+    </p>
+
+    <hr>
+
+    <h3>Payment Details</h3>
+
+    <p><strong>Customer:</strong> <a href="{{ customer_url }}">{{ revenue.customer.name }}</a></p>
+    <p><strong>Type:</strong> {{ revenue.get_title_display }}</p>
+    <p><strong>Year/Month:</strong> {{ revenue.year }}/{{ revenue.month }}</p>
+    <p><strong>Memo:</strong> {{ revenue.memo|default:"—" }}</p>
+
+    {% if revenue.title == 'registration_fee' %}
+    <hr>
+    <h4>Registration Fee</h4>
+    <p><strong>Deposit:</strong> {{ revenue.deposit }} ¥</p>
+    <p><strong>Deposit Discount %:</strong> {{ revenue.deposit_discount_percent }}%</p>
+    <p><strong>Deposit After Discount:</strong> {{ revenue.deposit_after_discount }} ¥</p>
+    <p><strong>Initial Fee:</strong> {{ revenue.initial_fee }} ¥</p>
+    <p><strong>Initial Fee Discount %:</strong> {{ revenue.initial_fee_discount_percent }}%</p>
+    <p><strong>Initial Fee After Discount:</strong> {{ revenue.initial_fee_after_discount }} ¥</p>
+    {% elif revenue.title == 'rent' %}
+    <hr>
+    <h4>Rent</h4>
+    <p><strong>Internet:</strong> {{ revenue.internet }} ¥</p>
+    <p><strong>Utilities:</strong> {{ revenue.utilities }} ¥</p>
+    <p><strong>Rent:</strong> {{ revenue.rent }} ¥</p>
+    <p><strong>Rent Discount %:</strong> {{ revenue.rent_discount_percent }}</p>
+    <p><strong>Rent After Discount:</strong> {{ revenue.rent_after_discount }}</p>
+    {% endif %}
+
+    <hr>
+
+    <h5>Audit Info</h5>
+    <p><strong>Created At:</strong> {{ revenue.created_at|date:"Y-m-d H:i" }}</p>
+    <p><strong>Created By:</strong> {{ revenue.created_by }}</p>
+
+    <hr>
+
+    <p>
+        If you have any questions or need further clarification, please do not hesitate to contact us.<br>
+        Thank you for choosing <strong>Fishtail Home</strong>.
+    </p>
+    </br></br>
+    <p>Warm regards,<br><strong>Fishtail Home Team</strong></p>
+
+</body>
+</html>

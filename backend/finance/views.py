@@ -1,6 +1,9 @@
 from django.shortcuts import render, get_object_or_404,redirect
 from .models import Revenue
 from .forms import RevenueForm
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.urls import reverse
 
 
 def revenues(request):
@@ -27,6 +30,28 @@ def revenue_add(request):
             revenue.created_by = request.user
             revenue.updated_by = request.user
             revenue.save()
+            # ✅ START: Email sending block
+            customer = revenue.customer
+            if customer and customer.email:
+                subject = 'Payment Notification From Fishtail'
+                from_email = 'no-reply@yourdomain.com'
+                to_email = customer.email
+
+                # Build customer link
+                customer_url = request.build_absolute_uri(
+                    reverse('customer:customer_detail', args=[customer.id])
+                )
+
+                html_content = render_to_string('email/revenue_email.html', {
+                    'revenue': revenue,
+                    'customer_url': customer_url,
+                })
+                text_content = f'Dear {customer.name}, your revenue record has been added.'
+
+                msg = EmailMultiAlternatives(subject, text_content, from_email, [to_email])
+                msg.attach_alternative(html_content, "text/html")
+                msg.send()
+
             return redirect('finance:revenues')
     else:
         form = RevenueForm()

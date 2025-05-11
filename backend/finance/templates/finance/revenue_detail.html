@@ -34,22 +34,22 @@
             <hr>
             <h5 class="text-muted">Registration Fee</h5>
             <div class="row mb-2">
-                <div class="col-md-4"><strong>Deposit:</strong> {{ revenue.deposit }}</div>
-                <div class="col-md-4"><strong>Deposit Discount %:</strong> {{ revenue.deposit_discount_percent }}</div>
-                <div class="col-md-4"><strong>Deposit After Discount:</strong> {{ revenue.deposit_after_discount }}</div>
+                <div class="col-md-4"><strong>Deposit:</strong> {{ revenue.deposit }} ¥</div>
+                <div class="col-md-4"><strong>Deposit Discount %:</strong> {{ revenue.deposit_discount_percent }} %</div>
+                <div class="col-md-4"><strong>Deposit After Discount:</strong> {{ revenue.deposit_after_discount }} ¥</div>
             </div>
             <div class="row mb-2">
-                <div class="col-md-4"><strong>Initial Fee:</strong> {{ revenue.initial_fee }}</div>
-                <div class="col-md-4"><strong>Initial Fee Discount %:</strong> {{ revenue.initial_fee_discount_percent }}</div>
-                <div class="col-md-4"><strong>Initial Fee After Discount:</strong> {{ revenue.initial_fee_after_discount }}</div>
+                <div class="col-md-4"><strong>Initial Fee:</strong> {{ revenue.initial_fee }} ¥</div>
+                <div class="col-md-4"><strong>Initial Fee Discount %:</strong> {{ revenue.initial_fee_discount_percent }} %</div>
+                <div class="col-md-4"><strong>Initial Fee After Discount:</strong> {{ revenue.initial_fee_after_discount }} ¥</div>
             </div>
             {% elif revenue.title == 'rent' %}
             <hr>
             <h5 class="text-muted">Rent</h5>
             <div class="row mb-2">
-                <div class="col-md-4"><strong>Internet:</strong> {{ revenue.internet }}</div>
-                <div class="col-md-4"><strong>Utilities:</strong> {{ revenue.utilities }}</div>
-                <div class="col-md-4"><strong>Rent:</strong> {{ revenue.rent }}</div>
+                <div class="col-md-4"><strong>Internet:</strong> {{ revenue.internet }} ¥</div>
+                <div class="col-md-4"><strong>Utilities:</strong> {{ revenue.utilities }} ¥</div>
+                <div class="col-md-4"><strong>Rent:</strong> {{ revenue.rent }} ¥</div>
             </div>
             <div class="row mb-2">
                 <div class="col-md-6"><strong>Rent Discount %:</strong> {{ revenue.rent_discount_percent }}</div>
