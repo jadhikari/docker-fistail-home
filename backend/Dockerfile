@@ -10,6 +10,9 @@ COPY ./backend /app
 
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
+RUN python manage.py makemigrations accounts
+RUN python manage.py migrate
+
 
 # For dev: simple runserver
 # For prod: use gunicorn
