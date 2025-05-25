@@ -89,11 +89,22 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default="sqlite:///db.sqlite3"  # fallback if DATABASE_URL not set
-    )
-}
+# Determine if we're in production
+IS_PRODUCTION = os.environ.get("DJANGO_DEBUG", "False") != "True"
+
+if IS_PRODUCTION:
+    # Use PostgreSQL or whatever is set in DATABASE_URL
+    DATABASES = {
+        'default': dj_database_url.config()
+    }
+else:
+    # Use SQLite for local development
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / "db.sqlite3",
+        }
+    }
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 

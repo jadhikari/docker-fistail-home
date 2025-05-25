@@ -180,4 +180,5 @@ backend/**/migrations/*.py
 
 # Ignore a specific media folder
 backend/media/
+staticfiles/
 
