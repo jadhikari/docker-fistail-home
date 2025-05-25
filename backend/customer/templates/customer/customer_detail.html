@@ -55,21 +55,34 @@
                 </div>
                 
                 <div class="col-md-4">
-                    <p><strong>Passport:</strong> 
-                    <a href="{{ customer.passport_url }}" target="_blank" class="btn btn-sm btn-outline-primary">View</a> <p>
+                    <p><strong>Passport:</strong>
+                        {% if customer.passport_pdf %}
+                            <a href="{{ customer.passport_pdf.url }}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>
+                        {% else %}
+                            None
+                        {% endif %}
+                    </p>
                 </div>
+
                 <div class="col-md-4">
-                    <p><strong>Zairo Card:</strong> 
-                    <a href="{{ customer.zairyu_card_url }}" target="_blank" class="btn btn-sm btn-outline-primary">View</a> <p>
+                    <p><strong>Zairyu Card:</strong>
+                        {% if customer.zairyu_card_pdf %}
+                            <a href="{{ customer.zairyu_card_pdf.url }}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>
+                        {% else %}
+                            None
+                        {% endif %}
+                    </p>
                 </div>
-                {% if customer.student_card_url %}
-                    <div class="col-md-4">
-                        <p>
-                            <strong>Student Card:</strong> 
-                            <a href="{{ customer.student_card_url }}" target="_blank" class="btn btn-sm btn-outline-primary">View</a> 
-                        <p>
-                    </div>
-                {% endif %}
+
+                <div class="col-md-4">
+                    {% if customer.student_card_pdf %}
+                        <p><strong>Student Card:</strong>
+                            <a href="{{ customer.student_card_pdf.url }}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>
+                        
+                    {% endif %}
+                    </p>
+                </div>
+
                 <div class="col-md-12">
                     <strong>Memo:</strong> <p>{{ customer.meno }}</p>
                 </div>

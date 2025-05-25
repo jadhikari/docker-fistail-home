@@ -1,7 +1,6 @@
 from django.core.paginator import Paginator
 from django.db.models import Q
-from django_countries.fields import Country
-from django_countries import countries
+from django_countries import countries #type: ignore
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Customer
 from hostel.models import BedAssignmentHistory
@@ -9,6 +8,8 @@ from finance.models import Revenue  # Assuming app name is `finance`
 from .forms import CustomerForm
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+import os
+from django.conf import settings
 
 
 @login_required(login_url='/accounts/login/')
@@ -51,7 +52,7 @@ def dashboard(request):
 @login_required(login_url='/accounts/login/')
 def customer_create(request):
     if request.method == 'POST':
-        form = CustomerForm(request.POST)
+        form = CustomerForm(request.POST, request.FILES)
         if form.is_valid():
             customer = form.save(commit=False)
             customer.created_by = request.user
@@ -68,23 +69,37 @@ def customer_create(request):
 def customer_edit(request, pk):
     customer = get_object_or_404(Customer, pk=pk)
 
-    # Prevent editing inactive customers
     if not customer.status:
         messages.warning(request, "This customer is inactive and cannot be edited.")
-        return redirect('customer:dashboard')  # or return HttpResponseForbidden("Not allowed")
+        return redirect('customer:dashboard')
 
     if request.method == 'POST':
-        form = CustomerForm(request.POST, instance=customer)
+        original_passport = customer.passport_pdf
+        original_zairyu = customer.zairyu_card_pdf
+        original_student = customer.student_card_pdf
+
+        form = CustomerForm(request.POST, request.FILES, instance=customer)
         if form.is_valid():
-            customer = form.save(commit=False)
-            customer.updated_by = request.user
-            customer.save()
+            updated_customer = form.save(commit=False)
+            updated_customer.updated_by = request.user
+            updated_customer.save()
+
+            # Delete old files if cleared
+            def delete_file_if_cleared(original_file, updated_file):
+                if original_file and not updated_file and original_file.path and os.path.isfile(original_file.path):
+                    os.remove(original_file.path)
+
+            delete_file_if_cleared(original_passport, updated_customer.passport_pdf)
+            delete_file_if_cleared(original_zairyu, updated_customer.zairyu_card_pdf)
+            delete_file_if_cleared(original_student, updated_customer.student_card_pdf)
+
             messages.success(request, "Customer updated successfully.")
             return redirect('customer:dashboard')
     else:
         form = CustomerForm(instance=customer)
-    
+
     return render(request, 'customer/customer_form.html', {'form': form, 'is_edit': True})
+
 
 @login_required(login_url='/accounts/login/')
 def customer_detail(request, pk):

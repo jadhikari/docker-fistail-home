@@ -3,141 +3,175 @@
 {% block title %}Hostel Dashboard{% endblock %}
 
 {% block content %}
-<style>
-    #hostel-table-wrapper {
-      height: 45vh;
-      overflow-y: auto;
-    }
-    #map {
-      height: 50vh;
-      width: 100%;
-    }
-</style>
-<div class="container-fluid py-3">
-  {% comment %} Display the error massage. {% endcomment %}
-    {% if messages %}
-        <div>
-            {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert" style="font-size: 0.85rem; line-height: 1.2;">
-                {{ message }}
-                <button type="button button-sm" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.7rem;"></button>
-            </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <h4>Hostel Dashboard</h4>
-        <a href="{% url 'hostel:hostel_add' %}" class="btn btn-sm btn-primary">Add Hostel</a>
-    </div>
-  
-    <div id="hostel-table-wrapper" class="table-responsive border rounded p-1">
-      <form method="get" class="mb-2">
-        <div class="input-group input-group-sm w-25">
-          <input type="text" name="q" value="{{ query }}" class="form-control form-control-sm" placeholder="Search by hostel name">
-          <button type="submit" class="btn btn-sm btn-primary ms-1">Search</button>
-        </div>
-      </form>
-
-      <table class="table table-sm table-striped table-bordered text-center">
-        <thead class="table-dark">
-          <tr>
-            <th>Name</th>
-            <th>Common Name</th>
-            <th>Type</th>
-            <th>Total Rooms</th>
-            <th>Address</th>
-            <th>Latitude</th>
-            <th>Longitude</th>
-            <th>Start Date</th>
-            <th>End Date</th>
-            <th>Rent</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for hostel in hostels %}
-          <tr data-name="{{ hostel.name }}" data-lat="{{ hostel.latitude }}" data-lng="{{ hostel.longitude }}">
-            <td><a href="{% url 'hostel:hostel_detail' hostel.id %}" class="text-decoration-none fw-bold">{{ hostel.name }}</a></td>
-            <td>{{ hostel.common_name }}</td>
-            <td>{{ hostel.get_hostel_type_display }}</td>
-            <td>{{ hostel.total_rooms }}</td>
-            <td>{{ hostel.address }}</td>
-            <td>{{ hostel.latitude }}</td>
-            <td>{{ hostel.longitude }}</td>
-            <td>{{ hostel.contract_start_date }}</td>
-            <td>{{ hostel.contract_end_date }}</td>
-            <td>{{ hostel.rent }}</td>
-            <td><a href="{% url 'hostel:hostel_edit' hostel.id %}" class="btn btn-sm btn-warning">Edit</a></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <div id="map" class="mt-3"></div>
-  </div>
-
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
-  <script>
-    document.addEventListener("DOMContentLoaded", function () {
-      const map = L.map('map').setView([35.6895, 139.6917], 5);
-  
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-      }).addTo(map);
-  
-      const rows = document.querySelectorAll("tbody tr");
-      let markers = [];
-  
-      rows.forEach(row => {
-        const lat = parseFloat(row.dataset.lat);
-        const lng = parseFloat(row.dataset.lng);
-        const name = row.dataset.name;
-  
-        if (!isNaN(lat) && !isNaN(lng)) {
-          console.log(`Placing marker for: ${name} (${lat}, ${lng})`);
-          const marker = L.marker([lat, lng]).addTo(map);
-          marker.bindTooltip(name, { permanent: false, direction: "top" });
-  
-          marker.on("mouseover", () => {
-            row.style.backgroundColor = "#e0f7fa";
-          });
-          marker.on("mouseout", () => {
-            row.style.backgroundColor = "";
-          });
-  
-          markers.push([lat, lng]);
+    <style>
+        /* Scrollable tbody inside a fixed table header */
+        .scrollable-table {
+            height: 45vh;
+            overflow-y: auto;
+            display: block;
         }
-      });
-  
-      // Auto zoom to fit all markers
-      if (markers.length) {
-        map.fitBounds(markers);
-      }
-  
-      // Allow clicking on map to place a new marker
-      map.on('click', function(e) {
-        const { lat, lng } = e.latlng;
-        L.marker([lat, lng]).addTo(map).bindPopup(`New Point: ${lat.toFixed(5)}, ${lng.toFixed(5)}`).openPopup();
-        map.panTo([lat, lng]);
-      });
-    });
 
-    // Auto-dismiss messages after 5 seconds
-    setTimeout(() => {
-        const alerts = document.querySelectorAll('.auto-dismiss');
-        alerts.forEach(alert => {
-          const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
-          bsAlert.close();
+        .scrollable-table thead, .scrollable-table tbody tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        .scrollable-table thead {
+            width: calc(100% - 1em); /* Prevent scrollbar overlay */
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background-color: #343a40;
+            color: white;
+        }
+
+        .scrollable-table tbody {
+            display: block;
+            max-height: 45vh;
+            overflow-y: auto;
+        }
+
+        .scrollable-table td, .scrollable-table th {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #map {
+            height: 50vh;
+            width: 100%;
+        }
+    </style>
+
+    <div class="container-fluid py-3">
+
+        <!-- Alert Messages -->
+        {% if messages %}
+            <div>
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert" style="font-size: 0.85rem; line-height: 1.2;">
+                        {{ message }}
+                        <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.7rem;"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h4>Hostel Dashboard</h4>
+            <a href="{% url 'hostel:hostel_add' %}" class="btn btn-sm btn-primary">Add Hostel</a>
+        </div>
+
+        <!-- Search Bar -->
+        <form method="get" class="mb-2">
+            <div class="input-group input-group-sm w-25">
+                <input type="text" name="q" value="{{ query }}" class="form-control form-control-sm" placeholder="Search by hostel name">
+                <button type="submit" class="btn btn-sm btn-primary ms-1">Search</button>
+            </div>
+        </form>
+
+        <!-- Sticky Header Table with Scrollable Body -->
+        <div class="table-responsive border rounded p-1 scrollable-table">
+            <table class="table table-sm table-striped table-bordered text-center m-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Name</th>
+                        <th>C. Name</th>
+                        <th>H. Type</th>
+                        <th>T. Rooms</th>
+                        <th>Address</th>
+                        <th> C. Start Date</th>
+                        <th>C. End Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for hostel in hostels %}
+                        <tr data-name="{{ hostel.name }}" data-lat="{{ hostel.latitude }}" data-lng="{{ hostel.longitude }}">
+                            <td>
+                                <a href="{% url 'hostel:hostel_detail' hostel.id %}" class="text-decoration-none fw-bold" title="{{ hostel.name }}">
+                                {{ hostel.name|slice:":15" }}{% if hostel.name|length > 15 %} ...{% endif %}
+                                </a>
+                            </td>
+                            <td>{{ hostel.common_name }}</td>
+                            <td>{{ hostel.get_hostel_type_display }}</td>
+                            <td>{{ hostel.total_rooms }}</td>
+                            <td>
+                                {{ hostel.address|slice:":15" }}{% if hostel.address|length > 15 %} ...{% endif %}
+                            </td>
+                            <td>{{ hostel.contract_start_date }}</td>
+                            <td>{{ hostel.contract_end_date }}</td>
+                            <td>
+                                <a href="{% url 'hostel:hostel_edit' hostel.id %}" class="btn btn-sm btn-warning">Edit</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- MAP -->
+        <div id="map" class="mt-3 rounded border"></div>
+    </div>
+
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const map = L.map('map').setView([35.6895, 139.6917], 5);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            }).addTo(map);
+
+            const rows = document.querySelectorAll("tbody tr");
+            let markers = [];
+
+            rows.forEach(row => {
+            const lat = parseFloat(row.dataset.lat);
+            const lng = parseFloat(row.dataset.lng);
+            const name = row.dataset.name;
+
+            if (!isNaN(lat) && !isNaN(lng)) {
+                const marker = L.marker([lat, lng]).addTo(map);
+                marker.bindTooltip(name, { permanent: false, direction: "top" });
+
+                marker.on("mouseover", () => {
+                row.style.backgroundColor = "#e0f7fa";
+                });
+                marker.on("mouseout", () => {
+                row.style.backgroundColor = "";
+                });
+
+                markers.push([lat, lng]);
+            }
+            });
+
+            if (markers.length) {
+                map.fitBounds(markers);
+            }
+
+            map.on('click', function (e) {
+                const { lat, lng } = e.latlng;
+                L.marker([lat, lng])
+                    .addTo(map)
+                    .bindPopup(`New Point: ${lat.toFixed(5)}, ${lng.toFixed(5)}`)
+                    .openPopup();
+                map.panTo([lat, lng]);
+            });
+
+            // Auto-dismiss alerts
+            setTimeout(() => {
+                const alerts = document.querySelectorAll('.auto-dismiss');
+                alerts.forEach(alert => {
+                    const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+                    bsAlert.close();
+                });
+            }, 4000);
         });
-      }, 4000);
-
-  </script>
-  
-
-  
-
-  
+    </script>
 {% endblock %}

@@ -7,7 +7,7 @@
     <a href="{% url 'customer:dashboard' %}" class="btn btn-sm btn-outline-secondary mb-2">← Back</a>
     <h4 class="mb-4 text-center">{% if is_edit %}Edit{% else %}Add{% endif %} Customer</h4>
 
-    <form method="post" novalidate>
+    <form method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
         <div class="row">
             {% for field in form %}
