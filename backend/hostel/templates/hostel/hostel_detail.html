@@ -7,7 +7,7 @@
     <div class="d-flex justify-content-between align-items-center mb-2">
         <a href="{% url 'hostel:dashboard' %}" class="btn btn-sm btn-outline-secondary">← Back</a>
         <div class="flex-grow-1 text-center">
-            <h5 class="mb-0">Hostel: {{ hostel.name|upper }}</h5>
+            <h5 class="mb-0">{{ hostel.name|upper }}</h5>
         </div>
         <div style="width: 100px;"></div> <!-- Placeholder to balance the layout -->
     </div>
@@ -103,7 +103,7 @@
                             <tr>
                             <td><a href="{% url 'hostel:unit_detail' unit.pk %}">{{ forloop.counter }}</a></td>
                             <td>{{ unit.get_unit_type_display }}</td>
-                            <td>{{ unit.bedroom_num|default:"-" }}</td>
+                            <td>{{ unit.room_num|default:"-" }}</td>
                             <td>{{ unit.num_of_beds|default:"-" }}</td>
                             <td>{{ unit.unit_id|default:"-" }}</td>
                             <td>{{ unit.memo|default:"-" }}</td>

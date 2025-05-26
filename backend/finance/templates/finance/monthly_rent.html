@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Monthly Rent{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <a href="{% url 'customer:customer_detail' customer_details.customer.id %}" class="btn btn-sm btn-outline-secondary mb-3">← Back</a>
+
+    <form method="post" action="{% url 'finance:monthly_rent' customer_details.customer.id %}">
+        {% csrf_token %}
+        <div class="card shadow-sm p-4">
+            <h4 class="text-center">Monthly Rent Payment</h4>
+            <hr>
+            <!-- Display the error massage.  -->
+            {% if messages %}
+                <div>
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert" style="font-size: 0.85rem; line-height: 1.2;">
+                        {{ message }}
+                        <button type="button button-sm" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.7rem;"></button>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            <!-- Payment Month -->
+            <div class="row mb-3 align-items-center">
+                <div class="col-md-2">
+                    <label for="rent_month" class="form-label fw-bold mb-0">Rent Payment Month:</label>
+                </div>
+                <div class="col-md-3">
+                    <input type="month" name="rent_month" id="rent_month" class="form-control" required>
+                </div>
+            </div>
+
+            <!-- Customer & Hostel Info -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <p><strong>Full Name:</strong> {{ customer_details.customer.name }}</p>
+                    <p><strong>Email:</strong> {{ customer_details.customer.email }}</p>
+                    <p><strong>Phone Number:</strong> {{ customer_details.customer.phone_number }}</p>
+                    <p><strong>Visa Type:</strong> {{ customer_details.customer.visa_type }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Hostel Name:</strong> {{ customer_details.unit.hostel.name }}</p>
+                    <p><strong>Address:</strong> {{ customer_details.unit.hostel.address }}</p>
+                    <p><strong>Room Number:</strong> {{ customer_details.unit.room_num }}</p>
+                    <p><strong>Bed Number:</strong> {{ customer_details.bed_num }}</p>
+                </div>
+            </div>
+
+            <!-- Fee Inputs -->
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Internet Fee</label>
+                    <input type="number" step="0.01" name="internet" id="internetFee" class="form-control" value="{{ customer_details.unit.hostel.internet_fee }}" readonly>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Utilities Fee</label>
+                    <input type="number" step="0.01" name="utilities" id="utilitiesFee" class="form-control" value="{{ customer_details.unit.hostel.utilities_fee }}" readonly>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Base Rent</label>
+                    <input type="number" step="0.01" name="rent" id="baseRent" class="form-control" value="{{ customer_details.unit.hostel.rent }}" readonly>
+                </div>
+            </div>
+
+            <!-- Discount & Total -->
+            <div class="row mb-3 align-items-end">
+                <div class="col-md-4">
+                    <label for="discount" class="form-label fw-bold">Discount (%)</label>
+                    <input type="number" step="0.01" name="rent_discount_percent" id="discount" class="form-control" value="0">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Rent After Discount</label>
+                    <p class="mt-2 mb-0">¥<span id="afterDiscount">0.00</span></p>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Total</label>
+                    <p class="mt-2 mb-0">¥<span id="totalAmount">0.00</span></p>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Submit Payment</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const discountInput = document.getElementById('discount');
+        const baseRent = parseFloat(document.getElementById('baseRent').value);
+        const internetFee = parseFloat(document.getElementById('internetFee').value);
+        const utilitiesFee = parseFloat(document.getElementById('utilitiesFee').value);
+
+        const afterDiscountDisplay = document.getElementById('afterDiscount');
+        const totalAmountDisplay = document.getElementById('totalAmount');
+
+        function calculate() {
+            let discount = parseFloat(discountInput.value);
+            if (isNaN(discount) || discount < 0) discount = 0;
+
+            const discountedRent = baseRent * (1 - discount / 100);
+            const total = discountedRent + internetFee + utilitiesFee;
+
+            afterDiscountDisplay.innerText = discountedRent.toFixed(2);
+            totalAmountDisplay.innerText = total.toFixed(2);
+        }
+
+        discountInput.addEventListener('input', calculate);
+        calculate();
+    });
+
+    // Auto-dismiss messages after 5 seconds
+    setTimeout(() => {
+      const alerts = document.querySelectorAll('.auto-dismiss');
+      alerts.forEach(alert => {
+        const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+        bsAlert.close();
+      });
+    }, 4000);
+</script>
+{% endblock %}

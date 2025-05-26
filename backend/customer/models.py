@@ -104,11 +104,11 @@ class Customer(TimeStampedUserModel):
     status = models.BooleanField(default=True)
     memo = models.TextField(blank=True, null=True)
 
-    def clean(self):
-        if self.nationality.code != 'JP' and not self.visa_type:
-            raise ValidationError({'visa_type': 'Visa type is required for non-Japanese nationals.'})
-        if self.visa_type == 'Student' and not self.student_card_pdf:
-            raise ValidationError({'student_card_pdf': 'Student card is required for Student visa holders.'})
+    # def clean(self):
+    #     if self.nationality.code != 'JP' and not self.visa_type:
+    #         raise ValidationError({'visa_type': 'Visa type is required for non-Japanese nationals.'})
+    #     if self.visa_type == 'Student' and not self.student_card_pdf:
+    #         raise ValidationError({'student_card_pdf': 'Student card is required for Student visa holders.'})
 
     def __str__(self):
         return f"{self.name} - {self.date_of_birth}"

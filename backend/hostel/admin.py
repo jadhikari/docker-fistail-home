@@ -36,7 +36,7 @@ class UnitAdmin(admin.ModelAdmin):
     list_display = (
         'hostel',
         'unit_type',
-        'bedroom_num',
+        'room_num',
         'num_of_beds',
         'unit_id',
         'created_at',

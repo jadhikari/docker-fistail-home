@@ -36,6 +36,7 @@ def current_year():
 def year_choices():
     return [(r, r) for r in range(2000, datetime.date.today().year + 10)]
 
+
 class Revenue(TimeStampedUserModel):
     REVENUE_TYPE_CHOICES = [
         ('registration_fee', 'Registration Fee'),
@@ -59,10 +60,11 @@ class Revenue(TimeStampedUserModel):
     # Fields for rent
     internet = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     utilities = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    
     rent = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     rent_discount_percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     rent_after_discount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     memo = models.TextField(blank=True, null=True)
 
@@ -75,7 +77,6 @@ class Revenue(TimeStampedUserModel):
         ]
 
     def clean(self):
-
         if self.title == 'registration_fee':
             if self.deposit is None or self.initial_fee is None:
                 raise ValidationError('Deposit and Initial Fee are required for Registration Fee.')
@@ -84,22 +85,23 @@ class Revenue(TimeStampedUserModel):
                 raise ValidationError('Internet, Utilities, and Rent are required for Rent.')
 
     def save(self, *args, **kwargs):
-        # Calculate deposit after discount
         if self.deposit and self.deposit_discount_percent is not None:
-            self.deposit_after_discount = self.deposit * (1 - self.deposit_discount_percent / 100)
+            self.deposit_after_discount = self.deposit * (Decimal(1) - self.deposit_discount_percent / Decimal(100))
 
-        # Calculate initial fee after discount
         if self.initial_fee and self.initial_fee_discount_percent is not None:
-            self.initial_fee_after_discount = self.initial_fee * (1 - self.initial_fee_discount_percent / 100)
+            self.initial_fee_after_discount = self.initial_fee * (Decimal(1) - self.initial_fee_discount_percent / Decimal(100))
 
-        # Calculate rent after discount
         if self.rent and self.rent_discount_percent is not None:
-            self.rent_after_discount = self.rent * (1 - self.rent_discount_percent / 100)
+            self.rent_after_discount = self.rent * (Decimal(1) - self.rent_discount_percent / Decimal(100))
+
+        if self.title == 'rent' and self.internet is not None and self.utilities is not None and self.rent_after_discount is not None:
+            self.total_amount = self.rent_after_discount + self.internet + self.utilities
 
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.get_title_display()} for {self.customer}"
+
 
 class Expense(TimeStampedUserModel):
     hostel = models.ForeignKey(Hostel, on_delete=models.CASCADE)

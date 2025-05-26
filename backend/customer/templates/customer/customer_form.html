@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="container mt-4">
-    <a href="{% url 'customer:dashboard' %}" class="btn btn-sm btn-outline-secondary mb-2">← Back</a>
+    <a href="{% url 'customer:customer_detail' customer.id %}" class="btn btn-sm btn-outline-secondary mb-2">← Back</a>
     <h4 class="mb-4 text-center">{% if is_edit %}Edit{% else %}Add{% endif %} Customer</h4>
 
     <form method="post" enctype="multipart/form-data" novalidate>
@@ -31,7 +31,7 @@
 
         <br/>
         <button type="submit" class="btn btn-primary">Submit</button>
-        <a href="{% url 'customer:dashboard' %}" class="btn btn-secondary">Cancel</a>
+        <a href="{% url 'customer:customer_detail' customer.id %}" class="btn btn-secondary">Cancel</a>
     </form>
 </div>
 {% endblock %}

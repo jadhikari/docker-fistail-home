@@ -32,7 +32,7 @@ class UnitForm(forms.ModelForm):
 
     class Meta:
         model = Unit
-        fields = ['unit_type', 'bedroom_num', 'num_of_beds', 'unit_id', 'image', 'memo']
+        fields = ['unit_type', 'room_num', 'num_of_beds', 'unit_id', 'image', 'memo']
         widgets = {
                 'memo': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
             }
@@ -40,7 +40,7 @@ class UnitForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         unit_type = cleaned_data.get('unit_type')
-        bedroom_num = cleaned_data.get('bedroom_num')
+        room_num = cleaned_data.get('room_num')
         num_of_beds = cleaned_data.get('num_of_beds')
         unit_id = cleaned_data.get('unit_id')
 
@@ -48,17 +48,17 @@ class UnitForm(forms.ModelForm):
             raise ValidationError("Hostel is required.")
 
         if unit_type == 'bedroom':
-            if bedroom_num is None:
-                self.add_error('bedroom_num', 'This field is required for bedroom units.')
+            if room_num is None:
+                self.add_error('room_num', 'This field is required for bedroom units.')
             if num_of_beds is None:
                 self.add_error('num_of_beds', 'This field is required for bedroom units.')
 
             if Unit.objects.filter(
                 hostel=self.hostel,
-                bedroom_num=bedroom_num,
+                room_num=room_num,
                 unit_type='bedroom'
             ).exclude(pk=self.instance.pk).exists():
-                self.add_error('bedroom_num', 'A bedroom with this number already exists in this hostel.')
+                self.add_error('room_num', 'A bedroom with this number already exists in this hostel.')
 
         else:
             if not unit_id:

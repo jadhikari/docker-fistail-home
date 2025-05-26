@@ -100,7 +100,7 @@ class Unit(TimeStampedUserModel):
 
     hostel = models.ForeignKey(Hostel, on_delete=models.CASCADE, related_name='units')
     unit_type = models.CharField(max_length=20, choices=UNIT_TYPE_CHOICES)
-    bedroom_num = models.PositiveIntegerField(null=True, blank=True)
+    room_num = models.CharField(max_length=20, null=True, blank=True)
     num_of_beds = models.PositiveIntegerField(null=True, blank=True)
     unit_id = models.CharField(max_length=50, null=True, blank=True)
     image = models.ImageField(upload_to='unit_images/', blank=True, null=True)
@@ -109,7 +109,7 @@ class Unit(TimeStampedUserModel):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=['hostel', 'bedroom_num'],
+                fields=['hostel', 'room_num'],
                 condition=models.Q(unit_type='bedroom'),
                 name='unique_bedroom_per_hostel'
             ),
@@ -122,7 +122,7 @@ class Unit(TimeStampedUserModel):
 
     def __str__(self):
         if self.unit_type == 'bedroom':
-            return f"{self.hostel.name} - Bedroom {self.bedroom_num}"
+            return f"{self.hostel.name} - Bedroom {self.room_num}"
         return f"{self.hostel.name} - {self.unit_type} ({self.unit_id})"
 
     

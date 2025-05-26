@@ -77,4 +77,14 @@
         </tbody>
     </table>
 </div>
+<script>
+    // Auto-dismiss messages after 5 seconds
+    setTimeout(() => {
+      const alerts = document.querySelectorAll('.auto-dismiss');
+      alerts.forEach(alert => {
+        const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+        bsAlert.close();
+      });
+    }, 4000);
+</script>
 {% endblock %}

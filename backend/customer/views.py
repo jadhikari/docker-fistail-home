@@ -98,7 +98,7 @@ def customer_edit(request, pk):
     else:
         form = CustomerForm(instance=customer)
 
-    return render(request, 'customer/customer_form.html', {'form': form, 'is_edit': True})
+    return render(request, 'customer/customer_form.html', {'form': form, 'is_edit': True, 'customer': customer})
 
 
 @login_required(login_url='/accounts/login/')
