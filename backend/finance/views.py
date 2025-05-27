@@ -6,17 +6,17 @@ from .forms import RevenueForm
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.urls import reverse
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from django.contrib import messages
 
 
 def revenues(request):
     query = request.GET.get('q')
-    revenues = Revenue.objects.select_related('customer').order_by('-year', '-month')
+    revenues = Revenue.objects.select_related('customer').order_by('-id')
 
     if query:
         revenues = revenues.filter(customer__name__icontains=query)
-
+    # print(revenues.internet)
     return render(request, 'finance/revenues_dashboard.html', {
         'revenues': revenues,
         'q': query,
@@ -74,7 +74,7 @@ def monthly_rent(request, customer_id):
     )
 
     if request.method == "POST":
-        month_input = request.POST.get("rent_month")  # e.g., "2025-06"
+        month_input = request.POST.get("rent_month")
         if not month_input:
             messages.error(request, "Payment month is required.")
             return redirect(request.path)
@@ -82,19 +82,25 @@ def monthly_rent(request, customer_id):
         year, month = map(int, month_input.split("-"))
 
         try:
-            rent_discount_percent = Decimal(request.POST.get("rent_discount_percent") or "0")
-        except:
-            rent_discount_percent = Decimal("0")
-
-        base_rent = customer_details.unit.hostel.rent or Decimal("0")
-        internet_fee = customer_details.unit.hostel.internet_fee or Decimal("0")
-        utilities_fee = customer_details.unit.hostel.utilities_fee or Decimal("0")
+            base_rent = Decimal(request.POST.get("rent", "0"))
+            internet_fee = Decimal(request.POST.get("internet", "0"))
+            utilities_fee = Decimal(request.POST.get("utilities", "0"))
+            rent_discount_percent = Decimal(request.POST.get("rent_discount_percent", "0"))
+        except InvalidOperation:
+            messages.error(request, "Invalid numeric values in the form.")
+            return redirect(request.path)
 
         rent_after_discount = base_rent * (Decimal(1) - rent_discount_percent / Decimal(100))
         total_amount = rent_after_discount + internet_fee + utilities_fee
 
+        memo = request.POST.get("memo", "").strip()
+
+        if rent_discount_percent > 0 and not memo:
+            messages.error(request, "Memo is required when a discount is applied.")
+            return redirect(request.path)
+
         revenue, created = Revenue.objects.get_or_create(
-            title="Hostel Monthly Rent",
+            title="rent",
             customer=customer_details.customer,
             year=year,
             month=month,
@@ -105,6 +111,7 @@ def monthly_rent(request, customer_id):
                 "internet": internet_fee,
                 "utilities": utilities_fee,
                 "total_amount": total_amount,
+                "memo": memo,
                 "created_by": request.user,
                 "updated_by": request.user,
             }
@@ -113,7 +120,6 @@ def monthly_rent(request, customer_id):
         if not created:
             messages.warning(request, "Rent payment for this month already exists.")
         else:
-            # ✅ Send confirmation email
             customer = revenue.customer
             if customer and customer.email:
                 subject = 'Rent Payment Notification - Fishtail'

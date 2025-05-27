@@ -94,8 +94,17 @@ class Revenue(TimeStampedUserModel):
         if self.rent and self.rent_discount_percent is not None:
             self.rent_after_discount = self.rent * (Decimal(1) - self.rent_discount_percent / Decimal(100))
 
-        if self.title == 'rent' and self.internet is not None and self.utilities is not None and self.rent_after_discount is not None:
-            self.total_amount = self.rent_after_discount + self.internet + self.utilities
+        
+        # Safely calculate total_amount
+        rent_total = (self.rent_after_discount or Decimal("0")) + (self.internet or Decimal("0")) + (self.utilities or Decimal("0"))
+        registration_total = (self.deposit_after_discount or Decimal("0")) + (self.initial_fee_after_discount or Decimal("0"))
+
+        if self.title == 'rent':
+            self.total_amount = rent_total
+        elif self.title == 'registration_fee':
+            self.total_amount = registration_total
+        else:
+            self.total_amount = Decimal("0")
 
         super().save(*args, **kwargs)
 

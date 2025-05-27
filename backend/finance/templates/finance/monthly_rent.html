@@ -14,7 +14,7 @@
             {% if messages %}
                 <div>
                     {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert" style="font-size: 0.85rem; line-height: 1.2;">
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss bg-danger text-white" role="alert" style="font-size: 0.85rem; line-height: 1.2;">
                         {{ message }}
                         <button type="button button-sm" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.7rem;"></button>
                     </div>
@@ -47,19 +47,19 @@
                 </div>
             </div>
 
-            <!-- Fee Inputs -->
+            <!-- Fee Inputs (Now Editable) -->
             <div class="row mb-3">
                 <div class="col-md-4">
                     <label class="form-label fw-bold">Internet Fee</label>
-                    <input type="number" step="0.01" name="internet" id="internetFee" class="form-control" value="{{ customer_details.unit.hostel.internet_fee }}" readonly>
+                    <input type="number" step="0.01" name="internet" id="internetFee" class="form-control" value="{{ customer_details.unit.hostel.internet_fee }}">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-bold">Utilities Fee</label>
-                    <input type="number" step="0.01" name="utilities" id="utilitiesFee" class="form-control" value="{{ customer_details.unit.hostel.utilities_fee }}" readonly>
+                    <input type="number" step="0.01" name="utilities" id="utilitiesFee" class="form-control" value="{{ customer_details.unit.hostel.utilities_fee }}">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-bold">Base Rent</label>
-                    <input type="number" step="0.01" name="rent" id="baseRent" class="form-control" value="{{ customer_details.unit.hostel.rent }}" readonly>
+                    <input type="number" step="0.01" name="rent" id="baseRent" class="form-control" value="{{ customer_details.unit.hostel.rent }}">
                 </div>
             </div>
 
@@ -79,6 +79,13 @@
                 </div>
             </div>
 
+            <!-- Memo Field (Required if discount) -->
+            <div class="mb-3">
+                <label for="memo" class="form-label fw-bold">Memo (required if discount applied)</label>
+                <textarea name="memo" id="memo" class="form-control" rows="3"></textarea>
+            </div>
+
+
             <button type="submit" class="btn btn-primary">Submit Payment</button>
         </div>
     </form>
@@ -87,16 +94,18 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const discountInput = document.getElementById('discount');
-        const baseRent = parseFloat(document.getElementById('baseRent').value);
-        const internetFee = parseFloat(document.getElementById('internetFee').value);
-        const utilitiesFee = parseFloat(document.getElementById('utilitiesFee').value);
+        const baseRentInput = document.getElementById('baseRent');
+        const internetInput = document.getElementById('internetFee');
+        const utilitiesInput = document.getElementById('utilitiesFee');
 
         const afterDiscountDisplay = document.getElementById('afterDiscount');
         const totalAmountDisplay = document.getElementById('totalAmount');
 
         function calculate() {
-            let discount = parseFloat(discountInput.value);
-            if (isNaN(discount) || discount < 0) discount = 0;
+            let baseRent = parseFloat(baseRentInput.value) || 0;
+            let internetFee = parseFloat(internetInput.value) || 0;
+            let utilitiesFee = parseFloat(utilitiesInput.value) || 0;
+            let discount = parseFloat(discountInput.value) || 0;
 
             const discountedRent = baseRent * (1 - discount / 100);
             const total = discountedRent + internetFee + utilitiesFee;
@@ -105,7 +114,12 @@
             totalAmountDisplay.innerText = total.toFixed(2);
         }
 
-        discountInput.addEventListener('input', calculate);
+        // Add event listeners to all relevant inputs
+        [discountInput, baseRentInput, internetInput, utilitiesInput].forEach(input => {
+            input.addEventListener('input', calculate);
+        });
+
+        // Initial calculation
         calculate();
     });
 
@@ -117,5 +131,16 @@
         bsAlert.close();
       });
     }, 4000);
+
+    document.querySelector('form').addEventListener('submit', function (e) {
+        const discount = parseFloat(discountInput.value || "0");
+        const memo = document.getElementById('memo');
+
+        if (discount > 0 && memo.value.trim() === "") {
+            e.preventDefault();
+            alert("Memo is required when a discount is applied.");
+            memo.focus();
+        }
+    });
 </script>
 {% endblock %}

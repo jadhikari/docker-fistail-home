@@ -6,15 +6,20 @@ from django.urls import reverse_lazy
 from django.contrib.messages.views import SuccessMessageMixin
 
 def user_login(request):
+    # If user is already logged in, redirect to dashboard
+    if request.user.is_authenticated:
+        return redirect('hostel:dashboard')  # or your homepage
+
     if request.method == 'POST':
-        email = request.POST.get('username')  # email field
+        email = request.POST.get('username')  # 'username' holds the email
         password = request.POST.get('password')
         user = authenticate(request, email=email, password=password)
         if user is not None:
             login(request, user)
-            return redirect('hostel:dashboard')   # replace with your actual target
+            return redirect('hostel:dashboard')
         else:
             messages.error(request, 'Invalid email or password')
+    
     return render(request, 'accounts/login.html')
 
 class CustomPasswordChangeView(SuccessMessageMixin, PasswordChangeView):
