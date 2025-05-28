@@ -109,6 +109,8 @@ def customer_detail(request, pk):
     assigned_bed = getattr(h_customer, 'bed_assignment', None)
     # Rent payment history
     rent_history = Revenue.objects.filter(customer=c_id).all().order_by('-created_at')
+    # Check if registration fee has been paid
+    registration_fee_paid = rent_history.filter(title="registration_fee").exists()
 
 
     assigned_bed_history = None
@@ -118,6 +120,7 @@ def customer_detail(request, pk):
         'customer': h_customer,
         'assigned_bed': assigned_bed,
         'rent_history': rent_history,
+        'registration_fee_paid': registration_fee_paid,
         'bed_history': assigned_bed_history,
     }
     return render(request, 'customer/customer_detail.html', context)
