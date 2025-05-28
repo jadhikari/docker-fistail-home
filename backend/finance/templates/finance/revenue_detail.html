@@ -46,7 +46,7 @@
             </div>
             <div class="row mb-2">
                 <div class="col-md-4"><strong>Initial Fee:</strong> ¥ {{ revenue.initial_fee }} </div>
-                <div class="col-md-4"><strong>Initial Fee Discount %:</strong> ¥ {{ revenue.initial_fee_discount_percent }} %</div>
+                <div class="col-md-4"><strong>Initial Fee Discount:</strong> {{ revenue.initial_fee_discount_percent }} %</div>
                 <div class="col-md-4"><strong>Initial Fee After Discount:</strong> ¥ {{ revenue.initial_fee_after_discount }} </div>
             </div>
             <div class="row mb-2">
@@ -57,13 +57,13 @@
             <h5 class="text-muted">Rent</h5>
             <div class="row mb-2">
                 <div class="col-md-4"><strong>Rent:</strong>¥ {{ revenue.rent }} </div>
-                <div class="col-md-6"><strong>Rent Discount %:</strong> {{ revenue.rent_discount_percent }} %</div>
+                <div class="col-md-6"><strong>Rent Discount:</strong> {{ revenue.rent_discount_percent }} %</div>
                 <div class="col-md-6"><strong>Rent After Discount:</strong>¥ {{ revenue.rent_after_discount }}</div>
             </div>
             <div class="row mb-2">
                 <div class="col-md-4"><strong>Internet:</strong> ¥ {{ revenue.internet }} </div>
-                <div class="col-md-4"><strong>Utilities:</strong> ¥ {{ revenue.utilities }} ¥</div>
-                <div class="col-md-4"><strong>Total Amount:</strong> ¥ {{ revenue.total_amount }} ¥</div>
+                <div class="col-md-4"><strong>Utilities:</strong> ¥ {{ revenue.utilities }}</div>
+                <div class="col-md-4"><strong>Total Amount:</strong> ¥ {{ revenue.total_amount }}</div>
             </div>
             {% endif %}
 
