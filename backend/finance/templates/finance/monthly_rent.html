@@ -133,13 +133,21 @@
     }, 4000);
 
     document.querySelector('form').addEventListener('submit', function (e) {
-        const discount = parseFloat(discountInput.value || "0");
+        const rentDiscount = document.getElementById('discount');
         const memo = document.getElementById('memo');
 
-        if (discount > 0 && memo.value.trim() === "") {
+        const discountApplied = parseFloat(rentDiscount.value || "0") > 0;
+
+        if (discountApplied && memo.value.trim() === "") {
             e.preventDefault();
             alert("Memo is required when a discount is applied.");
             memo.focus();
+            return;
+        }
+
+        const confirmed = confirm("Are you sure you want to make this transaction?");
+        if (!confirmed) {
+            e.preventDefault();
         }
     });
 </script>

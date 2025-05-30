@@ -99,10 +99,17 @@
             
         </div>
 
-        <div class="card-footer d-flex justify-content-between">
-            {% if customer.status == True %}
-                <a href="{% url 'finance:monthly_rent' customer.id %}" class="btn btn-info">Rent Payment</a>
-                <a href="{% url 'customer:customer_edit' customer.id %}" class="btn btn-warning">Edit</a>
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            {% if customer.status %}
+                <div class="d-flex gap-2">
+                    {% if not registration_fee_paid %}
+                        <a href="{% url 'finance:registration_fee' customer.id %}" class="btn btn-sm btn-success">Registration Fee</a>
+                    {% endif %}
+                    <a href="{% url 'finance:monthly_rent' customer.id %}" class="btn btn-sm btn-primary">Rent Payment</a>
+                </div>
+                <div>
+                    <a href="{% url 'customer:customer_edit' customer.id %}" class="btn btn-sm btn-warning">Edit</a>
+                </div>
             {% endif %}
         </div>
     </div>
@@ -192,7 +199,7 @@
                             <td>{{ rent.deposit_after_discount }}</td>
                             <td>{{ rent.internet }}</td>
                             <td>{{ rent.utilities }}</td>
-                            <td>{{ rent.rent }}</td>
+                            <td>{{ rent.rent_after_discount }}</td>
                             <td>
                                 {{ rent.memo|slice:":20" }}{% if rent.memo|length > 20 %} ... {% endif %}
                             </td>

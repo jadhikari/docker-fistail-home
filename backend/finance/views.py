@@ -8,6 +8,8 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 from decimal import Decimal, InvalidOperation
 from django.contrib import messages
+from .utils import send_revenue_email
+
 
 
 def revenues(request):
@@ -25,42 +27,6 @@ def revenues(request):
 def revenue_detail(request, pk):
     revenue = get_object_or_404(Revenue, pk=pk)
     return render(request, 'finance/revenue_detail.html', {'revenue': revenue})
-
-def revenue_add(request):
-    if request.method == 'POST':
-        form = RevenueForm(request.POST)
-        if form.is_valid():
-            revenue = form.save(commit=False)
-            revenue.created_by = request.user
-            revenue.updated_by = request.user
-            revenue.save()
-            # ✅ START: Email sending block
-            customer = revenue.customer
-            if customer and customer.email:
-                subject = 'Payment Notification From Fishtail'
-                from_email = 'no-reply@yourdomain.com'
-                to_email = customer.email
-
-                # Build customer link
-                customer_url = request.build_absolute_uri(
-                    reverse('customer:customer_detail', args=[customer.id])
-                )
-
-                html_content = render_to_string('email/revenue_email.html', {
-                    'revenue': revenue,
-                    'customer_url': customer_url,
-                })
-                text_content = f'Dear {customer.name}, your revenue record has been added.'
-
-                msg = EmailMultiAlternatives(subject, text_content, from_email, [to_email])
-                msg.attach_alternative(html_content, "text/html")
-                msg.send()
-
-            return redirect('finance:revenues')
-    else:
-        form = RevenueForm()
-
-    return render(request, 'finance/revenue_add.html', {'form': form})
 
 
 def expenses(request):
@@ -122,25 +88,79 @@ def monthly_rent(request, customer_id):
         else:
             customer = revenue.customer
             if customer and customer.email:
-                subject = 'Rent Payment Notification - Fishtail'
-                from_email = 'no-reply@yourdomain.com'
-                to_email = customer.email
-
-                customer_url = request.build_absolute_uri(
-                    reverse('customer:customer_detail', args=[customer.id])
-                )
-
-                html_content = render_to_string('email/revenue_email.html', {
-                    'revenue': revenue,
-                    'customer_url': customer_url,
-                })
-                text_content = f"Dear {customer.name}, your rent payment for {month}/{year} has been recorded."
-
-                msg = EmailMultiAlternatives(subject, text_content, from_email, [to_email])
-                msg.attach_alternative(html_content, "text/html")
-                msg.send()
+                send_revenue_email(request, revenue, subject='Rent Payment Notification - Fishtail')
 
             messages.success(request, "Monthly rent payment recorded successfully.")
         return redirect("finance:revenues")
 
     return render(request, 'finance/monthly_rent.html', {'customer_details': customer_details})
+
+
+def registration_fee(request, customer_id):
+    customer_details = get_object_or_404(
+        Bed.objects.select_related('unit', 'unit__hostel', 'customer'),
+        customer=customer_id
+    )
+
+    if request.method == "POST":
+        month_input = request.POST.get("reg_month")
+        if not month_input:
+            messages.error(request, "Payment month is required.")
+            return redirect(request.path)
+
+        try:
+            year, month = map(int, month_input.split("-"))
+        except ValueError:
+            messages.error(request, "Invalid month format.")
+            return redirect(request.path)
+
+        try:
+            deposit = Decimal(request.POST.get("deposit", "0"))
+            deposit_discount = Decimal(request.POST.get("deposit_discount_percent", "0"))
+            initial = Decimal(request.POST.get("initial_fee", "0"))
+            initial_discount = Decimal(request.POST.get("initial_fee_discount_percent", "0"))
+        except InvalidOperation:
+            messages.error(request, "Invalid numeric values.")
+            return redirect(request.path)
+
+        deposit_after = deposit * (Decimal(1) - deposit_discount / Decimal(100))
+        initial_after = initial * (Decimal(1) - initial_discount / Decimal(100))
+        total = deposit_after + initial_after
+
+        memo = request.POST.get("memo", "").strip()
+        if (deposit_discount > 0 or initial_discount > 0) and not memo:
+            messages.error(request, "Memo is required when a discount is applied.")
+            return redirect(request.path)
+
+        # Prevent duplicate
+        revenue, created = Revenue.objects.get_or_create(
+            title="registration_fee",
+            customer=customer_details.customer,
+            year=year,
+            month=month,
+            defaults={
+                "deposit": deposit,
+                "deposit_discount_percent": deposit_discount,
+                "deposit_after_discount": deposit_after,
+                "initial_fee": initial,
+                "initial_fee_discount_percent": initial_discount,
+                "initial_fee_after_discount": initial_after,
+                "total_amount": total,
+                "memo": memo,
+                "created_by": request.user,
+                "updated_by": request.user,
+            }
+        )
+
+        if not created:
+            messages.warning(request, "Registration fee for this month already exists.")
+        else:
+            customer = revenue.customer
+            if customer and customer.email:
+                send_revenue_email(request, revenue, subject='Registration Fee Notification - Fishtail')
+
+            messages.success(request, "Registration fee payment recorded successfully.")
+
+        return redirect("finance:revenues")
+
+    return render(request, 'finance/registration_fee.html', {'customer_details': customer_details})
