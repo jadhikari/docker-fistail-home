@@ -101,12 +101,14 @@
 
         <div class="card-footer d-flex justify-content-between align-items-center">
             {% if customer.status %}
-                <div class="d-flex gap-2">
-                    {% if not registration_fee_paid %}
-                        <a href="{% url 'finance:registration_fee' customer.id %}" class="btn btn-sm btn-success">Registration Fee</a>
-                    {% endif %}
-                    <a href="{% url 'finance:monthly_rent' customer.id %}" class="btn btn-sm btn-primary">Rent Payment</a>
-                </div>
+                {% if customer.bed_assignment %}
+                    <div class="d-flex gap-2">
+                        {% if not registration_fee_paid %}
+                            <a href="{% url 'finance:registration_fee' customer.id %}" class="btn btn-sm btn-success">Registration Fee</a>
+                        {% endif %}
+                        <a href="{% url 'finance:monthly_rent' customer.id %}" class="btn btn-sm btn-primary">Rent Payment</a>
+                    </div>
+                {% endif %}
                 <div>
                     <a href="{% url 'customer:customer_edit' customer.id %}" class="btn btn-sm btn-warning">Edit</a>
                 </div>
@@ -173,43 +175,45 @@
         </div>
     {% endif %}
     
-    <div class="card shadow-sm mt-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Payment History</h5>
-        </div>
-        <div class="card-body table-responsive">
-            <table class="table table-sm table-bordered text-center">
-                <thead class="table-light">
-                    <tr>
-                        <th>Year-Month</th>
-                        <th>Initial(¥)</th>
-                        <th>Deposit(¥)</th>
-                        <th>Internet(¥)</th>
-                        <th>Utilities(¥)</th>
-                        <th>Rent(¥)</th>
-                        <th>Meno</th>
-                        <th>Created At</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for rent in rent_history %}
+    {% if rent_history %}
+        <div class="card shadow-sm mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Payment History</h5>
+            </div>
+            <div class="card-body table-responsive">
+                <table class="table table-sm table-bordered text-center">
+                    <thead class="table-light">
                         <tr>
-                            <td>{{ rent.year }}-{{ rent.month|stringformat:"02d" }}</td>
-                            <td>{{ rent.initial_fee_after_discount }}</td>
-                            <td>{{ rent.deposit_after_discount }}</td>
-                            <td>{{ rent.internet }}</td>
-                            <td>{{ rent.utilities }}</td>
-                            <td>{{ rent.rent_after_discount }}</td>
-                            <td>
-                                {{ rent.memo|slice:":20" }}{% if rent.memo|length > 20 %} ... {% endif %}
-                            </td>
-                            <td>{{ rent.created_at }}</td>
+                            <th>Year-Month</th>
+                            <th>Initial(¥)</th>
+                            <th>Deposit(¥)</th>
+                            <th>Internet(¥)</th>
+                            <th>Utilities(¥)</th>
+                            <th>Rent(¥)</th>
+                            <th>Meno</th>
+                            <th>Created At</th>
                         </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {% for rent in rent_history %}
+                            <tr>
+                                <td>{{ rent.year }}-{{ rent.month|stringformat:"02d" }}</td>
+                                <td>{{ rent.initial_fee_after_discount }}</td>
+                                <td>{{ rent.deposit_after_discount }}</td>
+                                <td>{{ rent.internet }}</td>
+                                <td>{{ rent.utilities }}</td>
+                                <td>{{ rent.rent_after_discount }}</td>
+                                <td>
+                                    {{ rent.memo|slice:":20" }}{% if rent.memo|length > 20 %} ... {% endif %}
+                                </td>
+                                <td>{{ rent.created_at }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
+    {% endif %}
 
 
 

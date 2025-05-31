@@ -82,8 +82,8 @@
                         <th>H. Type</th>
                         <th>T. Rooms</th>
                         <th>Address</th>
-                        <th> C. Start Date</th>
-                        <th>C. End Date</th>
+                        <th>Total Bed</th>
+                        <th>Available Bed</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -101,8 +101,8 @@
                             <td>
                                 {{ hostel.address|slice:":15" }}{% if hostel.address|length > 15 %} ...{% endif %}
                             </td>
-                            <td>{{ hostel.contract_start_date }}</td>
-                            <td>{{ hostel.contract_end_date }}</td>
+                            <td>{{ hostel.total_beds }}</td>
+                            <td>{{ hostel.available_beds }}</td>
                             <td>
                                 <a href="{% url 'hostel:hostel_edit' hostel.id %}" class="btn btn-sm btn-warning">Edit</a>
                             </td>

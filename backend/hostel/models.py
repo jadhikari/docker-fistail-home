@@ -67,6 +67,12 @@ class Hostel(TimeStampedUserModel):
     )   # 👇 ForeignKey to a staff user
     
 
+    def total_beds(self):
+        return Bed.objects.filter(unit__hostel=self).count()
+
+    def available_beds(self):
+        return Bed.objects.filter(unit__hostel=self, customer__isnull=True).count()
+
     def normalize_name(self, name):
         # Lowercase and remove all spaces
         return re.sub(r'\s+', '', name.lower())
@@ -119,6 +125,13 @@ class Unit(TimeStampedUserModel):
                 name='unique_unit_id_per_hostel'
             ),
         ]
+    
+    @property
+    def available_beds(self):
+        assigned_beds = self.beds.filter(customer__isnull=False).count()
+        if self.num_of_beds is not None:
+            return self.num_of_beds - assigned_beds
+        return 0  # or None
 
     def __str__(self):
         if self.unit_type == 'bedroom':

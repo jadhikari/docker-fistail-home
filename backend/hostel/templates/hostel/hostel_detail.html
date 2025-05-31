@@ -91,8 +91,9 @@
                         <tr>
                             <th>S/N</th>
                             <th>Type</th>
-                            <th>Bedroom No.</th>
-                            <th>Beds</th>
+                            <th>Room No.</th>
+                            <th>Num. of Beds</th>
+                            <th>Available Beds</th>
                             <th>Others</th>
                             <th>Memo</th>
                             <th>Edit </th>
@@ -105,6 +106,7 @@
                             <td>{{ unit.get_unit_type_display }}</td>
                             <td>{{ unit.room_num|default:"-" }}</td>
                             <td>{{ unit.num_of_beds|default:"-" }}</td>
+                            <td>{{ unit.available_beds|default:"-" }}</td>
                             <td>{{ unit.unit_id|default:"-" }}</td>
                             <td>{{ unit.memo|default:"-" }}</td>
                             <td><a href="{% url 'hostel:unit_edit' unit.id %}" class="btn btn-sm btn-outline-primary">Edit</a></td>
