@@ -8,10 +8,10 @@
     {% if messages %}
         <div>
             {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert" style="font-size: 0.85rem; line-height: 1.2;">
-                {{ message }}
-                <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.7rem;"></button>
-            </div>
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert" style="font-size: 0.85rem;">
+                    {{ message }}
+                    <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.7rem;"></button>
+                </div>
             {% endfor %}
         </div>
     {% endif %}
@@ -20,18 +20,47 @@
         <h4>Revenues Dashboard</h4>
     </div>
 
-    <!-- Search Form by Customer Name -->
-    <form method="get" class="row g-2 mb-4">
-        <div class="col-md-4">
-            <input type="text" name="q" class="form-control form-control-sm" placeholder="Search by customer name" value="{{ q }}">
+    <form method="get" class="row g-2 mb-4 align-items-end">
+        <!-- Search by name -->
+        <div class="col-md-3">
+            <input type="text" name="name" class="form-control form-control-sm"
+                placeholder="Search by customer" value="{{ name|default:'' }}">
         </div>
-        <div class="col-md-2">
-            <button type="submit" class="btn btn-sm btn-outline-primary w-100">Search</button>
+
+        <!-- Month-Year picker -->
+        <div class="col-md-3">
+            <input type="month" id="month_picker" class="form-control form-control-sm"
+                value="{{ selected_year }}-{{ selected_month|stringformat:'02d' }}">
         </div>
+
+        <!-- Title dropdown -->
         <div class="col-md-2">
-            <a href="{% url 'finance:revenues' %}" class="btn btn-sm btn-outline-secondary w-100">Reset</a>
+            <select name="title" class="form-select form-select-sm">
+                <option value="">All Types</option>
+                {% for val, label in title_choices %}
+                    <option value="{{ val }}" {% if selected_title == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Hidden inputs -->
+        <input type="hidden" name="year" id="year_input" value="{{ selected_year }}">
+        <input type="hidden" name="month" id="month_input" value="{{ selected_month }}">
+
+        <!-- Search + Reset (grouped) -->
+        <div class="col-md-2 d-flex gap-2">
+            <button type="submit" class="btn btn-sm btn-outline-primary w-50">Search</button>
+            <a href="{% url 'finance:revenues' %}" class="btn btn-sm btn-outline-secondary w-50">Reset</a>
+        </div>
+
+        <!-- Download Excel aligned to far right -->
+        <div class="col-md-2 d-flex justify-content-end">
+            <button type="submit" name="download" value="excel" class="btn btn-sm btn-success">
+                <i class="bi bi-file-earmark-excel me-1"></i>
+            </button>
         </div>
     </form>
+
 
     <!-- Revenue Table -->
     <div class="table-responsive" style="max-height: 80vh; overflow-y: auto;">
@@ -58,32 +87,32 @@
             </thead>
             <tbody>
                 {% for revenue in revenues %}
-                <tr>
-                    <td><a href="{% url 'customer:customer_detail' revenue.customer.id %}">{{ revenue.customer.name }}</a></td>
-                    <td>{{ revenue.get_title_display }}</td>
-                    <td>{{ revenue.year }}-{{ revenue.month }}</td>
+                    <tr>
+                        <td><a href="{% url 'customer:customer_detail' revenue.customer.id %}">{{ revenue.customer.name }}</a></td>
+                        <td>{{ revenue.get_title_display }}</td>
+                        <td>{{ revenue.year }}-{{ revenue.month }}</td>
 
-                    <td>{{ revenue.initial_fee|default_if_none:"-" }}</td>
-                    <td>{{ revenue.initial_fee_discount_percent|default_if_none:"-" }}</td>
-                    <td>{{ revenue.initial_fee_after_discount|default_if_none:"-" }}</td>
+                        <td>{{ revenue.initial_fee|default_if_none:"-" }}</td>
+                        <td>{{ revenue.initial_fee_discount_percent|default_if_none:"-" }}</td>
+                        <td>{{ revenue.initial_fee_after_discount|default_if_none:"-" }}</td>
 
-                    <td>{{ revenue.deposit|default_if_none:"-" }}</td>
-                    <td>{{ revenue.deposit_discount_percent|default_if_none:"-" }}</td>
-                    <td>{{ revenue.deposit_after_discount|default_if_none:"-" }}</td>
+                        <td>{{ revenue.deposit|default_if_none:"-" }}</td>
+                        <td>{{ revenue.deposit_discount_percent|default_if_none:"-" }}</td>
+                        <td>{{ revenue.deposit_after_discount|default_if_none:"-" }}</td>
 
-                    <td>{{ revenue.internet|default_if_none:"-" }}</td>
-                    <td>{{ revenue.utilities|default_if_none:"-" }}</td>
-                    <td>{{ revenue.rent|default_if_none:"-" }}</td>
-                    <td>{{ revenue.rent_discount_percent|default_if_none:"-" }}</td>
-                    <td>{{ revenue.rent_after_discount|default_if_none:"-" }}</td>
+                        <td>{{ revenue.internet|default_if_none:"-" }}</td>
+                        <td>{{ revenue.utilities|default_if_none:"-" }}</td>
+                        <td>{{ revenue.rent|default_if_none:"-" }}</td>
+                        <td>{{ revenue.rent_discount_percent|default_if_none:"-" }}</td>
+                        <td>{{ revenue.rent_after_discount|default_if_none:"-" }}</td>
 
-                    <td>{{ revenue.total_amount|default_if_none:"-" }}</td>
-                    <td>
-                        <a href="{% url 'finance:revenue_detail' revenue.pk %}" class="btn btn-sm btn-primary">Details</a>
-                    </td>
-                </tr>
+                        <td>{{ revenue.total_amount|default_if_none:"-" }}</td>
+                        <td>
+                            <a href="{% url 'finance:revenue_detail' revenue.pk %}" class="btn btn-sm btn-primary">Details</a>
+                        </td>
+                    </tr>
                 {% empty %}
-                <tr><td colspan="16">No revenue records available.</td></tr>
+                    <tr><td colspan="16">No revenue records available.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -91,13 +120,31 @@
 </div>
 
 <script>
-    // Auto-dismiss messages after 4 seconds
+    // Auto-dismiss alerts
     setTimeout(() => {
-        const alerts = document.querySelectorAll('.auto-dismiss');
-        alerts.forEach(alert => {
+        document.querySelectorAll('.auto-dismiss').forEach(alert => {
             const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
             bsAlert.close();
         });
     }, 4000);
+
+    // Month picker logic
+    document.addEventListener('DOMContentLoaded', () => {
+        const monthPicker = document.getElementById('month_picker');
+        const yearInput = document.getElementById('year_input');
+        const monthInput = document.getElementById('month_input');
+
+        if (monthPicker.value) {
+            const [year, month] = monthPicker.value.split('-');
+            yearInput.value = year;
+            monthInput.value = parseInt(month);
+        }
+
+        monthPicker.addEventListener('change', () => {
+            const [year, month] = monthPicker.value.split('-');
+            yearInput.value = year;
+            monthInput.value = parseInt(month);
+        });
+    });
 </script>
 {% endblock %}

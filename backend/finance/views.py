@@ -1,38 +1,140 @@
 from django.shortcuts import render, get_object_or_404,redirect
 from .models import Revenue
-from customer.models import Customer
 from hostel.models import Bed
-from .forms import RevenueForm
-from django.core.mail import EmailMultiAlternatives
-from django.template.loader import render_to_string
-from django.urls import reverse
 from decimal import Decimal, InvalidOperation
 from django.contrib import messages
 from .utils import send_revenue_email
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from django.db.models import Q
+import openpyxl #type: ignore
+from django.http import HttpResponse
 
 
+@login_required(login_url='/accounts/login/')
+def export_revenues_to_excel(queryset):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Revenues"
 
+    # ✅ Updated headers
+    headers = [
+        'Customer', 'Hostel', 'Unit', 'Bed',
+        'Type', 'Year', 'Month',
+        'Initial Fee', 'I. F. Discount (%)', 'I. F. After Discount',
+        'Deposit', 'D. Discount (%)', 'D. After Discount',
+        'Internet', 'Utilities', 'Rent', 'R. Discount (%)', 'R. After Discount',
+        'Total'
+    ]
+    ws.append(headers)
+
+    for rev in queryset:
+        # Safely access bed → unit → hostel
+        bed = getattr(rev.customer, 'bed_assignment', None)
+        unit = getattr(bed, 'unit', None) if bed else None
+        hostel = getattr(unit, 'hostel', None) if unit else None
+
+        ws.append([
+            rev.customer.name,
+            hostel.name if hostel else '',
+            unit.room_num if unit else '',
+            bed.bed_num if bed else '',
+            rev.get_title_display(),
+            rev.year,
+            rev.month,
+            rev.initial_fee or '',
+            rev.initial_fee_discount_percent or '',
+            rev.initial_fee_after_discount or '',
+            rev.deposit or '',
+            rev.deposit_discount_percent or '',
+            rev.deposit_after_discount or '',
+            rev.internet or '',
+            rev.utilities or '',
+            rev.rent or '',
+            rev.rent_discount_percent or '',
+            rev.rent_after_discount or '',
+            rev.total_amount or '',
+        ])
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    response['Content-Disposition'] = 'attachment; filename=\"revenues.xlsx\"'
+    wb.save(response)
+    return response
+
+
+@login_required(login_url='/accounts/login/')
 def revenues(request):
-    query = request.GET.get('q')
-    revenues = Revenue.objects.select_related('customer').order_by('-id')
+    name = request.GET.get('name')
+    year = request.GET.get('year')
+    month = request.GET.get('month')
+    title = request.GET.get('title')
 
-    if query:
-        revenues = revenues.filter(customer__name__icontains=query)
-    # print(revenues.internet)
+    # Default filter: current year and month
+    today = timezone.now()
+    default_year = today.year
+    default_month = today.month
+
+    # Initialize query
+    query = Q()
+
+    # Dynamic filters
+    if name:
+        query &= Q(customer__name__icontains=name) | Q(title__icontains=name)
+
+    if title:
+        query &= Q(title=title)
+
+    try:
+        selected_year = int(year)
+    except (ValueError, TypeError):
+        selected_year = default_year
+    query &= Q(year=selected_year)
+
+    try:
+        selected_month = int(month)
+    except (ValueError, TypeError):
+        selected_month = default_month
+    query &= Q(month=selected_month)
+
+    # Optimized queryset with select_related
+    revenues = Revenue.objects.select_related('customer').filter(query).order_by('-id')
+
+    # ✅ Excel export condition now safely after 'revenues' is defined
+    if request.GET.get('download') == 'excel':
+        return export_revenues_to_excel(revenues)
+
+    # Show warning if no filters used
+    if request.GET and not any([name, year, month, title]):
+        messages.warning(request, "No filter parameters provided.")
+
+    # Generate list of years from database values
+    year_choices = Revenue.objects.values_list('year', flat=True).distinct().order_by('-year')
+
     return render(request, 'finance/revenues_dashboard.html', {
         'revenues': revenues,
-        'q': query,
+        'name': name,
+        'selected_year': selected_year,
+        'selected_month': selected_month,
+        'selected_title': title,
+        'year_choices': year_choices,
+        'month_choices': [(i, i) for i in range(1, 13)],
+        'title_choices': Revenue.REVENUE_TYPE_CHOICES,
     })
 
+
+@login_required(login_url='/accounts/login/')
 def revenue_detail(request, pk):
     revenue = get_object_or_404(Revenue, pk=pk)
     return render(request, 'finance/revenue_detail.html', {'revenue': revenue})
 
 
+@login_required(login_url='/accounts/login/')
 def expenses(request):
     return render(request, 'finance/expenses_dashboard.html')
 
-
+@login_required(login_url='/accounts/login/')
 def monthly_rent(request, customer_id):
     customer_details = get_object_or_404(
         Bed.objects.select_related('unit', 'unit__hostel', 'customer'),
@@ -96,6 +198,7 @@ def monthly_rent(request, customer_id):
     return render(request, 'finance/monthly_rent.html', {'customer_details': customer_details})
 
 
+@login_required(login_url='/accounts/login/')
 def registration_fee(request, customer_id):
     customer_details = get_object_or_404(
         Bed.objects.select_related('unit', 'unit__hostel', 'customer'),
