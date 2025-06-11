@@ -11,31 +11,29 @@ import openpyxl #type: ignore
 from django.http import HttpResponse
 
 
-@login_required(login_url='/accounts/login/')
 def export_revenues_to_excel(queryset):
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Revenues"
 
-    # ✅ Updated headers
     headers = [
         'Customer', 'Hostel', 'Unit', 'Bed',
         'Type', 'Year', 'Month',
-        'Initial Fee', 'I. F. Discount (%)', 'I. F. After Discount',
-        'Deposit', 'D. Discount (%)', 'D. After Discount',
-        'Internet', 'Utilities', 'Rent', 'R. Discount (%)', 'R. After Discount',
+        'Initial Fee', 'I. F. Discount (%)', 'I. F. A. D.',
+        'Deposit', 'D. Discount (%)', 'D. A. D.',
+        'Internet', 'Utilities', 'Rent', 'R. Discount (%)', 'R. A. D.',
         'Total'
     ]
     ws.append(headers)
 
     for rev in queryset:
-        # Safely access bed → unit → hostel
-        bed = getattr(rev.customer, 'bed_assignment', None)
+        customer = getattr(rev, 'customer', None)
+        bed = getattr(customer, 'bed_assignment', None) if customer else None
         unit = getattr(bed, 'unit', None) if bed else None
         hostel = getattr(unit, 'hostel', None) if unit else None
 
         ws.append([
-            rev.customer.name,
+            customer.name if customer else '',
             hostel.name if hostel else '',
             unit.room_num if unit else '',
             bed.bed_num if bed else '',
@@ -71,15 +69,12 @@ def revenues(request):
     month = request.GET.get('month')
     title = request.GET.get('title')
 
-    # Default filter: current year and month
     today = timezone.now()
     default_year = today.year
     default_month = today.month
 
-    # Initialize query
     query = Q()
 
-    # Dynamic filters
     if name:
         query &= Q(customer__name__icontains=name) | Q(title__icontains=name)
 
@@ -98,18 +93,18 @@ def revenues(request):
         selected_month = default_month
     query &= Q(month=selected_month)
 
-    # Optimized queryset with select_related
     revenues = Revenue.objects.select_related('customer').filter(query).order_by('-id')
 
-    # ✅ Excel export condition now safely after 'revenues' is defined
+    # ✅ Only allow download if there are results
     if request.GET.get('download') == 'excel':
-        return export_revenues_to_excel(revenues)
+        if revenues.exists():
+            return export_revenues_to_excel(revenues)
+        else:
+            messages.warning(request, "No data available to export.")
 
-    # Show warning if no filters used
     if request.GET and not any([name, year, month, title]):
         messages.warning(request, "No filter parameters provided.")
 
-    # Generate list of years from database values
     year_choices = Revenue.objects.values_list('year', flat=True).distinct().order_by('-year')
 
     return render(request, 'finance/revenues_dashboard.html', {
@@ -122,7 +117,6 @@ def revenues(request):
         'month_choices': [(i, i) for i in range(1, 13)],
         'title_choices': Revenue.REVENUE_TYPE_CHOICES,
     })
-
 
 @login_required(login_url='/accounts/login/')
 def revenue_detail(request, pk):
