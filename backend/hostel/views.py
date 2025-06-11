@@ -10,9 +10,9 @@ from django.contrib import messages
 def dashboard(request):
     query = request.GET.get('q', '')
     if query:
-        hostels = Hostel.objects.filter(name__icontains=query)
+        hostels = Hostel.objects.filter(name__icontains=query).order_by('id')
     else:
-        hostels = Hostel.objects.all()
+        hostels = Hostel.objects.all().order_by('id')
     return render(request, 'hostel/dashboard.html', {'hostels': hostels, 'query': query})
 
 @login_required(login_url='/accounts/login/')

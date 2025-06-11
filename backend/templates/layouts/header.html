@@ -1,10 +1,10 @@
-<nav class="navbar navbar-dark bg-dark fixed-top">
+<nav class="navbar fixed-top">
     <div class="container-fluid">
         <span class="navbar-brand mb-0 h1">Fishtail System</span>
 
         {% if user.is_authenticated %}
         <div class="dropdown">
-            <a class="btn btn-dark dropdown-toggle d-flex align-items-center" href="#" role="button" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
+            <a class="btn dropdown-toggle d-flex align-items-center" href="#" role="button" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-person-circle fs-4 me-1"></i>
                 <span>{{ user.first_name|default:user.email }}</span>
             </a>

@@ -1,19 +1,20 @@
 /* Sidebar layout */
 .sidebar {
-    width: 200px;
+    width: 150px;
     min-height: calc(100vh - 56px); /* header height */
     transition: width 0s;
     position: fixed;
     margin-top:67px;
     background-color:rgb(148, 212, 247);
+    border-right: 1px solid black;
 }
 
 .sidebar.collapsed {
-    width: 70px;
+    width: 50px;
 }
 
 .main-content {
-    margin-left: 200px;
+    margin-left: 150px;
     transition: margin-left 0s;
 }
 
@@ -31,9 +32,9 @@
 
 .sidebar .nav-link {
     display: flex;
-    align-items: center;
+    align-items: left;
     padding: 0.75rem;
-    justify-content: center;
+    justify-content: left;
     text-align: left;
     transition: background-color 0.s;
     white-space: nowrap;
@@ -51,4 +52,9 @@
 .sidebar .nav-link.active {
     background-color: #71a7f8;
     color: white;
+}
+
+.navbar{
+    background-color: rgb(148, 212, 247);
+    border-bottom: 1px solid black;
 }
