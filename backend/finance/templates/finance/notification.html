@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Notification{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>Unpaid Rent Notifications</h4>
+    </div>
+
+    <form method="get" class="form-inline mb-4">
+        <div class="input-group">
+            <input type="text" name="name" class="form-control" placeholder="Search by name" value="{{ search_name }}">
+            <div class="input-group-append">
+                <button type="submit" class="btn btn-sm btn-primary">Search</button>
+                {% if search_name %}
+                    <a href="{% url 'finance:notification' %}" class="btn btn-sm btn-secondary">Clear</a>
+                {% endif %}
+                <button type="submit" name="download" value="1" class="btn btn-sm btn-success">Download Excel</button>
+            </div>
+        </div>
+    </form>
+
+    {% if defaulters %}
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered table-striped table-bordered text-center">
+                <thead class="thead-dark">
+                    <tr>
+                        <th class="custom-thead">Name</th>
+                        <th class="custom-thead">Stay Type</th>
+                        <th class="custom-thead">Assigned Date</th>
+                        <th class="custom-thead">End Date</th>
+                        <th class="custom-thead">Unpaid Months</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in defaulters %}
+                        <tr>
+                            <td><a href="{% url 'customer:customer_detail' entry.customer.id %}">{{ entry.customer.name }}</a></td>
+                            <td>{{ entry.type|title }}</td>
+                            <td>{{ entry.assigned_date }}</td>
+                            <td>
+                                {% if entry.end_date != today %}
+                                    {{ entry.end_date }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% for y, m in entry.unpaid_months %}
+                                    {{ y }}-{{ m|stringformat:"02d" }}{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-success">No unpaid rent found. 🎉</div>
+    {% endif %}
+
+
+{% endblock %}

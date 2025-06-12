@@ -10,6 +10,9 @@ from django.db.models import Q
 import openpyxl #type: ignore
 from django.http import HttpResponse
 
+from .finance_helpers.rent_defaulters import get_rent_defaulters
+from datetime import date
+
 
 def export_revenues_to_excel(queryset):
     wb = openpyxl.Workbook()
@@ -124,9 +127,6 @@ def revenue_detail(request, pk):
     return render(request, 'finance/revenue_detail.html', {'revenue': revenue})
 
 
-@login_required(login_url='/accounts/login/')
-def expenses(request):
-    return render(request, 'finance/expenses_dashboard.html')
 
 @login_required(login_url='/accounts/login/')
 def monthly_rent(request, customer_id):
@@ -261,3 +261,49 @@ def registration_fee(request, customer_id):
         return redirect("finance:revenues")
 
     return render(request, 'finance/registration_fee.html', {'customer_details': customer_details})
+
+@login_required(login_url='/accounts/login/')
+def expenses(request):
+    return render(request, 'finance/expenses_dashboard.html')
+
+@login_required(login_url='/accounts/login/')
+def notification(request):
+    search_name = request.GET.get('name', '').strip().lower()
+    defaulters = get_rent_defaulters()
+
+    if search_name:
+        defaulters = [
+            d for d in defaulters
+            if search_name in d['customer'].name.lower()
+        ]
+
+    # Handle Excel download
+    if 'download' in request.GET:
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = 'Unpaid Rent'
+
+        # Header
+        sheet.append(['Customer Name', 'Stay Type', 'Assigned Date', 'Released/End Date', 'Unpaid Months'])
+
+        for entry in defaulters:
+            unpaid_str = ", ".join(f"{y}-{m:02d}" for y, m in entry['unpaid_months'])
+            sheet.append([
+                entry['customer'].name,
+                entry['type'].capitalize(),
+                entry['assigned_date'],
+                entry['end_date'],
+                unpaid_str
+            ])
+
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="unpaid_rent.xlsx"'
+        workbook.save(response)
+        return response
+
+    return render(request, 'finance/notification.html', {
+        'defaulters': defaulters,
+        'search_name': request.GET.get('name', ''),
+        'today': date.today()
+        
+    })

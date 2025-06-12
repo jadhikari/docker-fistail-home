@@ -9,4 +9,5 @@ urlpatterns = [
     path('expenses/', views.expenses, name='expenses'),  # 👈 root view
     path('registration/<int:customer_id>/', views.registration_fee, name='registration_fee'),
     path('rent/<int:customer_id>/', views.monthly_rent, name='monthly_rent'), 
+    path('notification/', views.notification, name='notification'),  
 ]

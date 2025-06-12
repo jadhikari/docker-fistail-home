@@ -27,6 +27,13 @@
                 🧾 <span class="link-text">Expenses</span>
             </a>
         </li>
+
+        <li class="nav-item">
+            <a href="{% url 'finance:notification' %}" class="nav-link {% if request.resolver_match.url_name == 'notification' %}active{% endif %}">
+                🔔 <span class="link-text">Notification</span>
+            </a>
+        </li>
+
         <li class="nav-item">
             <a href="#" class="nav-link">
                 ⚙️ <span class="link-text">Settings</span>

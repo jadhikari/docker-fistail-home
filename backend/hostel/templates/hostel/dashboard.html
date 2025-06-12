@@ -3,46 +3,6 @@
 {% block title %}Hostel Dashboard{% endblock %}
 
 {% block content %}
-    <style>
-        /* Scrollable tbody inside a fixed table header */
-        .scrollable-table {
-            overflow-y: auto;
-            display: block;
-        }
-
-        .scrollable-table thead, .scrollable-table tbody tr {
-            display: table;
-            width: 100%;
-            table-layout: fixed;
-        }
-
-        .scrollable-table thead {
-            width: calc(100% - 1em); /* Prevent scrollbar overlay */
-            position: sticky;
-            top: 0;
-            z-index: 2;
-            background-color: #343a40;
-            color: white;
-        }
-
-        .scrollable-table tbody {
-            display: block;
-            max-height: 45vh;
-            overflow-y: auto;
-        }
-
-        .scrollable-table td, .scrollable-table th {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        #map {
-            height: 50vh;
-            width: 100%;
-        }
-    </style>
-
     <div class="container-fluid py-3">
 
         <!-- Alert Messages -->
@@ -74,16 +34,16 @@
         <!-- Sticky Header Table with Scrollable Body -->
         <div class="table-responsive border rounded p-1 scrollable-table">
             <table class="table table-sm table-striped table-bordered text-center m-0">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Name</th>
-                        <th>C. Name</th>
-                        <th>H. Type</th>
-                        <th>T. Rooms</th>
-                        <th>Address</th>
-                        <th>Total Bed</th>
-                        <th>Available Bed</th>
-                        <th>Action</th>
+                <thead >
+                    <tr >
+                        <th class="custom-thead">Name</th>
+                        <th class="custom-thead">C. Name</th>
+                        <th class="custom-thead">H. Type</th>
+                        <th class="custom-thead">T. Rooms</th>
+                        <th class="custom-thead">Address</th>
+                        <th class="custom-thead">Total Bed</th>
+                        <th class="custom-thead">Available Bed</th>
+                        <th class="custom-thead">Action</th>
                     </tr>
                 </thead>
                 <tbody>
