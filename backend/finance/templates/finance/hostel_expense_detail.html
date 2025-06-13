@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}Expense Detail - {{ expense.transaction_code }}{% endblock %}
+
+{% block content %}
+  <h2>Expense Transaction: {{ expense.transaction_code }}</h2>
+
+  <table class="table">
+    <tr><th>Date</th><td>{{ expense.purchased_date }}</td></tr>
+    <tr><th>Hostel</th><td>{{ expense.hostel.name }}</td></tr>
+    <tr><th>Purchased By</th><td>{{ expense.purchased_by }}</td></tr>
+    <tr><th>Amount (Total)</th><td>{{ expense.amount_total }}</td></tr>
+    <tr><th>Memo</th><td>{{ expense.memo }}</td></tr>
+    <tr><th>Bill</th>
+        <td>
+            {% if expense.bill_url %}
+                <a href="{{ expense.bill_url }}" target="_blank">View Bill</a>
+            {% else %}
+                N/A
+            {% endif %}
+        </td>
+    </tr>
+    <tr><th>Status</th><td>{{ expense.get_status_display }}</td></tr>
+    <tr><th>Approved By</th><td>{{ expense.approved_by|default:"-" }}</td></tr>
+  </table>
+
+  <h4>Change Status</h4>
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="status" class="form-label">Status</label>
+      <select name="status" id="status" class="form-select">
+        {% for value, label in expense.STATUS_CHOICES %}
+          <option value="{{ value }}" {% if expense.status == value %}selected{% endif %}>
+            {{ label }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Update Status</button>
+  </form>
+{% endblock %}

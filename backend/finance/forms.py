@@ -1,49 +1,32 @@
 from django import forms
-from .models import Revenue
-from hostel.models import Hostel
-from customer.models import Customer
+from .models import HostelExpense
 
-class RevenueForm(forms.ModelForm):
+
+class HostelExpenseForm(forms.ModelForm):
     class Meta:
-        model = Revenue
+        model = HostelExpense
         fields = [
-            'title', 'customer', 'year', 'month',
-            'deposit', 'deposit_discount_percent',
-            'initial_fee', 'initial_fee_discount_percent', 
-            'internet', 'utilities', 'rent', 'rent_discount_percent',
+            'hostel',
+            'purchased_date',
+            'purchased_by',
+            'bill_url',
             'memo',
+            'amount_before_tax',
+            'amount_tax',
         ]
         widgets = {
-                'memo': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
-            }
+            'purchased_date': forms.DateInput(attrs={'type': 'date'}),
+            'bill_url': forms.Textarea(attrs={'rows': 1}),
+            'memo': forms.Textarea(attrs={'rows': 3}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        customer_id = None
-        title = None
+        # Make all fields required
+        for field_name, field in self.fields.items():
+            if field_name != 'hostel':
+                field.required = True
 
-        if self.data:
-            customer_id = self.data.get('customer')
-            title = self.data.get('title')
-        elif getattr(self.instance, 'customer', None):
-            customer_id = self.instance.customer.id
-            title = self.instance.title
-
-        if customer_id and str(customer_id).isdigit():
-            try:
-                customer = Customer.objects.get(id=int(customer_id))
-                if customer.bed_assignment and customer.bed_assignment.unit:
-                    hostel = customer.bed_assignment.unit.hostel
-
-                    if title == 'registration_fee':
-                        self.fields['deposit'].initial = hostel.deposit_fee
-                        self.fields['initial_fee'].initial = hostel.initial_fee
-
-                    elif title == 'rent':
-                        self.fields['internet'].initial = hostel.internet_fee
-                        self.fields['utilities'].initial = hostel.utilities_fee
-                        self.fields['rent'].initial = hostel.rent
-
-            except (Customer.DoesNotExist, AttributeError):
-                pass  # fail silently for missing/invalid customer
+        # Add "ALL" option to hostel dropdown
+        self.fields['hostel'].empty_label = "ALL"

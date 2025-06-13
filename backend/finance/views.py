@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404,redirect
-from .models import HostelRevenue
+from .models import HostelRevenue, HostelExpense
 from hostel.models import Bed
 from decimal import Decimal, InvalidOperation
 from django.contrib import messages
@@ -12,7 +12,8 @@ from django.http import HttpResponse
 
 from .finance_helpers.rent_defaulters import get_rent_defaulters
 from datetime import date
-
+from .forms import HostelExpenseForm
+from django.contrib.auth.decorators import login_required, user_passes_test
 
 def export_revenues_to_excel(queryset):
     wb = openpyxl.Workbook()
@@ -262,9 +263,6 @@ def registration_fee(request, customer_id):
 
     return render(request, 'finance/registration_fee.html', {'customer_details': customer_details})
 
-@login_required(login_url='/accounts/login/')
-def expenses(request):
-    return render(request, 'finance/expenses_dashboard.html')
 
 @login_required(login_url='/accounts/login/')
 def notification(request):
@@ -307,3 +305,62 @@ def notification(request):
         'today': date.today()
         
     })
+
+
+@login_required(login_url='/accounts/login/')
+def expenses(request):
+    all_expenses = HostelExpense.objects.select_related('hostel').order_by('-purchased_date')
+    return render(request, 'finance/expenses_dashboard.html', {'expenses': all_expenses})
+
+def hostel_expense_create(request):
+    if request.method == 'POST':
+        form = HostelExpenseForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect(request.path) # Adjust this to your list view
+    else:
+        form = HostelExpenseForm()
+    return render(request, 'finance/hostel_expense_form.html', {'form': form})
+
+
+# Update view
+def hostel_expense_edit(request, pk):
+    expense = get_object_or_404(HostelExpense, pk=pk)
+
+    if expense.status == 'approved':
+        messages.warning(request, "Approved expenses cannot be edited.")
+        return redirect('hostel_expense_list')
+
+    if request.method == 'POST':
+        form = HostelExpenseForm(request.POST, instance=expense)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Expense updated successfully.")
+            return redirect('hostel_expense_list')
+    else:
+        form = HostelExpenseForm(instance=expense)
+
+    return render(request, 'finance/hostel_expense_form.html', {'form': form})
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def hostel_expense_detail(request, pk):
+    expense = get_object_or_404(HostelExpense, pk=pk)
+
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+        if new_status in dict(HostelExpense.STATUS_CHOICES):
+            expense.status = new_status
+            if new_status == 'approved':
+                user = request.user
+                if user.first_name:
+                    expense.approved_by = user.first_name
+                else:
+                    expense.approved_by = user.email
+            else:
+                expense.approved_by = None
+            expense.save()
+            messages.success(request, "Status updated successfully.")
+            return redirect('finance:expenses')
+
+    return render(request, 'finance/hostel_expense_detail.html', {'expense': expense})

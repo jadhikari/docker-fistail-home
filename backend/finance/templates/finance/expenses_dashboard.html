@@ -3,6 +3,71 @@
 {% block title %}Hostel Dashboard{% endblock %}
 
 {% block content %}
-<h2>Expenses Dashboard</h2>
-<p>Welcome to the hostel section.</p>
+  <h2>Hostel Expenses</h2>
+
+  <a href="{% url 'finance:hostel_expense_add' %}" class="btn btn-success mb-3">+ Add Expense</a>
+
+  <table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Date</th>
+        <th>Hostel</th>
+        <th>Purchased By</th>
+        <th>Approved By</th>
+        <th>Amount (Total)</th>
+        <th>Status</th>
+        <th>Memo</th>
+        <th>Bill</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for expense in expenses %}
+        <tr>
+            <td>
+                {% if request.user.is_superuser %}
+                    <a href="{% url 'finance:hostel_expense_detail' expense.pk %}">
+                    {{ expense.transaction_code }}
+                    </a>
+                {% else %}
+                    {{ expense.transaction_code }}
+                {% endif %}
+            </td>
+            <td>{{ expense.purchased_date }}</td>
+            <td>{{ expense.hostel.name|default:"ALL" }}</td>
+            <td>{{ expense.purchased_by }}</td>
+            <td>{{ expense.approved_by|default:"-" }}</td>
+            <td>{{ expense.amount_total }}</td>
+            <td>
+                {% if expense.status == 'approved' %}
+                    <span class="badge bg-success">Approved</span>
+                {% elif expense.status == 'rejected' %}
+                    <span class="badge bg-danger">Rejected</span>
+                {% else %}
+                    <span class="badge bg-warning text-dark">Pending</span>
+                {% endif %}
+            </td>
+            <td>{{ expense.memo|truncatechars:40 }}</td>
+            <td>
+                {% if expense.bill_url %}
+                <a href="{{ expense.bill_url }}" target="_blank">View Bill</a>
+                {% else %}
+                N/A
+                {% endif %}
+            </td>
+            <td>
+                {% if expense.status != 'approved' %}
+                    <a href="{% url 'finance:hostel_expense_edit' expense.pk %}" class="btn btn-sm btn-primary">Edit</a>
+                {% else %}
+                    <button class="btn btn-sm btn-secondary" disabled>Edit</button>
+                {% endif %}
+            </td>
+
+        </tr>
+      {% empty %}
+        <tr><td colspan="9">No expenses found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
 {% endblock %}

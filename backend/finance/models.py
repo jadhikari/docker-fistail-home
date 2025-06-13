@@ -5,6 +5,8 @@ from django.core.exceptions import ValidationError
 from hostel.models import Hostel
 from customer.models import Customer
 import datetime
+import string
+import random
 
 User = get_user_model()
 
@@ -113,20 +115,40 @@ class HostelRevenue(TimeStampedUserModel):
 
 
 class HostelExpense(TimeStampedUserModel):
-    hostel = models.ForeignKey(Hostel, on_delete=models.CASCADE)
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
+    hostel = models.ForeignKey(Hostel, on_delete=models.CASCADE, blank=True, null=True)
     purchased_date = models.DateField()
     purchased_by = models.CharField(max_length=255)
     bill_url = models.TextField()
     memo = models.TextField()
-    approved_by = models.CharField(max_length=255)
+    approved_by = models.CharField(max_length=255, blank=True, null=True)
 
     amount_before_tax = models.DecimalField(max_digits=10, decimal_places=2)
     amount_tax = models.DecimalField(max_digits=10, decimal_places=2)
     amount_total = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
 
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    transaction_code = models.CharField(max_length=6, unique=True, editable=False)
+
     def save(self, *args, **kwargs):
+        if not self.transaction_code:
+            self.transaction_code = self.generate_unique_code()
+        if not self.status:
+            self.status = 'pending'
         self.amount_total = (self.amount_before_tax or Decimal("0.00")) + (self.amount_tax or Decimal("0.00"))
         super().save(*args, **kwargs)
 
+    def generate_unique_code(self):
+        chars = string.ascii_uppercase + string.digits
+        while True:
+            code = ''.join(random.choices(chars, k=6))
+            if not HostelExpense.objects.filter(transaction_code=code).exists():
+                return code
+
     def __str__(self):
-        return f"Expense by {self.purchased_by} on {self.purchased_date} for {self.hostel.name}"
+        return f"[{self.transaction_code}] Expense by {self.purchased_by} on {self.purchased_date} for {self.hostel.name}"
