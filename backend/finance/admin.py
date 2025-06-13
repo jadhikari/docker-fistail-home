@@ -1,8 +1,8 @@
 from django.contrib import admin
-from .models import Revenue,Expense
+from .models import HostelRevenue,HostelExpense
 
-@admin.register(Revenue)
-class RevenueAdmin(admin.ModelAdmin):
+@admin.register(HostelRevenue)
+class HostelRevenueAdmin(admin.ModelAdmin):
     list_display = [
         'title', 'customer','year','month',
         'deposit', 'deposit_discount_percent', 'deposit_after_discount',
@@ -24,8 +24,8 @@ class RevenueAdmin(admin.ModelAdmin):
         qs = super().get_queryset(request)
         return qs.select_related('customer')
 
-@admin.register(Expense)
-class ExpenseAdmin(admin.ModelAdmin):
+@admin.register(HostelExpense)
+class HostelExpenseAdmin(admin.ModelAdmin):
     list_display = (
         'id',
         'hostel',

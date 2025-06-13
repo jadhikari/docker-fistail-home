@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404,redirect
-from .models import Revenue
+from .models import HostelRevenue
 from hostel.models import Bed
 from decimal import Decimal, InvalidOperation
 from django.contrib import messages
@@ -96,7 +96,7 @@ def revenues(request):
         selected_month = default_month
     query &= Q(month=selected_month)
 
-    revenues = Revenue.objects.select_related('customer').filter(query).order_by('-id')
+    revenues = HostelRevenue.objects.select_related('customer').filter(query).order_by('-id')
 
     # ✅ Only allow download if there are results
     if request.GET.get('download') == 'excel':
@@ -108,7 +108,7 @@ def revenues(request):
     if request.GET and not any([name, year, month, title]):
         messages.warning(request, "No filter parameters provided.")
 
-    year_choices = Revenue.objects.values_list('year', flat=True).distinct().order_by('-year')
+    year_choices = HostelRevenue.objects.values_list('year', flat=True).distinct().order_by('-year')
 
     return render(request, 'finance/revenues_dashboard.html', {
         'revenues': revenues,
@@ -118,12 +118,12 @@ def revenues(request):
         'selected_title': title,
         'year_choices': year_choices,
         'month_choices': [(i, i) for i in range(1, 13)],
-        'title_choices': Revenue.REVENUE_TYPE_CHOICES,
+        'title_choices': HostelRevenue.REVENUE_TYPE_CHOICES,
     })
 
 @login_required(login_url='/accounts/login/')
 def revenue_detail(request, pk):
-    revenue = get_object_or_404(Revenue, pk=pk)
+    revenue = get_object_or_404(HostelRevenue, pk=pk)
     return render(request, 'finance/revenue_detail.html', {'revenue': revenue})
 
 
@@ -161,7 +161,7 @@ def monthly_rent(request, customer_id):
             messages.error(request, "Memo is required when a discount is applied.")
             return redirect(request.path)
 
-        revenue, created = Revenue.objects.get_or_create(
+        revenue, created = HostelRevenue.objects.get_or_create(
             title="rent",
             customer=customer_details.customer,
             year=year,
@@ -230,7 +230,7 @@ def registration_fee(request, customer_id):
             return redirect(request.path)
 
         # Prevent duplicate
-        revenue, created = Revenue.objects.get_or_create(
+        revenue, created = HostelRevenue.objects.get_or_create(
             title="registration_fee",
             customer=customer_details.customer,
             year=year,

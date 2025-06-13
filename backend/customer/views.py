@@ -4,7 +4,7 @@ from django_countries import countries #type: ignore
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Customer
 from hostel.models import BedAssignmentHistory
-from finance.models import Revenue  # Assuming app name is `finance`
+from finance.models import HostelRevenue  # Assuming app name is `finance`
 from .forms import CustomerForm
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -108,7 +108,7 @@ def customer_detail(request, pk):
     # Assigned bed (if any)
     assigned_bed = getattr(h_customer, 'bed_assignment', None)
     # Rent payment history
-    rent_history = Revenue.objects.filter(customer=c_id).all().order_by('-created_at')
+    rent_history = HostelRevenue.objects.filter(customer=c_id).all().order_by('-created_at')
     # Check if registration fee has been paid
     registration_fee_paid = rent_history.filter(title="registration_fee").exists()
 

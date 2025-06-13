@@ -37,7 +37,7 @@ def year_choices():
     return [(r, r) for r in range(2000, datetime.date.today().year + 10)]
 
 
-class Revenue(TimeStampedUserModel):
+class HostelRevenue(TimeStampedUserModel):
     REVENUE_TYPE_CHOICES = [
         ('registration_fee', 'Registration Fee'),
         ('rent', 'Rent'),
@@ -112,13 +112,13 @@ class Revenue(TimeStampedUserModel):
         return f"{self.get_title_display()} for {self.customer}"
 
 
-class Expense(TimeStampedUserModel):
+class HostelExpense(TimeStampedUserModel):
     hostel = models.ForeignKey(Hostel, on_delete=models.CASCADE)
     purchased_date = models.DateField()
     purchased_by = models.CharField(max_length=255)
-    bill_url = models.URLField()
-    image_url = models.URLField()
+    bill_url = models.TextField()
     memo = models.TextField()
+    approved_by = models.CharField(max_length=255)
 
     amount_before_tax = models.DecimalField(max_digits=10, decimal_places=2)
     amount_tax = models.DecimalField(max_digits=10, decimal_places=2)

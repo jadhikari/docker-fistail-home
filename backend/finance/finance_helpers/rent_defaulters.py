@@ -1,6 +1,6 @@
 from datetime import date
 from django.utils.timezone import now
-from finance.models import Revenue
+from finance.models import HostelRevenue
 from hostel.models import Bed, BedAssignmentHistory
 
 def get_month_range(start_date, end_date):
@@ -26,7 +26,7 @@ def get_rent_defaulters():
         assigned_date = bed.assigned_date
         end_date = now().date()
         all_months = get_month_range(assigned_date, end_date)
-        paid_months = Revenue.objects.filter(
+        paid_months = HostelRevenue.objects.filter(
             customer=customer,
             title='rent'
         ).values_list('year', 'month')
@@ -46,7 +46,7 @@ def get_rent_defaulters():
         assigned_date = history.assigned_date
         released_date = history.released_date
         all_months = get_month_range(assigned_date, released_date)
-        paid_months = Revenue.objects.filter(
+        paid_months = HostelRevenue.objects.filter(
             customer=customer,
             title='rent'
         ).values_list('year', 'month')
