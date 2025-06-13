@@ -22,11 +22,13 @@
                 💵 <span class="link-text">Revenues</span>
             </a>
         </li>
-        <li class="nav-item">
-            <a href="{% url 'finance:expenses' %}" class="nav-link {% if request.resolver_match.url_name == 'expenses' %}active{% endif %}">
-                🧾 <span class="link-text">Expenses</span>
-            </a>
-        </li>
+        {% if perms.finance.view_hostelexpense %}
+            <li class="nav-item">
+                <a href="{% url 'finance:expenses' %}" class="nav-link {% if request.resolver_match.url_name == 'expenses' %}active{% endif %}">
+                    🧾 <span class="link-text">Expenses</span>
+                </a>
+            </li>
+        {% endif %}
 
         <li class="nav-item">
             <a href="{% url 'finance:notification' %}" class="nav-link {% if request.resolver_match.url_name == 'notification' %}active{% endif %}">

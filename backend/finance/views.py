@@ -4,7 +4,7 @@ from hostel.models import Bed
 from decimal import Decimal, InvalidOperation
 from django.contrib import messages
 from .utils import send_revenue_email
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.utils import timezone
 from django.db.models import Q
 import openpyxl #type: ignore
@@ -307,42 +307,120 @@ def notification(request):
     })
 
 
-@login_required(login_url='/accounts/login/')
-def expenses(request):
-    all_expenses = HostelExpense.objects.select_related('hostel').order_by('-purchased_date')
-    return render(request, 'finance/expenses_dashboard.html', {'expenses': all_expenses})
+from django.utils import timezone
+from datetime import datetime
 
+@login_required(login_url='/accounts/login/')
+@permission_required('finance.view_hostelexpense', raise_exception=True)
+def expenses(request):
+    expenses_qs = HostelExpense.objects.select_related('hostel').order_by('-purchased_date')
+
+    # Get filters from request
+    from_date = request.GET.get('from_date')
+    to_date = request.GET.get('to_date')
+    status = request.GET.get('status')
+    export = request.GET.get('export')
+
+    # If no filters are provided, default to current month
+    if not from_date and not to_date and not status and not export:
+        today = timezone.now().date()
+        first_day = today.replace(day=1)
+        expenses_qs = expenses_qs.filter(purchased_date__gte=first_day, purchased_date__lte=today)
+        from_date = first_day.strftime('%Y-%m-%d')
+        to_date = today.strftime('%Y-%m-%d')
+
+    # Filter by date range (if specified)
+    if from_date:
+        expenses_qs = expenses_qs.filter(purchased_date__gte=from_date)
+    if to_date:
+        expenses_qs = expenses_qs.filter(purchased_date__lte=to_date)
+
+    # Filter by status
+    if status in ['approved', 'pending', 'rejected']:
+        expenses_qs = expenses_qs.filter(status=status)
+
+    # Export to Excel
+    if export == 'excel':
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Hostel Expenses"
+
+        ws.append([
+            "ID", "Date", "Hostel", "Purchased By", "Approved By", "Before tax","Tax","Amount", "Status", "Memo",
+            "Created By", "Created At", "Updated By", "Updated At"
+        ])
+
+        for e in expenses_qs:
+            ws.append([
+                e.transaction_code,
+                e.purchased_date.strftime('%Y-%m-%d'),
+                e.hostel.name if e.hostel else "ALL",
+                e.purchased_by,
+                e.approved_by if e.approved_by else "-",
+                float(e.amount_before_tax),
+                float(e.amount_tax),
+                float(e.amount_total),
+                e.status,
+                e.memo,
+                str(e.created_by) if e.created_by else "-",
+                e.created_at.strftime('%Y-%m-%d %H:%M:%S') if e.created_at else "-",
+                str(e.updated_by) if e.updated_by else "-",
+                e.updated_at.strftime('%Y-%m-%d %H:%M:%S') if e.updated_at else "-",
+            ])
+
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename=expenses.xlsx'
+        wb.save(response)
+        return response
+
+    return render(request, 'finance/expenses_dashboard.html', {
+        'expenses': expenses_qs,
+        'from_date': from_date,
+        'to_date': to_date,
+        'status': status
+    })
+
+@login_required(login_url='/accounts/login/')
+@permission_required('finance.add_hostelexpense', raise_exception=True)
 def hostel_expense_create(request):
     if request.method == 'POST':
         form = HostelExpenseForm(request.POST)
         if form.is_valid():
-            form.save()
-            return redirect(request.path) # Adjust this to your list view
+            expense = form.save(commit=False)
+            expense.created_by = request.user
+            expense.updated_by = request.user
+            expense.save()
+            messages.success(request, "Expense created successfully.")
+            return redirect('finance:expenses')
     else:
         form = HostelExpenseForm()
     return render(request, 'finance/hostel_expense_form.html', {'form': form})
 
 
-# Update view
+@login_required(login_url='/accounts/login/')
+@permission_required('finance.change_hostelexpense', raise_exception=True)
 def hostel_expense_edit(request, pk):
     expense = get_object_or_404(HostelExpense, pk=pk)
 
     if expense.status == 'approved':
         messages.warning(request, "Approved expenses cannot be edited.")
-        return redirect('hostel_expense_list')
+        return redirect('finance:expenses')
 
     if request.method == 'POST':
         form = HostelExpenseForm(request.POST, instance=expense)
         if form.is_valid():
-            form.save()
+            expense = form.save(commit=False)
+            expense.updated_by = request.user
+            expense.save()
             messages.success(request, "Expense updated successfully.")
-            return redirect('hostel_expense_list')
+            return redirect('finance:expenses')
     else:
         form = HostelExpenseForm(instance=expense)
 
     return render(request, 'finance/hostel_expense_form.html', {'form': form})
 
-@login_required
+
+@login_required(login_url='/accounts/login/')
 @user_passes_test(lambda u: u.is_superuser)
 def hostel_expense_detail(request, pk):
     expense = get_object_or_404(HostelExpense, pk=pk)
@@ -353,6 +431,7 @@ def hostel_expense_detail(request, pk):
             expense.status = new_status
             if new_status == 'approved':
                 user = request.user
+                expense.updated_by = request.user
                 if user.first_name:
                     expense.approved_by = user.first_name
                 else:

@@ -1,73 +1,132 @@
 {% extends "base.html" %}
 
-{% block title %}Hostel Dashboard{% endblock %}
+{% block title %}Hostel Expenses Dashboard{% endblock %}
 
 {% block content %}
-  <h2>Hostel Expenses</h2>
+<div class="container-fluid mt-3">
+    {% if messages %}
+        <div>
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert" style="font-size: 0.85rem;">
+                    {{ message }}
+                    <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.7rem;"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>Hostel Expenses</h4>
+        <a href="{% url 'finance:hostel_expense_add' %}" class="btn btn-success btn-sm">+ Add Expense</a>
+    </div>
 
-  <a href="{% url 'finance:hostel_expense_add' %}" class="btn btn-success mb-3">+ Add Expense</a>
 
-  <table class="table table-bordered">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Date</th>
-        <th>Hostel</th>
-        <th>Purchased By</th>
-        <th>Approved By</th>
-        <th>Amount (Total)</th>
-        <th>Status</th>
-        <th>Memo</th>
-        <th>Bill</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for expense in expenses %}
-        <tr>
-            <td>
-                {% if request.user.is_superuser %}
-                    <a href="{% url 'finance:hostel_expense_detail' expense.pk %}">
-                    {{ expense.transaction_code }}
-                    </a>
-                {% else %}
-                    {{ expense.transaction_code }}
-                {% endif %}
-            </td>
-            <td>{{ expense.purchased_date }}</td>
-            <td>{{ expense.hostel.name|default:"ALL" }}</td>
-            <td>{{ expense.purchased_by }}</td>
-            <td>{{ expense.approved_by|default:"-" }}</td>
-            <td>{{ expense.amount_total }}</td>
-            <td>
-                {% if expense.status == 'approved' %}
-                    <span class="badge bg-success">Approved</span>
-                {% elif expense.status == 'rejected' %}
-                    <span class="badge bg-danger">Rejected</span>
-                {% else %}
-                    <span class="badge bg-warning text-dark">Pending</span>
-                {% endif %}
-            </td>
-            <td>{{ expense.memo|truncatechars:40 }}</td>
-            <td>
-                {% if expense.bill_url %}
-                <a href="{{ expense.bill_url }}" target="_blank">View Bill</a>
-                {% else %}
-                N/A
-                {% endif %}
-            </td>
-            <td>
-                {% if expense.status != 'approved' %}
-                    <a href="{% url 'finance:hostel_expense_edit' expense.pk %}" class="btn btn-sm btn-primary">Edit</a>
-                {% else %}
-                    <button class="btn btn-sm btn-secondary" disabled>Edit</button>
-                {% endif %}
-            </td>
+    <form method="get" class="row row-cols-1 row-cols-sm-2 row-cols-md-4 g-2 mb-3 align-items-end">
+        <div class="col">
+            <label for="fromDate" class="form-label mb-1">From Date</label>
+            <input type="date" id="fromDate" name="from_date" value="{{ from_date }}" class="form-control form-control-sm">
+        </div>
+        <div class="col">
+            <label for="toDate" class="form-label mb-1">To Date</label>
+            <input type="date" id="toDate" name="to_date" value="{{ to_date }}" class="form-control form-control-sm">
+        </div>
+        <div class="col">
+            <label for="statusFilter" class="form-label mb-1">Status</label>
+            <select id="statusFilter" name="status" class="form-select form-select-sm">
+                <option value="">-- All Statuses --</option>
+                <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="approved" {% if status == 'approved' %}selected{% endif %}>Approved</option>
+                <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>Rejected</option>
+            </select>
+        </div>
+        <div class="col d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm w-100">Search</button>
+            <a href="{% url 'finance:expenses' %}" class="btn btn-sm btn-outline-secondary w-50">Reset</a>
+            <a href="?{% if from_date %}from_date={{ from_date }}&{% endif %}{% if to_date %}to_date={{ to_date }}&{% endif %}{% if status %}status={{ status }}&{% endif %}export=excel" class="btn btn-outline-success btn-sm w-100">Download Excel</a>
+        </div>
+    </form>
 
-        </tr>
-      {% empty %}
-        <tr><td colspan="9">No expenses found.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+    <div class="table-responsive" style="max-height: 80vh; overflow-y: auto;">
+        <table class="table table-sm table-bordered text-center align-middle table-striped w-100">
+            <thead class="sticky-top" style="top: 0; z-index: 10;">
+                <tr>
+                    <th class="custom-thead">ID</th>
+                    <th class="custom-thead">Date</th>
+                    <th class="custom-thead">Hostel</th>
+                    <th class="custom-thead">Purchased By</th>
+                    <th class="custom-thead">Memo</th>
+                    <th class="custom-thead">Bill</th>
+                    <th class="custom-thead">Amount (Total)</th>
+                    <th class="custom-thead">Status</th>
+                    <th class="custom-thead">Approved By</th>
+                    <th class="custom-thead">Created By</th>
+                    <th class="custom-thead">Created At</th>
+                    <th class="custom-thead">Updated By</th>
+                    <th class="custom-thead">Updated At</th>
+                    <th class="custom-thead">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in expenses %}
+                <tr>
+                    <td>
+                        {% if request.user.is_superuser %}
+                            <a href="{% url 'finance:hostel_expense_detail' expense.pk %}">
+                                {{ expense.transaction_code }}
+                            </a>
+                        {% else %}
+                            {{ expense.transaction_code }}
+                        {% endif %}
+                    </td>
+                    <td>{{ expense.purchased_date }}</td>
+                    <td>{{ expense.hostel.name|default:"ALL" }}</td>
+                    <td>{{ expense.purchased_by }}</td>
+                    <td>{{ expense.memo|truncatechars:10 }}</td>
+                    <td>
+                        {% if expense.bill_url %}
+                            {{ expense.bill_url }}
+                        {% else %}
+                            <span class="text-muted">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ expense.amount_total }}</td>
+                    <td>
+                        {% if expense.status == 'approved' %}
+                            <span class="badge bg-success">Approved</span>
+                        {% elif expense.status == 'rejected' %}
+                            <span class="badge bg-danger">Rejected</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ expense.approved_by|default:"-" }}</td>
+                    <td>{{ expense.created_by|default:"-" }}</td>
+                    <td>{{ expense.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ expense.updated_by|default:"-" }}</td>
+                    <td>{{ expense.updated_at|date:"Y-m-d H:i" }}</td>
+                    <td>
+                        {% if expense.status != 'approved' %}
+                            <a href="{% url 'finance:hostel_expense_edit' expense.pk %}" class="btn btn-sm btn-outline-warning">✏️</a>
+                        {% else %}
+                            <button class="btn btn-sm btn-secondary" disabled>Edit</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="10" class="text-center text-muted">No expenses found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+    // Auto-dismiss alerts
+    setTimeout(() => {
+        document.querySelectorAll('.auto-dismiss').forEach(alert => {
+            const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+            bsAlert.close();
+        });
+    }, 4000);
+</script>
 {% endblock %}

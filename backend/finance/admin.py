@@ -28,13 +28,25 @@ class HostelRevenueAdmin(admin.ModelAdmin):
 class HostelExpenseAdmin(admin.ModelAdmin):
     list_display = (
         'id',
-        'hostel',
+        'get_hostel_name',
         'purchased_date',
         'purchased_by',
         'amount_before_tax',
         'amount_tax',
         'amount_total',
+        'status',
+        'created_by',
+        'created_at',
+        'updated_by',
+        'updated_at',
     )
-    list_filter = ('hostel', 'purchased_date')
-    search_fields = ('purchased_by', 'memo')
-    readonly_fields = ('amount_total',)
+    list_filter = ('hostel', 'purchased_date', 'status')
+    search_fields = ('purchased_by', 'memo', 'status', 'transaction_code')
+
+    readonly_fields = ('amount_total', 'created_by', 'created_at', 'updated_by', 'updated_at')
+
+    def get_hostel_name(self, obj):
+        return obj.hostel.name if obj.hostel else "ALL"
+
+    get_hostel_name.short_description = 'Hostel'
+    get_hostel_name.admin_order_field = 'hostel'

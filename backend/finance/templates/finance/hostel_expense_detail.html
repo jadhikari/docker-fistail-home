@@ -3,40 +3,111 @@
 {% block title %}Expense Detail - {{ expense.transaction_code }}{% endblock %}
 
 {% block content %}
-  <h2>Expense Transaction: {{ expense.transaction_code }}</h2>
-
-  <table class="table">
-    <tr><th>Date</th><td>{{ expense.purchased_date }}</td></tr>
-    <tr><th>Hostel</th><td>{{ expense.hostel.name }}</td></tr>
-    <tr><th>Purchased By</th><td>{{ expense.purchased_by }}</td></tr>
-    <tr><th>Amount (Total)</th><td>{{ expense.amount_total }}</td></tr>
-    <tr><th>Memo</th><td>{{ expense.memo }}</td></tr>
-    <tr><th>Bill</th>
-        <td>
-            {% if expense.bill_url %}
-                <a href="{{ expense.bill_url }}" target="_blank">View Bill</a>
-            {% else %}
-                N/A
-            {% endif %}
-        </td>
-    </tr>
-    <tr><th>Status</th><td>{{ expense.get_status_display }}</td></tr>
-    <tr><th>Approved By</th><td>{{ expense.approved_by|default:"-" }}</td></tr>
-  </table>
-
-  <h4>Change Status</h4>
-  <form method="post">
-    {% csrf_token %}
-    <div class="mb-3">
-      <label for="status" class="form-label">Status</label>
-      <select name="status" id="status" class="form-select">
-        {% for value, label in expense.STATUS_CHOICES %}
-          <option value="{{ value }}" {% if expense.status == value %}selected{% endif %}>
-            {{ label }}
-          </option>
-        {% endfor %}
-      </select>
+<div class="container-fluid mt-3">
+    <a href="{% url 'finance:expenses' %}" class="btn btn-sm btn-outline-secondary mb-3">← Back to Dashboard</a>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-4 ">Expense Details: <span class="text-muted">{{ expense.transaction_code }}</span></h4>
     </div>
-    <button type="submit" class="btn btn-primary">Update Status</button>
-  </form>
+
+    <div class="d-flex justify-content-center">
+        <div class="table-responsive" style="width: 70%;">
+            <table class="table table-sm table-bordered ">
+                <tbody>
+                    <tr>
+                        <th class="custom-thead" style="width: 180px;">Transaction Code</th>
+                        <td>{{ expense.transaction_code }}</td>
+                    </tr>
+                    <tr>
+                        <th class="custom-thead">Date</th>
+                        <td>{{ expense.purchased_date }}</td>
+                    </tr>
+                    <tr>
+                        <th class="custom-thead">Hostel</th>
+                        <td>{{ expense.hostel.name|default:"ALL" }}</td>
+                    </tr>
+                    <tr>
+                        <th class="custom-thead">Purchased By</th>
+                        <td>{{ expense.purchased_by }}</td>
+                    </tr>
+                    <tr>
+                        <th class="custom-thead">Amount (Before Tax)</th>
+                        <td>{{ expense.amount_before_tax }}</td>
+                    </tr>
+                    <tr>
+                        <th class="custom-thead">Tax Amount</th>
+                        <td>{{ expense.amount_tax }}</td>
+                    </tr>
+                    <tr>
+                        <th class="custom-thead">Total Amount</th>
+                        <td>{{ expense.amount_total }}</td>
+                    </tr>
+                    <tr>
+                        <th class="custom-thead">Memo</th>
+                        <td>{{ expense.memo }}</td>
+                    </tr>
+                    <tr>
+                        <th class="custom-thead">Bill</th>
+                        <td>
+                            {% if expense.bill_url %}
+                            <a href="{{ expense.bill_url }}" target="_blank">View Bill</a>
+                            {% else %}
+                            <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th class="custom-thead">Status</th>
+                        <td>
+                            {% if expense.status == 'approved' %}
+                            <span class="badge bg-success">Approved</span>
+                            {% elif expense.status == 'rejected' %}
+                            <span class="badge bg-danger">Rejected</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">Pending</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th class="custom-thead">Approved By</th>
+                        <td>{{ expense.approved_by|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <th class="custom-thead">Created At</th>
+                        <td>{{ expense.created_at|date:"Y-m-d H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <th class="custom-thead">Created By</th>
+                        <td>{{ expense.created_by|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <th class="custom-thead">Updated At</th>
+                        <td>{{ expense.updated_at|date:"Y-m-d H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <th class="custom-thead">Updated By</th>
+                        <td>{{ expense.updated_by|default:"-" }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <h5 class="mb-3">Change Status</h5>
+    <form method="post" class="mb-5">
+        {% csrf_token %}
+        <div class="row g-2 align-items-end">
+            <div class="col-sm-4">
+                <label for="status" class="form-label">Status</label>
+                <select name="status" id="status" class="form-select form-select-sm">
+                {% for value, label in expense.STATUS_CHOICES %}
+                    <option value="{{ value }}" {% if expense.status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+                </select>
+            </div>
+            <div class="col-sm-auto">
+                <button type="submit" class="btn btn-primary btn-sm">Update Status</button>
+            </div>
+        </div>
+    </form>
+    </div>
 {% endblock %}

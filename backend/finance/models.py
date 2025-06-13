@@ -149,6 +149,7 @@ class HostelExpense(TimeStampedUserModel):
             code = ''.join(random.choices(chars, k=6))
             if not HostelExpense.objects.filter(transaction_code=code).exists():
                 return code
-
+    
     def __str__(self):
-        return f"[{self.transaction_code}] Expense by {self.purchased_by} on {self.purchased_date} for {self.hostel.name}"
+        hostel_name = self.hostel.name if self.hostel else "ALL"
+        return f"[{self.transaction_code}] Expense by {self.purchased_by} on {self.purchased_date} for {hostel_name}"
