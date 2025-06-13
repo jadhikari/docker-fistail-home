@@ -1,8 +1,10 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="container-fluid">
-  <h4 class="mb-4">{{ form.instance.pk|yesno:"Edit Expense,Add Expense" }}</h4>
-
+<div class="container-fluid mt-3">
+  <a href="{% url 'finance:expenses' %}" class="btn btn-sm btn-outline-secondary mb-3">← Back to Dashboard</a>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-4 ">{{ form.instance.pk|yesno:"Edit Expense,Add Expense" }}</h4>
+    </div>
   <form method="post" novalidate>
     {% csrf_token %}
     {% if form.non_field_errors %}
