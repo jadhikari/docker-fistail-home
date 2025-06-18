@@ -31,6 +31,7 @@ class HostelExpenseAdmin(admin.ModelAdmin):
         'get_hostel_name',
         'purchased_date',
         'purchased_by',
+        'get_approved_by_name',  # ✅ Add this line
         'amount_before_tax',
         'amount_tax',
         'amount_total',
@@ -47,6 +48,11 @@ class HostelExpenseAdmin(admin.ModelAdmin):
 
     def get_hostel_name(self, obj):
         return obj.hostel.name if obj.hostel else "ALL"
-
     get_hostel_name.short_description = 'Hostel'
     get_hostel_name.admin_order_field = 'hostel'
+
+    def get_approved_by_name(self, obj):
+        if obj.approved_by:
+            return obj.approved_by.first_name or obj.approved_by.email
+        return "-"
+    get_approved_by_name.short_description = 'Approved By'

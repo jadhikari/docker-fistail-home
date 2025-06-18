@@ -307,9 +307,6 @@ def notification(request):
     })
 
 
-from django.utils import timezone
-from datetime import datetime
-
 @login_required(login_url='/accounts/login/')
 @permission_required('finance.view_hostelexpense', raise_exception=True)
 def expenses(request):
@@ -350,13 +347,17 @@ def expenses(request):
             "Created By", "Created At", "Updated By", "Updated At"
         ])
 
+        approved_name = "-"
+        if e.approved_by:
+            approved_name = e.approved_by.first_name or e.approved_by.email
+
         for e in expenses_qs:
             ws.append([
                 e.transaction_code,
                 e.purchased_date.strftime('%Y-%m-%d'),
                 e.hostel.name if e.hostel else "ALL",
                 e.purchased_by,
-                e.approved_by if e.approved_by else "-",
+                approved_name,
                 float(e.amount_before_tax),
                 float(e.amount_tax),
                 float(e.amount_total),
@@ -430,12 +431,8 @@ def hostel_expense_detail(request, pk):
         if new_status in dict(HostelExpense.STATUS_CHOICES):
             expense.status = new_status
             if new_status == 'approved':
-                user = request.user
                 expense.updated_by = request.user
-                if user.first_name:
-                    expense.approved_by = user.first_name
-                else:
-                    expense.approved_by = user.email
+                expense.approved_by = request.user
             else:
                 expense.approved_by = None
             expense.save()
