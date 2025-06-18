@@ -124,7 +124,7 @@ class HostelExpense(TimeStampedUserModel):
     hostel = models.ForeignKey(Hostel, on_delete=models.CASCADE, blank=True, null=True)
     purchased_date = models.DateField()
     purchased_by = models.CharField(max_length=255)
-    bill_url = models.TextField()
+    bill_url = models.TextField(null=True, blank=True)
     memo = models.TextField()
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     amount_before_tax = models.DecimalField(max_digits=10, decimal_places=2)
