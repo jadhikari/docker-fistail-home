@@ -349,7 +349,7 @@ CREATE TABLE public.finance_hostelexpense (
     purchased_by character varying(255) NOT NULL,
     bill_url text NOT NULL,
     memo text NOT NULL,
-    approved_by character varying(255) NOT NULL,
+    approved_by_id bigint,
     amount_before_tax numeric(10,2) NOT NULL,
     amount_tax numeric(10,2) NOT NULL,
     amount_total numeric(10,2) NOT NULL,
