@@ -242,3 +242,90 @@ DJANGO_SECRET_KEY=django-insecure-dev-key
 DJANGO_DEBUG=True
 DJANGO_ALLOWED_HOSTS=localhost 127.0.0.1 0.0.0.0
 
+
+🧪 How to Run It
+Step-by-step when starting from scratch or updating:
+
+# Start DB only first
+docker-compose -f docker-compose.prod.yml up -d postgres
+
+# Run migrations manually
+docker-compose -f docker-compose.prod.yml run --rm migrate
+
+# Start backend and nginx
+docker-compose -f docker-compose.prod.yml up -d backend nginx
+To re-run migrations:
+
+docker-compose -f docker-compose.prod.yml run --rm migrate
+
+
+Here's the deployment guide in **Markdown** format that you can add to your `README.md` or a separate `DEPLOYMENT.md`:
+
+---
+
+````markdown
+# 🚀 Docker Deployment Guide
+
+This guide explains the recommended steps for pulling the latest code, applying Django migrations, and restarting services when deploying updates to production.
+
+---
+
+## 📁 Prerequisites
+
+- Docker and Docker Compose are installed
+- You are inside the project directory on the production server
+
+---
+
+## 🔁 Step 1: Pull Latest Code
+
+```bash
+cd ~/your-project-directory
+git pull origin main
+````
+
+---
+
+## 🛠️ Step 2: Rebuild Docker Images (if needed)
+
+If you've made changes to:
+
+* `Dockerfile`
+* `requirements.txt`
+* `models.py`
+* Django migrations
+
+Then rebuild:
+
+```bash
+docker-compose -f docker-compose.prod.yml build
+```
+
+---
+
+## ⚙️ Step 3: Apply Migrations
+
+Use the `migrate` service defined in `docker-compose.prod.yml`:
+
+```bash
+docker-compose -f docker-compose.prod.yml run --rm migrate
+```
+```bash
+docker-compose -f docker-compose.prod.yml run migrate
+```
+
+---
+
+## 🔁 Step 4: Restart Backend (and Nginx if needed)
+
+```bash
+docker-compose -f docker-compose.prod.yml restart backend
+```
+
+If you've updated static files or Nginx config:
+
+```bash
+docker-compose -f docker-compose.prod.yml restart nginx
+```
+
+---
