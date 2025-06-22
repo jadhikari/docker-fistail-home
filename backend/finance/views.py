@@ -347,11 +347,11 @@ def expenses(request):
             "Created By", "Created At", "Updated By", "Updated At"
         ])
 
-        approved_name = "-"
-        if e.approved_by:
-            approved_name = e.approved_by.first_name or e.approved_by.email
-
         for e in expenses_qs:
+            approved_name = "-"
+            if e.approved_by:
+                approved_name = e.approved_by.first_name or e.approved_by.email
+
             ws.append([
                 e.transaction_code,
                 e.purchased_date.strftime('%Y-%m-%d'),

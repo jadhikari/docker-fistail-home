@@ -95,19 +95,22 @@
     <h5 class="mb-3">Change Status</h5>
     <form method="post" class="mb-5">
         {% csrf_token %}
-        <div class="row g-2 align-items-end">
-            <div class="col-sm-4">
-                <label for="status" class="form-label">Status</label>
+        <div class="d-flex flex-wrap align-items-end gap-2">
+            <div>
+                <label for="status" class="form-label mb-0 me-2">Update Status:</label>
+            </div>
+            <div>
                 <select name="status" id="status" class="form-select form-select-sm">
-                {% for value, label in expense.STATUS_CHOICES %}
-                    <option value="{{ value }}" {% if expense.status == value %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
+                    {% for value, label in expense.STATUS_CHOICES %}
+                        <option value="{{ value }}" {% if expense.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
                 </select>
             </div>
-            <div class="col-sm-auto">
-                <button type="submit" class="btn btn-primary btn-sm">Update Status</button>
+            <div>
+                <button type="submit" class="btn btn-primary btn-sm">Update</button>
             </div>
         </div>
     </form>
-    </div>
+
+</div>
 {% endblock %}

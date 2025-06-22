@@ -19,21 +19,55 @@
                 {% endfor %}
               </div>
             {% endif %}
-          
-            <!-- Render fields manually for better control -->
-            <div>
-              <label for="{{ form.bed_num.id_for_label }}">Bed Number:</label>
-              {{ form.bed_num }}
-          
+        
+            <!-- Bed Number Field -->
+            <div class="mb-3">
+              <label for="{{ form.bed_num.id_for_label }}" class="form-label">
+                Bed Number <span class="text-danger">*</span>
+              </label>
+              <input 
+                type="text" 
+                name="{{ form.bed_num.name }}" 
+                id="{{ form.bed_num.id_for_label }}" 
+                value="{{ form.bed_num.value|default_if_none:'' }}" 
+                class="form-control" 
+                required
+              >
               {% if form.bed_num.errors %}
-                <div style="color: red;">
+                <div class="text-danger small">
                   {% for error in form.bed_num.errors %}
                     <div>{{ error }}</div>
                   {% endfor %}
                 </div>
               {% endif %}
             </div>
-          
+
+            <!-- Rent Field -->
+            <div class="mb-3">
+              <label for="{{ form.rent.id_for_label }}" class="form-label">
+                Rent (¥) <span class="text-danger">*</span>
+              </label>
+              <div class="input-group">
+                <span class="input-group-text">¥</span>
+                <input 
+                  type="number" 
+                  step="0.01" 
+                  name="{{ form.rent.name }}" 
+                  id="{{ form.rent.id_for_label }}" 
+                  value="{{ form.rent.value|default_if_none:'' }}" 
+                  class="form-control" 
+                  required
+                >
+              </div>
+              {% if form.rent.errors %}
+                <div class="text-danger small">
+                  {% for error in form.rent.errors %}
+                    <div>{{ error }}</div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </div>
+
             <br />
             <button type="submit" class="btn btn-primary">Save</button>
             <a href="javascript:history.back()" class="btn btn-secondary">Cancel</a>

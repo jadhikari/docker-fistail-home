@@ -56,7 +56,6 @@ class Hostel(TimeStampedUserModel):
     initial_fee = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.00'))])
     internet_fee = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.00'))])
     utilities_fee = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.00'))])
-    rent = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.00'))])
     hostel_manager = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -155,6 +154,7 @@ class Bed(TimeStampedUserModel):
             )
         ]
     )
+    rent = models.DecimalField(max_digits=10, decimal_places=2,blank=True, null=True, validators=[MinValueValidator(Decimal('0.00'))])
     customer = models.OneToOneField(
         Customer,
         on_delete=models.CASCADE,

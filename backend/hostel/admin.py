@@ -16,7 +16,6 @@ class HostelAdmin(admin.ModelAdmin):
         'initial_fee',
         'internet_fee',
         'utilities_fee',
-        'rent',
         'created_at',
         'created_by',
         'updated_at',
@@ -59,6 +58,7 @@ class BedAdmin(admin.ModelAdmin):
     list_display = (
         'unit',
         'bed_num',
+        'rent',
         'customer',
         'created_at',
         'created_by',

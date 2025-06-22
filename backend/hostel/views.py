@@ -94,18 +94,26 @@ def unit_edit(request, pk):
 @login_required(login_url='/accounts/login/')
 def add_bed(request, unit_id):
     unit = get_object_or_404(Unit, id=unit_id)
+    
     if request.method == 'POST':
         form = BedForm(request.POST, unit=unit)
+        
         if form.is_valid():
-            bed = form.save(commit=False)
-            bed.unit = unit
-            bed.save()
+            bed_num = form.cleaned_data.get('bed_num')
+            rent = form.cleaned_data.get('rent')
 
-            # Optional: update unit tracking
-            unit.updated_by = request.user
-            unit.save()
+            if not bed_num or rent is None:
+                form.add_error(None, "Both bed number and rent are required.")
+            else:
+                bed = form.save(commit=False)
+                bed.unit = unit
+                bed.save()
 
-            return redirect('hostel:unit_detail', unit.id)
+                # Optional: update unit tracking
+                unit.updated_by = request.user
+                unit.save()
+
+                return redirect('hostel:unit_detail', unit.id)
     else:
         form = BedForm(unit=unit)
 

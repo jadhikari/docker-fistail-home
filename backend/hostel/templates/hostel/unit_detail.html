@@ -46,6 +46,7 @@
             <div class="mb-3 border p-3 rounded small">
             <p>
               🛏️ <strong>Bed Number:</strong> {{ bed.bed_num }} |
+              💵 <strong>Rent(¥):</strong> {{ bed.rent }} |
               👤 <strong>Assigned to:</strong> 
               {% if bed.customer %}
                   <a href="{% url 'customer:customer_detail' bed.customer.id %}">{{ bed.customer }}</a>
