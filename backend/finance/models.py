@@ -152,3 +152,41 @@ class HostelExpense(TimeStampedUserModel):
     def __str__(self):
         hostel_name = self.hostel.name if self.hostel else "ALL"
         return f"[{self.transaction_code}] Expense by {self.purchased_by} on {self.purchased_date} for {hostel_name}"
+
+
+class UtilityExpense(models.Model):
+    class ExpenseType(models.TextChoices):
+        INTERNET = 'INTERNET', 'Internet'
+        WATER = 'WATER', 'Water'
+        ELECTRICITY = 'ELECTRICITY', 'Electricity'
+        GAS = 'GAS', 'Gas'
+
+    class ApprovalStatus(models.TextChoices):
+        PENDING = 'PENDING', 'Pending'
+        APPROVED = 'APPROVED', 'Approved'
+        REJECTED = 'REJECTED', 'Rejected'
+
+    hostel = models.ForeignKey('hostel.Hostel', on_delete=models.CASCADE, related_name='utility_expenses')
+    expense_type = models.CharField(max_length=20, choices=ExpenseType.choices)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, help_text='Total amount paid for the utility.')
+    billing_year = models.IntegerField(choices=year_choices(), default=current_year, help_text='Year the utility bill was issued.')
+    billing_month = models.IntegerField(choices=[(i, i) for i in range(1, 13)], help_text='Month the utility bill was issued.')
+    date_from = models.DateField(verbose_name='Usage Start Date', help_text='Start date of the usage period.')
+    date_to = models.DateField(verbose_name='Usage End Date', help_text='End date of the usage period.')
+    paid_date = models.DateField(verbose_name='Paid Date', help_text='Date when the expense was paid.')
+    usage_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text='Usage measured (e.g., kWh, m³, GB).')
+    description = models.TextField(blank=True, help_text='Optional description or notes.')
+    paid_by = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True, help_text='User who recorded or paid the expense.')
+    approved_by = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_utility_expenses', help_text='User who approved the expense.')
+    approval_status = models.CharField(max_length=10, choices=ApprovalStatus.choices, default=ApprovalStatus.PENDING, help_text='Approval status of the expense.')
+    receipt = models.FileField(upload_to='utility_receipts/', null=True, blank=True, help_text='Upload of the bill or receipt.')
+
+    class Meta:
+        ordering = ['-billing_year', '-billing_month']
+        verbose_name = 'Utility Expense'
+        verbose_name_plural = 'Utility Expenses'
+
+
+
+    def __str__(self):
+        return f"{self.get_expense_type_display()} | {self.hostel.name} | {self.amount}"

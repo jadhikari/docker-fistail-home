@@ -1,3 +1,276 @@
+# Fishtail Home - Hostel Management System
+
+A professional Django-based hostel management system for managing student accommodations in Japan.
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Docker & Docker Compose
+- Git
+
+### Development Setup
+```bash
+# Clone the repository
+git clone <repository-url>
+cd docker-fistail-home
+
+# Create environment file (if not exists)
+cp .env.dev.example .env.dev  # or create manually
+
+# Edit environment variables
+nano .env.dev
+
+# Start development environment
+make dev
+```
+
+### Production Setup
+```bash
+# Create environment file (if not exists)
+cp .env.prod.example .env.prod  # or create manually
+
+# Edit production environment variables
+nano .env.prod
+
+# Start production environment
+make prod
+
+# Run migrations
+make migrate
+```
+
+## 📁 Project Structure
+
+```
+docker-fistail-home/
+├── backend/                 # Django application
+│   ├── accounts/           # User management
+│   ├── customer/           # Customer/tenant management
+│   ├── finance/            # Financial management
+│   ├── hostel/             # Hostel management
+│   ├── MIGRATION_RULES.md               # Simple migration rules
+│   └── Dockerfile          # Multi-stage Docker build
+├── nginx/                  # Nginx configuration
+├── config/                 # Database configuration
+├── docker-compose.dev.yml  # Development environment
+├── docker-compose.prod.yml # Production environment
+├── Makefile               # Management commands
+└── README.md              # This file
+```
+
+## 🛠️ Available Commands
+
+### Development
+```bash
+make dev              # Start development environment
+make dev-detach       # Start development in background
+make dev-logs         # Show development logs
+make down-dev         # Stop development environment
+```
+
+### Production
+```bash
+make prod             # Start production environment
+make prod-logs        # Show production logs
+make down-prod        # Stop production environment
+make restart          # Restart all services
+```
+
+### Database Management
+```bash
+make migrate          # Run migrations
+make makemigrations   # Create new migrations
+make backup           # Create database backup
+make restore          # Restore from backup
+
+# Migration Commands (SIMPLE)
+make migration-status     # Check migration status
+make migration-fake       # Fake migrations (when tables exist but migrations missing)
+make migration-fake-initial # Fake initial migrations
+```
+
+### Maintenance
+```bash
+make clean            # Clean all Docker resources
+make health           # Check service health
+make monitor          # Monitor resource usage
+```
+
+### SSL Management
+```bash
+make ssl-setup        # Setup SSL certificates
+make ssl-renew        # Renew SSL certificates
+```
+
+## 🔧 Configuration
+
+### Environment Setup
+
+The project uses separate environment files for development and production:
+
+- **`.env.dev`**: Development environment variables
+- **`.env.prod`**: Production environment variables
+
+#### Manual Setup
+```bash
+# Create environment files manually
+nano .env.dev    # For development
+nano .env.prod   # For production
+```
+
+**Note**: The `.env.dev` and `.env.prod` files are already configured in the docker-compose files and are git-ignored for security.
+
+Key configuration sections:
+- **Django Settings**: Secret key, debug mode, allowed hosts
+- **Database**: PostgreSQL (fishtaildb, user: fishtail)
+- **Email**: SMTP configuration (companyfishtail@gmail.com)
+- **SSL**: Certbot and domain settings (production)
+- **Security**: CSRF, session, and security headers (production)
+
+### Docker Configuration
+
+The project uses multi-stage Docker builds for optimal security and performance:
+
+- **Development**: Includes development tools and hot-reload
+- **Production**: Minimal runtime with security hardening
+
+### Nginx Configuration
+
+Professional Nginx setup with:
+- SSL/TLS optimization
+- Security headers
+- Rate limiting
+- Gzip compression
+- Static file caching
+- Health checks
+
+## 🔒 Security Features
+
+- **Non-root containers**: All services run as non-root users
+- **Security headers**: Comprehensive security headers in Nginx
+- **Rate limiting**: API and login rate limiting
+- **SSL/TLS**: Modern SSL configuration with HSTS
+- **File upload validation**: Secure file upload handling
+- **Environment isolation**: Separate dev/prod configurations
+
+## 🛡️ Migration Rules
+
+**SIMPLE RULE: Never delete migration files in production OR development**
+
+This prevents the migration conflicts you've been experiencing.
+
+### Quick Commands
+```bash
+# Check migration status
+make migration-status
+
+# Fix "relation already exists" error
+make migration-fake-initial
+
+# Fix missing migrations
+make migration-fake
+```
+
+### Documentation
+- **Simple Rules**: `backend/MIGRATION_RULES.md`
+
+**That's it! Keep it simple.**
+
+## 📊 Monitoring & Health Checks
+
+All services include health checks:
+- **Backend**: Django deployment check
+- **Database**: PostgreSQL connection check
+- **Redis**: Redis ping check
+- **Nginx**: HTTP health endpoint
+
+## 🚀 Deployment
+
+### Development
+```bash
+make dev
+# Access at http://localhost:8000
+```
+
+### Production
+```bash
+# 1. Configure environment (if not already done)
+nano .env.prod
+
+# 2. Start services
+make prod
+
+# 3. Run migrations
+make migrate
+
+# 4. Setup SSL (first time)
+make ssl-setup
+
+# 5. Create superuser
+make createsuperuser
+```
+
+## 🔄 CI/CD Integration
+
+The Docker setup is designed for easy CI/CD integration:
+
+```yaml
+# Example GitHub Actions workflow
+- name: Build and deploy
+  run: |
+    make build-prod
+    make prod
+    make migrate
+```
+
+## 📝 Logging
+
+Structured logging with log rotation:
+- **Application logs**: `/app/logs/`
+- **Nginx logs**: `/var/log/nginx/`
+- **Docker logs**: JSON format with rotation
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+1. **Port conflicts**: Check if ports 8000, 5432, 6379 are available
+2. **Permission issues**: Ensure proper file permissions
+3. **Database connection**: Verify PostgreSQL is running
+4. **SSL issues**: Check certificate paths and permissions
+
+### Debug Commands
+
+```bash
+make health           # Check service status
+make logs-backend     # View backend logs
+make logs-nginx       # View nginx logs
+make shell            # Open Django shell
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test with `make test`
+5. Submit a pull request
+
+## 📄 License
+
+This project is proprietary software for Fishtail Home management.
+
+## 🆘 Support
+
+For support and questions:
+- Create an issue in the repository
+- Contact the development team
+- Check the troubleshooting section
+
+---
+
+**Fishtail Home Management System** - Professional hostel management for Japan
+
 # docker-fistail-home
 
 # Development environment variables env.dev

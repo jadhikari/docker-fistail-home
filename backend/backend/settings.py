@@ -93,13 +93,19 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Determine if we're in production
 IS_PRODUCTION = os.environ.get("DJANGO_DEBUG", "False") != "True"
 
-if IS_PRODUCTION:
+# Check if DATABASE_URL is set (for both dev and prod)
+if os.environ.get("DATABASE_URL"):
+    # Use DATABASE_URL if available
+    DATABASES = {
+        'default': dj_database_url.config()
+    }
+elif IS_PRODUCTION:
     # Use PostgreSQL or whatever is set in DATABASE_URL
     DATABASES = {
         'default': dj_database_url.config()
     }
 else:
-    # Use SQLite for local development
+    # Use SQLite for local development (fallback)
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
