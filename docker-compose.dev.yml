@@ -21,10 +21,6 @@ services:
       - "8000:8000"
     env_file:
       - .env.dev
-    environment:
-      - DJANGO_DEBUG=True
-      - DJANGO_SETTINGS_MODULE=backend.settings
-      - DATABASE_URL=postgres://fishtail:Fishtail131311@postgres:5432/fishtaildb
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "manage.py", "check"]
@@ -40,10 +36,8 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: fishtail-postgres-dev
-    environment:
-      POSTGRES_DB: fishtaildb
-      POSTGRES_USER: fishtail
-      POSTGRES_PASSWORD: Fishtail131311
+    env_file:
+      - .env.dev
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./config/postgresql.conf:/etc/postgresql/postgresql.conf:ro

@@ -153,6 +153,35 @@ Professional Nginx setup with:
 - **File upload validation**: Secure file upload handling
 - **Environment isolation**: Separate dev/prod configurations
 
+## 🚨 Security Alert - IMPORTANT
+
+**CRITICAL**: If you received a GitGuardian alert about exposed credentials:
+
+1. **Immediate Action Required**:
+   ```bash
+   # Create environment file with secure credentials
+   cp .env.dev.example .env.dev
+   nano .env.dev  # Edit with your secure password
+   ```
+
+2. **Set Environment Variables**:
+   ```bash
+   export POSTGRES_PASSWORD="your_secure_password_here"
+   ```
+
+3. **Update Docker Compose**:
+   The docker-compose files now use environment variables instead of hardcoded passwords.
+
+4. **Rotate Credentials**:
+   - Change the database password
+   - Update any other exposed credentials
+   - Consider the credentials compromised
+
+5. **Prevention**:
+   - Never commit `.env` files to git
+   - Use environment variables for all secrets
+   - Regularly audit your codebase for hardcoded credentials
+
 ## 🛡️ Migration Rules
 
 **SIMPLE RULE: Never delete migration files in production OR development**
