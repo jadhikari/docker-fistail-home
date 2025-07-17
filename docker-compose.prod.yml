@@ -22,19 +22,6 @@ services:
     environment:
       - DJANGO_SETTINGS_MODULE=backend.settings
       - PYTHONUNBUFFERED=1
-  migrate:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
-    depends_on:
-      - postgres
-    env_file: .env.prod
-    command: >
-      sh -c "
-        sleep 5 &&
-        python manage.py makemigrations &&
-        python manage.py migrate
-      "
   postgres:
     image: postgres:15
     container_name: postgres-db-prod
