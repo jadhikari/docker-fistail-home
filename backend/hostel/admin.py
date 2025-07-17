@@ -14,8 +14,6 @@ class HostelAdmin(admin.ModelAdmin):
         'hostel_manager',
         'deposit_fee',
         'initial_fee',
-        'internet_fee',
-        'utilities_fee',
         'created_at',
         'created_by',
         'updated_at',
@@ -59,13 +57,24 @@ class BedAdmin(admin.ModelAdmin):
         'unit',
         'bed_num',
         'rent',
+        'internet_fee',
+        'utilities_fee',
         'customer',
+        'assigned_date',
+        'released_date',
         'created_at',
         'created_by',
         'updated_at',
         'updated_by',
     )
+    list_filter = ('unit__hostel', 'unit', 'customer')
+    search_fields = ('bed_num', 'unit__room_num', 'unit__hostel__name', 'customer__name')
+    autocomplete_fields = ('unit', 'customer', 'created_by', 'updated_by')
     readonly_fields = ('created_at', 'updated_at')
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('unit', 'unit__hostel', 'customer', 'created_by', 'updated_by')
 
 @admin.register(BedAssignmentHistory)
 class BedAssignmentHistoryAdmin(admin.ModelAdmin):

@@ -1,6 +1,6 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
-{% block title %}Expense Detail - {{ expense.transaction_code }}{% endblock %}
+{% block title %}Utility Expense Detail{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-3">
@@ -21,17 +21,17 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <h4 class="mb-1">
-                        <i class="bi bi-house-door text-primary me-2"></i>
-                        Hostel Expense Details
+                        <i class="bi bi-lightning text-primary me-2"></i>
+                        Utility Expense Details
                     </h4>
-                    <p class="text-muted mb-0 small">Transaction Code: <span class="fw-semibold">{{ expense.transaction_code }}</span></p>
+                    <p class="text-muted mb-0 small">ID: <span class="fw-semibold">UTIL-{{ expense.id|stringformat:"06d" }}</span></p>
                 </div>
                 <div class="d-flex gap-2">
                     <a href="{% url 'finance:expenses' %}" class="btn btn-outline-secondary btn-sm">
                         <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
                     </a>
-                    {% if expense.status != 'approved' %}
-                        <a href="{% url 'finance:hostel_expense_edit' expense.pk %}" class="btn btn-outline-warning btn-sm">
+                    {% if expense.approval_status != 'APPROVED' %}
+                        <a href="{% url 'finance:utility_expense_edit' expense.pk %}" class="btn btn-outline-warning btn-sm">
                             <i class="bi bi-pencil-square me-1"></i>Edit
                         </a>
                     {% endif %}
@@ -43,7 +43,7 @@
     <!-- Expense Details Card -->
     <div class="card mb-4">
         <div class="card-header bg-light">
-            <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Expense Information</h6>
+            <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Utility Expense Information</h6>
         </div>
         <div class="card-body">
             <div class="row">
@@ -52,31 +52,57 @@
                         <table class="table table-borderless">
                             <tbody>
                                 <tr>
-                                    <th class="text-muted" style="width: 200px;">Transaction Code</th>
-                                    <td><span class="fw-semibold">{{ expense.transaction_code }}</span></td>
-                                </tr>
-                                <tr>
-                                    <th class="text-muted">Purchase Date</th>
-                                    <td>{{ expense.purchased_date|date:"F d, Y" }}</td>
+                                    <th class="text-muted" style="width: 200px;">Expense ID</th>
+                                    <td><span class="fw-semibold">UTIL-{{ expense.id|stringformat:"06d" }}</span></td>
                                 </tr>
                                 <tr>
                                     <th class="text-muted">Hostel</th>
-                                    <td>{{ expense.hostel.name|default:"ALL" }}</td>
+                                    <td>{{ expense.hostel.name }}</td>
                                 </tr>
                                 <tr>
-                                    <th class="text-muted">Purchased By</th>
-                                    <td>{{ expense.purchased_by }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="text-muted">Memo</th>
-                                    <td>{{ expense.memo|default:"-" }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="text-muted">Bill</th>
+                                    <th class="text-muted">Expense Type</th>
                                     <td>
-                                        {% if expense.bill_url %}
-                                            <a href="{{ expense.bill_url }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                                <i class="bi bi-file-earmark-pdf me-1"></i>View Bill
+                                        {% if expense.expense_type == 'INTERNET' %}
+                                            <span class="badge bg-info text-dark"><i class="bi bi-wifi me-1"></i>Internet</span>
+                                        {% elif expense.expense_type == 'WATER' %}
+                                            <span class="badge bg-primary"><i class="bi bi-droplet me-1"></i>Water</span>
+                                        {% elif expense.expense_type == 'ELECTRICITY' %}
+                                            <span class="badge bg-warning text-dark"><i class="bi bi-lightning me-1"></i>Electricity</span>
+                                        {% elif expense.expense_type == 'GAS' %}
+                                            <span class="badge bg-danger"><i class="bi bi-fire me-1"></i>Gas</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Billing Period</th>
+                                    <td>{{ expense.billing_year }}/{{ expense.billing_month|stringformat:"02d" }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Usage Period</th>
+                                    <td>{{ expense.date_from|date:"M d, Y" }} to {{ expense.date_to|date:"M d, Y" }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Paid Date</th>
+                                    <td>{{ expense.paid_date|date:"M d, Y" }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Paid By</th>
+                                    <td>{{ expense.paid_by|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Usage Amount</th>
+                                    <td>{{ expense.usage_amount|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Description</th>
+                                    <td>{{ expense.description|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Receipt</th>
+                                    <td>
+                                        {% if expense.receipt %}
+                                            <a href="{{ expense.receipt.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-file-earmark-pdf me-1"></i>View Receipt
                                             </a>
                                         {% else %}
                                             <span class="text-muted">N/A</span>
@@ -91,20 +117,9 @@
                     <div class="card bg-light">
                         <div class="card-body">
                             <h6 class="card-title mb-3 small"><i class="bi bi-calculator me-2"></i>Amount Details</h6>
-                            <div class="row g-2">
-                                <div class="col-6">
-                                    <small class="text-muted">Before Tax</small>
-                                    <div class="fw-semibold">¥{{ expense.amount_before_tax }}</div>
-                                </div>
-                                <div class="col-6">
-                                    <small class="text-muted">Tax Amount</small>
-                                    <div class="fw-semibold">¥{{ expense.amount_tax }}</div>
-                                </div>
-                                <div class="col-12 mt-2">
-                                    <hr>
-                                    <small class="text-muted">Total Amount</small>
-                                    <div class="h5 fw-bold text-success mb-0">¥{{ expense.amount_total }}</div>
-                                </div>
+                            <div class="text-center">
+                                <small class="text-muted">Total Amount</small>
+                                <div class="h3 fw-bold text-success mb-0">¥{{ expense.amount }}</div>
                             </div>
                         </div>
                     </div>
@@ -124,9 +139,9 @@
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Current Status</label>
                         <div>
-                            {% if expense.status == 'approved' %}
+                            {% if expense.approval_status == 'APPROVED' %}
                                 <span class="badge bg-success fs-6"><i class="bi bi-check-circle me-1"></i>Approved</span>
-                            {% elif expense.status == 'rejected' %}
+                            {% elif expense.approval_status == 'REJECTED' %}
                                 <span class="badge bg-danger fs-6"><i class="bi bi-x-circle me-1"></i>Rejected</span>
                             {% else %}
                                 <span class="badge bg-warning text-dark fs-6"><i class="bi bi-hourglass-split me-1"></i>Pending</span>
@@ -170,7 +185,7 @@
     </div>
 
     <!-- Status Update Form -->
-    {% if user.is_superuser %}
+    {% if request.user.is_superuser %}
         <div class="card mt-4">
                     <div class="card-header bg-light">
             <h6 class="mb-0"><i class="bi bi-gear me-2"></i>Update Status</h6>
@@ -180,11 +195,11 @@
                     {% csrf_token %}
                     <div class="row align-items-end">
                         <div class="col-md-4">
-                            <label for="status" class="form-label fw-semibold small">New Status</label>
-                            <select name="status" id="status" class="form-select">
-                                {% for value, label in expense.STATUS_CHOICES %}
-                                    <option value="{{ value }}" {% if expense.status == value %}selected{% endif %}>{{ label }}</option>
-                                {% endfor %}
+                            <label for="approval_status" class="form-label fw-semibold small">New Status</label>
+                            <select name="approval_status" id="approval_status" class="form-select">
+                                <option value="PENDING" {% if expense.approval_status == 'PENDING' %}selected{% endif %}>Pending</option>
+                                <option value="APPROVED" {% if expense.approval_status == 'APPROVED' %}selected{% endif %}>Approved</option>
+                                <option value="REJECTED" {% if expense.approval_status == 'REJECTED' %}selected{% endif %}>Rejected</option>
                             </select>
                         </div>
                         <div class="col-md-4">
@@ -208,4 +223,4 @@
         });
     }, 5000);
 </script>
-{% endblock %}
+{% endblock %} 

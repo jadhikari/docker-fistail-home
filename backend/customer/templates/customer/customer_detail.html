@@ -3,7 +3,18 @@
 {% block title %}Customer Detail{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container-fluid mt-3">
+    {% comment %} Display the error massage. {% endcomment %}
+    {% if messages %}
+        <div>
+            {% for message in messages %}
+            <div class="bg-danger text-white alert alert-{{ message.tags|first }} alert-dismissible fade show auto-dismiss" role="alert" style="font-size: 0.85rem; line-height: 1.2;">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="font-size: 0.7rem;"></button>
+            </div>
+            {% endfor %}
+        </div>
+    {% endif %}
     <a href="{% url 'customer:dashboard' %}" class="btn btn-sm btn-outline-secondary mb-2">← Back</a>
     <h4 class="mb-4 text-center">Customer Details </h4>
     <div class="card shadow-sm">
@@ -215,7 +226,19 @@
         </div>
     {% endif %}
 
-
+    {% comment %} Script to display massage just for 4 second {% endcomment %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            setTimeout(() => {
+                const alerts = document.querySelectorAll('.auto-dismiss');
+                alerts.forEach(alert => {
+                    const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+                    bsAlert.close();
+                });
+            }, 4000);
+        });
+        </script>
+        
 
 </div>
 {% endblock %}

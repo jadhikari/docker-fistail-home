@@ -5,7 +5,7 @@
 <div class="container mt-4">
     <a href="{% url 'customer:customer_detail' customer_details.customer.id %}" class="btn btn-sm btn-outline-secondary mb-3">← Back</a>
 
-    <form method="post" action="{% url 'finance:monthly_rent' customer_details.customer.id %}">
+    <form method="post" action="{% url 'finance:monthly_rent' customer_details.customer.id %}" data-can-edit="{% if can_edit_fees %}true{% else %}false{% endif %}">
         {% csrf_token %}
         <div class="card shadow-sm p-4">
             <h4 class="text-center">Monthly Rent Payment</h4>
@@ -47,19 +47,33 @@
                 </div>
             </div>
 
+            <!-- Privilege Notice -->
+            {% if not can_edit_fees %}
+            <div class="alert alert-info mb-3">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Note:</strong> You don't have permission to edit fee amounts. The values are pre-filled from bed settings.
+            </div>
+            {% endif %}
+
             <!-- Fee Inputs (Now Editable) -->
             <div class="row mb-3">
                 <div class="col-md-4">
                     <label class="form-label fw-bold">Internet Fee</label>
-                    <input type="number" step="0.01" name="internet" id="internetFee" class="form-control" value="{{ customer_details.unit.hostel.internet_fee }}">
+                    <input type="number" step="0.01" name="internet" id="internetFee" class="form-control" 
+                           value="{{ customer_details.internet_fee }}"
+                           {% if not can_edit_fees %}readonly{% endif %}>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-bold">Utilities Fee</label>
-                    <input type="number" step="0.01" name="utilities" id="utilitiesFee" class="form-control" value="{{ customer_details.unit.hostel.utilities_fee }}">
+                    <input type="number" step="0.01" name="utilities" id="utilitiesFee" class="form-control" 
+                           value="{{ customer_details.utilities_fee }}"
+                           {% if not can_edit_fees %}readonly{% endif %}>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-bold">Base Rent</label>
-                    <input type="number" step="0.01" name="rent" id="baseRent" class="form-control" value="{{ customer_details.rent }}">
+                    <input type="number" step="0.01" name="rent" id="baseRent" class="form-control" 
+                           value="{{ customer_details.rent }}"
+                           {% if not can_edit_fees %}readonly{% endif %}>
                 </div>
             </div>
 
@@ -67,7 +81,9 @@
             <div class="row mb-3 align-items-end">
                 <div class="col-md-4">
                     <label for="discount" class="form-label fw-bold">Discount (%)</label>
-                    <input type="number" step="0.01" name="rent_discount_percent" id="discount" class="form-control" value="0">
+                    <input type="number" step="0.01" name="rent_discount_percent" id="discount" class="form-control" 
+                           value="0"
+                           {% if not can_edit_fees %}readonly{% endif %}>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-bold">Rent After Discount</label>
@@ -101,6 +117,9 @@
         const afterDiscountDisplay = document.getElementById('afterDiscount');
         const totalAmountDisplay = document.getElementById('totalAmount');
 
+        // Check if user can edit fees
+        const canEditFees = document.querySelector('form').dataset.canEdit === 'true';
+
         function calculate() {
             let baseRent = parseFloat(baseRentInput.value) || 0;
             let internetFee = parseFloat(internetInput.value) || 0;
@@ -114,10 +133,12 @@
             totalAmountDisplay.innerText = total.toFixed(2);
         }
 
-        // Add event listeners to all relevant inputs
-        [discountInput, baseRentInput, internetInput, utilitiesInput].forEach(input => {
-            input.addEventListener('input', calculate);
-        });
+        // Add event listeners to all relevant inputs only if editable
+        if (canEditFees) {
+            [discountInput, baseRentInput, internetInput, utilitiesInput].forEach(input => {
+                input.addEventListener('input', calculate);
+            });
+        }
 
         // Initial calculation
         calculate();

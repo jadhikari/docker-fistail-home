@@ -116,6 +116,12 @@ def customer_detail(request, pk):
     assigned_bed_history = None
     assigned_bed_history = BedAssignmentHistory.objects.filter(customer=c_id).all()
 
+    # Test message to check if alerts work
+    if request.GET.get('test') == '1':
+        messages.success(request, "Test success message - this should auto-dismiss in 4 seconds!")
+        messages.error(request, "Test error message - this should auto-dismiss in 4 seconds!")
+        messages.warning(request, "Test warning message - this should auto-dismiss in 4 seconds!")
+
     context = {
         'customer': h_customer,
         'assigned_bed': assigned_bed,

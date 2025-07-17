@@ -1,122 +1,307 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Hostel Dashboard{% endblock %}
+{% block title %}Hostel Details - {{ hostel.name }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-2">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <a href="{% url 'hostel:dashboard' %}" class="btn btn-sm btn-outline-secondary">← Back</a>
-        <div class="flex-grow-1 text-center">
-            <h5 class="mb-0">{{ hostel.name|upper }}</h5>
+<div class="container-fluid py-3">
+    {% if messages %}
+        <div class="mb-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>{{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
         </div>
-        <div style="width: 100px;"></div> <!-- Placeholder to balance the layout -->
-    </div>
-    <div class="mb-3 text-center">
-        {% if hostel.image %}
-            <img src="{{ hostel.image.url }}" class="img-fluid rounded" style="max-height: 300px;" alt="hostel Image">
-        {% else %}
-        <p class=" small">No image available.</p>
-        {% endif %}
-    </div>
+    {% endif %}
 
-
-    <div class="row g-3 small">
-        <div class="col-md-6">
-            <h6 class=" border-bottom pb-1 text-primary text-center">Overview</h6>
-            <p><strong>Common Name:</strong> {{ hostel.common_name|default:"-" }}</p>
-            <p><strong>Type:</strong> {{ hostel.get_hostel_type_display }}</p>
-            <p><strong>Total Rooms:</strong> {{ hostel.total_rooms }}</p>
-        </div>
-        <div class="col-md-6">
-            <h6 class=" border-bottom pb-1 text-primary text-center">Contract Info</h6>
-            <p><strong>Manager:</strong> {{ hostel.hostel_manager.get_full_name|default:"-" }}</p>
-            <p><strong>Memo:</strong> {{ hostel.memo|default:"-" }}</p>
-        </div>
-    </div>
-
-    <div class="border-top my-2"></div>
-
-    <h6 class=" border-bottom pb-1 text-primary text-center">Fees</h6>
-    <div class="row g-2 small">
-        <div class="col-6 col-md-3"><strong>Deposit:</strong> ¥{{ hostel.deposit_fee }}</div>
-        <div class="col-6 col-md-3"><strong>Initial:</strong> ¥{{ hostel.initial_fee }}</div>
-        <div class="col-6 col-md-3"><strong>Internet:</strong> ¥{{ hostel.internet_fee }}</div>
-        <div class="col-6 col-md-3"><strong>Utilities:</strong> ¥{{ hostel.utilities_fee }}</div>
-    </div>
-
-    <div class="border-top my-2"></div>
-
-    <div class="row g-3 small">
-        <div class="col-md-6">
-            <h6 class=" border-bottom pb-1 text-primary text-center">Location</h6>
-            <p><strong>Address:</strong> {{ hostel.address }}</p>
-            <p><strong>Latitude:</strong> {{ hostel.latitude }}</p>
-            <p><strong>Longitude:</strong> {{ hostel.longitude }}</p>
-        </div>
-        <div class="col-md-6">
-        <h6 class=" border-bottom pb-1 text-primary text-center">Owner & Contract Info</h6>
-            <p><strong>Owner:</strong> {{ hostel.house_owner|default:"-" }}</p>
-            <p><strong>Contact:</strong> {{ hostel.hw_contact_num|default:"-" }}</p>
-            <p><strong>Start Date:</strong> {{ hostel.contract_start_date|date:"Y-m-d" }}</p>
-            <p><strong>End Date:</strong> {{ hostel.contract_end_date|date:"Y-m-d" }}</p>
-        </div>
-    </div>
-
-  <div class="border-top my-2"></div>
-
-    <h6 class=" border-bottom pb-1 text-primary text-center">Info</h6>
-    <div class="row g-2 small">
-        <div class="col-6 col-md-3"><strong>Created:</strong> {{ hostel.created_at }}</div>
-        <div class="col-6 col-md-3"><strong>Created By:</strong> {{ hostel.created_by }}</div>
-        <div class="col-6 col-md-3"><strong>Updated:</strong> {{ hostel.updated_at }}</div>
-        <div class="col-6 col-md-3"><strong>Updated By:</strong> {{ hostel.updated_by }}</div>
-    </div>
-
-    <div class="border-top my-2"></div>
-  
-    <div class="card shadow-sm mt-4 p-2"> 
-        <div class="row">
-            <div class="col-6">
-                <h5 class="text-primary">Units</h5>
-            </div>
-            <div class="col-6 ">
-                <a href="{% url 'hostel:unit_create' hostel.id %}" class="btn float-end btn-sm btn-primary mb-2">➕ Add Unit</a>
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">
+                        <i class="bi bi-house-door text-primary me-2"></i>
+                        {{ hostel.name|upper }}
+                    </h4>
+                    <p class="text-muted mb-0 small">
+                        {% if hostel.common_name %}
+                            {{ hostel.common_name }} | 
+                        {% endif %}
+                        {{ hostel.get_hostel_type_display }} Hostel
+                    </p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'hostel:dashboard' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+                    </a>
+                    <a href="{% url 'hostel:hostel_edit' hostel.pk %}" class="btn btn-outline-warning btn-sm">
+                        <i class="bi bi-pencil-square me-1"></i>Edit Hostel
+                    </a>
+                </div>
             </div>
         </div>
-        {% if units %}
+    </div>
+
+    <!-- Hostel Image Section -->
+    {% if hostel.image %}
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="bi bi-image me-2"></i>Hostel Image</h6>
+        </div>
+        <div class="card-body text-center">
+            <img src="{{ hostel.image.url }}" class="img-fluid rounded" style="max-height: 300px;" alt="Hostel Image">
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Hostel Information Cards -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Basic Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-borderless">
+                            <tbody>
+                                <tr>
+                                    <th class="text-muted" style="width: 150px;">Hostel Name</th>
+                                    <td><span class="fw-semibold">{{ hostel.name }}</span></td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Common Name</th>
+                                    <td>{{ hostel.common_name|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Type</th>
+                                    <td>
+                                        {% if hostel.hostel_type == 'boys' %}
+                                            <span class="badge bg-primary"><i class="bi bi-gender-male me-1"></i>Boys</span>
+                                        {% else %}
+                                            <span class="badge bg-danger"><i class="bi bi-gender-female me-1"></i>Girls</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Total Rooms</th>
+                                    <td>{{ hostel.total_rooms }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Manager</th>
+                                    <td>{{ hostel.hostel_manager.get_full_name|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Memo</th>
+                                    <td>{{ hostel.memo|default:"-" }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-geo-alt me-2"></i>Location & Contract</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-borderless">
+                            <tbody>
+                                <tr>
+                                    <th class="text-muted" style="width: 150px;">Address</th>
+                                    <td>{{ hostel.address }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Latitude</th>
+                                    <td>{{ hostel.latitude|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Longitude</th>
+                                    <td>{{ hostel.longitude|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Owner</th>
+                                    <td>{{ hostel.house_owner|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Contact</th>
+                                    <td>{{ hostel.hw_contact_num|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Contract Period</th>
+                                    <td>
+                                        {% if hostel.contract_start_date and hostel.contract_end_date %}
+                                            {{ hostel.contract_start_date|date:"M d, Y" }} to {{ hostel.contract_end_date|date:"M d, Y" }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fees Information -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="bi bi-calculator me-2"></i>Fee Information</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <small class="text-muted">Deposit Fee</small>
+                        <div class="h5 fw-bold text-primary mb-0">¥{{ hostel.deposit_fee }}</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <small class="text-muted">Initial Fee</small>
+                        <div class="h5 fw-bold text-success mb-0">¥{{ hostel.initial_fee }}</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <small class="text-muted">Total Beds</small>
+                        <div class="h5 fw-bold text-info mb-0">{{ hostel.total_beds }}</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <small class="text-muted">Available Beds</small>
+                        <div class="h5 fw-bold text-warning mb-0">{{ hostel.available_beds }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audit Information -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Audit Information</h6>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <small class="text-muted">Created At</small>
+                    <div class="fw-semibold">{{ hostel.created_at|date:"M d, Y H:i" }}</div>
+                </div>
+                <div class="col-md-3">
+                    <small class="text-muted">Created By</small>
+                    <div class="fw-semibold">{{ hostel.created_by|default:"-" }}</div>
+                </div>
+                <div class="col-md-3">
+                    <small class="text-muted">Updated At</small>
+                    <div class="fw-semibold">{{ hostel.updated_at|date:"M d, Y H:i" }}</div>
+                </div>
+                <div class="col-md-3">
+                    <small class="text-muted">Updated By</small>
+                    <div class="fw-semibold">{{ hostel.updated_by|default:"-" }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Units Section -->
+    <div class="card">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="bi bi-grid me-2"></i>Units</h6>
+            <div class="d-flex gap-2">
+                <span class="badge bg-primary small">{{ units|length }} units</span>
+                <a href="{% url 'hostel:unit_create' hostel.id %}" class="btn btn-success btn-sm">
+                    <i class="bi bi-plus-circle me-1"></i>Add Unit
+                </a>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            {% if units %}
             <div class="table-responsive">
-                <table class="table table-sm table-bordered small text-center">
-                    <thead class="table-light">
+                <table class="table table-hover mb-0 table-sm">
+                    <thead class="table-dark">
                         <tr>
-                            <th>S/N</th>
-                            <th>Type</th>
-                            <th>Room No.</th>
-                            <th>Num. of Beds</th>
-                            <th>Available Beds</th>
-                            <th>Others</th>
-                            <th>Memo</th>
-                            <th>Edit </th>
+                            <th class="text-center small">S/N</th>
+                            <th class="small">Type</th>
+                            <th class="small">Room No.</th>
+                            <th class="text-center small">Num. of Beds</th>
+                            <th class="text-center small">Available Beds</th>
+                            <th class="small">Unit ID</th>
+                            <th class="small">Memo</th>
+                            <th class="text-center small">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for unit in units %}
-                            <tr>
-                            <td><a href="{% url 'hostel:unit_detail' unit.pk %}">{{ forloop.counter }}</a></td>
-                            <td>{{ unit.get_unit_type_display }}</td>
+                        <tr>
+                            <td class="text-center">{{ forloop.counter }}</td>
+                            <td>
+                                {% if unit.unit_type == 'bedroom' %}
+                                    <span class="badge bg-primary"><i class="bi bi-house-door me-1"></i>Bedroom</span>
+                                {% elif unit.unit_type == 'kitchen' %}
+                                    <span class="badge bg-success"><i class="bi bi-cup-hot me-1"></i>Kitchen</span>
+                                {% elif unit.unit_type == 'bathroom' %}
+                                    <span class="badge bg-info"><i class="bi bi-droplet me-1"></i>Bathroom</span>
+                                {% elif unit.unit_type == 'toilet' %}
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-toilet me-1"></i>Toilet</span>
+                                {% else %}
+                                    <span class="badge bg-secondary"><i class="bi bi-gear me-1"></i>{{ unit.get_unit_type_display }}</span>
+                                {% endif %}
+                            </td>
                             <td>{{ unit.room_num|default:"-" }}</td>
-                            <td>{{ unit.num_of_beds|default:"-" }}</td>
-                            <td>{{ unit.available_beds|default:"-" }}</td>
+                            <td class="text-center">{{ unit.num_of_beds|default:"-" }}</td>
+                            <td class="text-center">
+                                {% if unit.available_beds > 0 %}
+                                    <span class="badge bg-success">{{ unit.available_beds }}</span>
+                                {% else %}
+                                    <span class="badge bg-danger">0</span>
+                                {% endif %}
+                            </td>
                             <td>{{ unit.unit_id|default:"-" }}</td>
-                            <td>{{ unit.memo|default:"-" }}</td>
-                            <td><a href="{% url 'hostel:unit_edit' unit.id %}" class="btn btn-sm btn-outline-primary">Edit</a></td>
-                            </tr>
+                            <td>
+                                <span class="text-truncate d-inline-block" style="max-width: 120px;" title="{{ unit.memo }}">
+                                    {{ unit.memo|default:"-" }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <a href="{% url 'hostel:unit_detail' unit.id %}" class="btn btn-sm btn-outline-primary" title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{% url 'hostel:unit_edit' unit.id %}" class="btn btn-sm btn-outline-warning" title="Edit Unit">
+                                    <i class="bi bi-pencil-square"></i>
+                                </a>
+                            </td>
+                        </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
-        {% else %}
-            <p class="text-muted small">No units available for this hostel.</p>
-        {% endif %}
+            {% else %}
+            <div class="text-center py-4">
+                <div class="text-muted small">
+                    <i class="bi bi-inbox h3"></i>
+                    <p class="mt-2 mb-0">No units available for this hostel.</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
     </div>
 </div>
+
+<script>
+    // Auto-dismiss alerts
+    setTimeout(() => {
+        document.querySelectorAll('.auto-dismiss').forEach(alert => {
+            const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+</script>
 {% endblock %}

@@ -1,86 +1,334 @@
 {% extends "base.html" %}
 
-{% block title %}Revenue Detail{% endblock %}
+{% block title %}Revenue Detail - {{ revenue.get_title_display }}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <a href="{% url 'finance:revenues' %}" class="btn btn-sm btn-outline-secondary mb-3">← Back to Dashboard</a>
+<div class="container-fluid py-3">
+    {% if messages %}
+        <div class="mb-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>{{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
 
-    <div class="card shadow-sm">
-        <div class="card-header text-center">
-            <h4 class="mb-0"> 
-                {% if revenue.title == 'registration_fee' %}
-                    Registration Fee Payment Detail
-                {% elif revenue.title == 'rent' %}
-                    Monthly Rent Payment Detail
-                {% endif %}
-            </h4>
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">
+                        {% if revenue.title == 'registration_fee' %}
+                            <i class="bi bi-person-plus text-primary me-2"></i>
+                            Registration Fee Details
+                        {% elif revenue.title == 'rent' %}
+                            <i class="bi bi-house-door text-primary me-2"></i>
+                            Monthly Rent Details
+                        {% endif %}
+                    </h4>
+                    <p class="text-muted mb-0 small">
+                        Customer: <span class="fw-semibold">{{ revenue.customer.name }}</span> | 
+                        Period: <span class="fw-semibold">{{ revenue.year }}/{{ revenue.month|stringformat:"02d" }}</span>
+                    </p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'finance:revenues' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+                    </a>
+                    <a href="{% url 'customer:customer_detail' revenue.customer.id %}" class="btn btn-outline-info btn-sm">
+                        <i class="bi bi-person me-1"></i>View Customer
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revenue Details Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Revenue Information</h6>
         </div>
         <div class="card-body">
-
-            <div class="row mb-2">
-                <div class="col-md-6">
-                    <strong>Customer:</strong> <a href="{% url 'customer:customer_detail' revenue.customer.id %}">{{ revenue.customer.name }}</a>
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="table-responsive">
+                        <table class="table table-borderless">
+                            <tbody>
+                                <tr>
+                                    <th class="text-muted" style="width: 200px;">Revenue Type</th>
+                                    <td>
+                                        {% if revenue.title == 'registration_fee' %}
+                                            <span class="badge bg-primary"><i class="bi bi-person-plus me-1"></i>Registration Fee</span>
+                                        {% elif revenue.title == 'rent' %}
+                                            <span class="badge bg-success"><i class="bi bi-house-door me-1"></i>Monthly Rent</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Customer</th>
+                                    <td>
+                                        <a href="{% url 'customer:customer_detail' revenue.customer.id %}" class="text-decoration-none fw-semibold">
+                                            {{ revenue.customer.name }}
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Billing Period</th>
+                                    <td>{{ revenue.year }}/{{ revenue.month|stringformat:"02d" }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Memo</th>
+                                    <td>{{ revenue.memo|default:"-" }}</td>
+                                </tr>
+                                {% if revenue.title == 'registration_fee' %}
+                                <tr>
+                                    <th class="text-muted">Payment Type</th>
+                                    <td><span class="badge bg-info text-dark">One-time Payment</span></td>
+                                </tr>
+                                {% elif revenue.title == 'rent' %}
+                                <tr>
+                                    <th class="text-muted">Payment Type</th>
+                                    <td><span class="badge bg-warning text-dark">Recurring Payment</span></td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <strong>Type:</strong> {{ revenue.get_title_display }}
+                <div class="col-md-4">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title mb-3 small"><i class="bi bi-calculator me-2"></i>Amount Details</h6>
+                            {% if revenue.title == 'registration_fee' %}
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <small class="text-muted">Deposit</small>
+                                        <div class="fw-semibold">¥{{ revenue.deposit }}</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">Discount</small>
+                                        <div class="fw-semibold text-danger">-{{ revenue.deposit_discount_percent }}%</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">Initial Fee</small>
+                                        <div class="fw-semibold">¥{{ revenue.initial_fee }}</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">Discount</small>
+                                        <div class="fw-semibold text-danger">-{{ revenue.initial_fee_discount_percent }}%</div>
+                                    </div>
+                                    <div class="col-12 mt-2">
+                                        <hr>
+                                        <small class="text-muted">Total Amount</small>
+                                        <div class="h5 fw-bold text-success mb-0">¥{{ revenue.total_amount }}</div>
+                                    </div>
+                                </div>
+                            {% elif revenue.title == 'rent' %}
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <small class="text-muted">Rent</small>
+                                        <div class="fw-semibold">¥{{ revenue.rent }}</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">Discount</small>
+                                        <div class="fw-semibold text-danger">-{{ revenue.rent_discount_percent }}%</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">Internet</small>
+                                        <div class="fw-semibold">¥{{ revenue.internet }}</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">Utilities</small>
+                                        <div class="fw-semibold">¥{{ revenue.utilities }}</div>
+                                    </div>
+                                    <div class="col-12 mt-2">
+                                        <hr>
+                                        <small class="text-muted">Total Amount</small>
+                                        <div class="h5 fw-bold text-success mb-0">¥{{ revenue.total_amount }}</div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <div class="row mb-2">
-                <div class="col-md-6">
-                    <strong>Year/Month:</strong> {{ revenue.year }}/{{ revenue.month }}
-                </div>
-                <div class="col-md-6">
-                    <strong>Memo:</strong> {{ revenue.memo|default:"—" }}
-                </div>
-            </div>
-
-            {% if revenue.title == 'registration_fee' %}
-            <hr>
-            <h5 class="text-muted">Registration Fee</h5>
-            <div class="row mb-2">
-                <div class="col-md-4"><strong>Deposit:</strong> ¥ {{ revenue.deposit }} </div>
-                <div class="col-md-4"><strong>Deposit Discount %:</strong> {{ revenue.deposit_discount_percent }} %</div>
-                <div class="col-md-4"><strong>Deposit After Discount:</strong> ¥ {{ revenue.deposit_after_discount }} </div>
-            </div>
-            <div class="row mb-2">
-                <div class="col-md-4"><strong>Initial Fee:</strong> ¥ {{ revenue.initial_fee }} </div>
-                <div class="col-md-4"><strong>Initial Fee Discount:</strong> {{ revenue.initial_fee_discount_percent }} %</div>
-                <div class="col-md-4"><strong>Initial Fee After Discount:</strong> ¥ {{ revenue.initial_fee_after_discount }} </div>
-            </div>
-            <div class="row mb-2">
-                <div class="offset-md-8 col-md-4"><strong>Total Amount:</strong> ¥ {{ revenue.total_amount }} </div>
-            </div>
-            {% elif revenue.title == 'rent' %}
-            <hr>
-            <h5 class="text-muted">Rent</h5>
-            <div class="row mb-2">
-                <div class="col-md-4"><strong>Rent:</strong>¥ {{ revenue.rent }} </div>
-                <div class="col-md-6"><strong>Rent Discount:</strong> {{ revenue.rent_discount_percent }} %</div>
-                <div class="col-md-6"><strong>Rent After Discount:</strong>¥ {{ revenue.rent_after_discount }}</div>
-            </div>
-            <div class="row mb-2">
-                <div class="col-md-4"><strong>Internet:</strong> ¥ {{ revenue.internet }} </div>
-                <div class="col-md-4"><strong>Utilities:</strong> ¥ {{ revenue.utilities }}</div>
-                <div class="col-md-4"><strong>Total Amount:</strong> ¥ {{ revenue.total_amount }}</div>
-            </div>
-            {% endif %}
-
-            <hr>
-            <h5 class="text-muted">Audit Info</h5>
+    <!-- Detailed Breakdown Card -->
+    {% if revenue.title == 'registration_fee' %}
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="bi bi-receipt me-2"></i>Registration Fee Breakdown</h6>
+        </div>
+        <div class="card-body">
             <div class="row">
                 <div class="col-md-6">
-                    <strong>Created At:</strong> {{ revenue.created_at|date:"Y-m-d H:i" }}<br>
-                    <strong>Created By:</strong> {{ revenue.created_by|default:"—" }}
+                    <h6 class="text-muted mb-3">Deposit Details</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <tbody>
+                                <tr>
+                                    <td class="text-muted">Original Deposit</td>
+                                    <td class="text-end">¥{{ revenue.deposit }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Discount ({{ revenue.deposit_discount_percent }}%)</td>
+                                    <td class="text-end text-danger">-¥{{ revenue.deposit|floatformat:2|add:"-"|add:revenue.deposit_after_discount|floatformat:2 }}</td>
+                                </tr>
+                                <tr class="table-light">
+                                    <td class="fw-semibold">Deposit After Discount</td>
+                                    <td class="text-end fw-bold">¥{{ revenue.deposit_after_discount }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
                 <div class="col-md-6">
-                    <strong>Updated At:</strong> {{ revenue.updated_at|date:"Y-m-d H:i" }}<br>
-                    <strong>Updated By:</strong> {{ revenue.updated_by|default:"—" }}
+                    <h6 class="text-muted mb-3">Initial Fee Details</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <tbody>
+                                <tr>
+                                    <td class="text-muted">Original Initial Fee</td>
+                                    <td class="text-end">¥{{ revenue.initial_fee }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Discount ({{ revenue.initial_fee_discount_percent }}%)</td>
+                                    <td class="text-end text-danger">-¥{{ revenue.initial_fee|floatformat:2|add:"-"|add:revenue.initial_fee_after_discount|floatformat:2 }}</td>
+                                </tr>
+                                <tr class="table-light">
+                                    <td class="fw-semibold">Initial Fee After Discount</td>
+                                    <td class="text-end fw-bold">¥{{ revenue.initial_fee_after_discount }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
+        </div>
+    </div>
+    {% elif revenue.title == 'rent' %}
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="bi bi-receipt me-2"></i>Rent Breakdown</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-muted mb-3">Rent Details</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <tbody>
+                                <tr>
+                                    <td class="text-muted">Original Rent</td>
+                                    <td class="text-end">¥{{ revenue.rent }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Discount ({{ revenue.rent_discount_percent }}%)</td>
+                                    <td class="text-end text-danger">-¥{{ revenue.rent|floatformat:2|add:"-"|add:revenue.rent_after_discount|floatformat:2 }}</td>
+                                </tr>
+                                <tr class="table-light">
+                                    <td class="fw-semibold">Rent After Discount</td>
+                                    <td class="text-end fw-bold">¥{{ revenue.rent_after_discount }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-muted mb-3">Additional Charges</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <tbody>
+                                <tr>
+                                    <td class="text-muted">Internet</td>
+                                    <td class="text-end">¥{{ revenue.internet }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Utilities</td>
+                                    <td class="text-end">¥{{ revenue.utilities }}</td>
+                                </tr>
+                                <tr class="table-light">
+                                    <td class="fw-semibold">Additional Total</td>
+                                    <td class="text-end fw-bold">¥{{ revenue.internet|add:revenue.utilities }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
+    <!-- Audit Information -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Audit Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <small class="text-muted">Created At</small>
+                            <div class="fw-semibold">{{ revenue.created_at|date:"M d, Y H:i" }}</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Created By</small>
+                            <div class="fw-semibold">{{ revenue.created_by|default:"-" }}</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Updated At</small>
+                            <div class="fw-semibold">{{ revenue.updated_at|date:"M d, Y H:i" }}</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Updated By</small>
+                            <div class="fw-semibold">{{ revenue.updated_by|default:"-" }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Additional Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Payment Status</label>
+                        <div>
+                            <span class="badge bg-success fs-6"><i class="bi bi-check-circle me-1"></i>Paid</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Revenue Category</label>
+                        <div>
+                            {% if revenue.title == 'registration_fee' %}
+                                <span class="badge bg-primary">Registration</span>
+                            {% elif revenue.title == 'rent' %}
+                                <span class="badge bg-success">Rent</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<script>
+    // Auto-dismiss alerts
+    setTimeout(() => {
+        document.querySelectorAll('.auto-dismiss').forEach(alert => {
+            const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+</script>
 {% endblock %}

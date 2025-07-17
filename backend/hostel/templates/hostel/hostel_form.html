@@ -1,41 +1,461 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}{% if is_edit %}Edit{% else %}Add{% endif %} Hostel{% endblock %}
+{% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <a href="{% url 'hostel:dashboard' %}" class="btn btn-sm btn-outline-secondary mb-2">← Back </a>
-    
-    <div class= "card shadow-sm p-1">
-        <h4 class="text-center">{% if is_edit %}Edit{% else %}Add{% endif %} Hostel</h4>
-        <div class="border-top mb-4"></div>
-        <form method="post" enctype="multipart/form-data" novalidate>
-            {% csrf_token %}
+<div class="container-fluid py-3">
+    {% if messages %}
+        <div class="mb-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>{{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
 
-            <div class="row">
-                {% for field in form %}
-                    <div class="mb-3 col-md-6">
-                        <label for="{{ field.id_for_label }}" class="form-label">
-                            {{ field.label }} :{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
-                        </label>
-                        {{ field }}
-                        {% if field.help_text %}
-                            <div class="form-text">{{ field.help_text }}</div>
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">
+                        <i class="bi bi-house-door text-primary me-2"></i>
+                        {{ title }}
+                    </h4>
+                    <p class="text-muted mb-0 small">
+                        {% if hostel %}
+                            Editing hostel: {{ hostel.name }}
+                        {% else %}
+                            Add a new hostel to the system
                         {% endif %}
-                        {% for error in field.errors %}
-                            <div class="text-danger">{{ error }}</div>
+                    </p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'hostel:dashboard' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Card -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Hostel Information</h6>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <!-- Display form-level non-field errors -->
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            <div><i class="bi bi-exclamation-triangle me-2"></i>{{ error }}</div>
                         {% endfor %}
                     </div>
-                    {% if forloop.counter|divisibleby:"2" and not forloop.last %}
-                        </div><div class="row">
-                    {% endif %}
-                {% endfor %}
-            </div>
+                {% endif %}
 
-            <br />
-            <button type="submit" class="btn btn-primary">Submit</button>
-            <a href="{% url 'hostel:dashboard' %}" class="btn btn-secondary">Cancel</a>
-        </form>
+                <div class="row g-3">
+                    <!-- Hostel Name Field -->
+                    <div class="col-md-6">
+                        <label for="{{ form.name.id_for_label }}" class="form-label fw-semibold small">
+                            Hostel Name <span class="text-danger">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            name="{{ form.name.name }}" 
+                            id="{{ form.name.id_for_label }}" 
+                            value="{{ form.name.value|default_if_none:'' }}" 
+                            class="form-control form-control-sm" 
+                            required
+                            placeholder="Enter hostel name"
+                        >
+                        {% if form.name.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.name.errors %}
+                                    <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Common Name Field -->
+                    <div class="col-md-6">
+                        <label for="{{ form.common_name.id_for_label }}" class="form-label fw-semibold small">
+                            Common Name
+                        </label>
+                        <input 
+                            type="text" 
+                            name="{{ form.common_name.name }}" 
+                            id="{{ form.common_name.id_for_label }}" 
+                            value="{{ form.common_name.value|default_if_none:'' }}" 
+                            class="form-control form-control-sm"
+                            placeholder="Enter common name"
+                        >
+                        {% if form.common_name.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.common_name.errors %}
+                                    <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Hostel Type Field -->
+                    <div class="col-md-6">
+                        <label for="{{ form.hostel_type.id_for_label }}" class="form-label fw-semibold small">
+                            Hostel Type <span class="text-danger">*</span>
+                        </label>
+                        <select 
+                            name="{{ form.hostel_type.name }}" 
+                            id="{{ form.hostel_type.id_for_label }}" 
+                            class="form-select form-select-sm" 
+                            required
+                        >
+                            <option value="">Select hostel type</option>
+                            {% for value, label in form.hostel_type.field.choices %}
+                                <option value="{{ value }}" {% if form.hostel_type.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.hostel_type.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.hostel_type.errors %}
+                                    <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Total Rooms Field -->
+                    <div class="col-md-6">
+                        <label for="{{ form.total_rooms.id_for_label }}" class="form-label fw-semibold small">
+                            Total Rooms <span class="text-danger">*</span>
+                        </label>
+                        <input 
+                            type="number" 
+                            name="{{ form.total_rooms.name }}" 
+                            id="{{ form.total_rooms.id_for_label }}" 
+                            value="{{ form.total_rooms.value|default_if_none:'' }}" 
+                            class="form-control form-control-sm" 
+                            required
+                            min="1"
+                            placeholder="Enter total rooms"
+                        >
+                        {% if form.total_rooms.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.total_rooms.errors %}
+                                    <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Address Field -->
+                    <div class="col-12">
+                        <label for="{{ form.address.id_for_label }}" class="form-label fw-semibold small">
+                            Address <span class="text-danger">*</span>
+                        </label>
+                        <textarea 
+                            name="{{ form.address.name }}" 
+                            id="{{ form.address.id_for_label }}" 
+                            class="form-control form-control-sm" 
+                            rows="3"
+                            required
+                            placeholder="Enter hostel address"
+                        >{{ form.address.value|default_if_none:'' }}</textarea>
+                        {% if form.address.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.address.errors %}
+                                    <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Latitude and Longitude Fields -->
+                    <div class="col-md-6">
+                        <label for="{{ form.latitude.id_for_label }}" class="form-label fw-semibold small">
+                            Latitude
+                        </label>
+                        <input 
+                            type="number" 
+                            step="any" 
+                            name="{{ form.latitude.name }}" 
+                            id="{{ form.latitude.id_for_label }}" 
+                            value="{{ form.latitude.value|default_if_none:'' }}" 
+                            class="form-control form-control-sm"
+                            placeholder="Enter latitude"
+                        >
+                        {% if form.latitude.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.latitude.errors %}
+                                    <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="{{ form.longitude.id_for_label }}" class="form-label fw-semibold small">
+                            Longitude
+                        </label>
+                        <input 
+                            type="number" 
+                            step="any" 
+                            name="{{ form.longitude.name }}" 
+                            id="{{ form.longitude.id_for_label }}" 
+                            value="{{ form.longitude.value|default_if_none:'' }}" 
+                            class="form-control form-control-sm"
+                            placeholder="Enter longitude"
+                        >
+                        {% if form.longitude.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.longitude.errors %}
+                                    <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- House Owner and Contact Fields -->
+                    <div class="col-md-6">
+                        <label for="{{ form.house_owner.id_for_label }}" class="form-label fw-semibold small">
+                            House Owner
+                        </label>
+                        <input 
+                            type="text" 
+                            name="{{ form.house_owner.name }}" 
+                            id="{{ form.house_owner.id_for_label }}" 
+                            value="{{ form.house_owner.value|default_if_none:'' }}" 
+                            class="form-control form-control-sm"
+                            placeholder="Enter house owner name"
+                        >
+                        {% if form.house_owner.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.house_owner.errors %}
+                                    <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="{{ form.hw_contact_num.id_for_label }}" class="form-label fw-semibold small">
+                            Contact Number
+                        </label>
+                        <input 
+                            type="text" 
+                            name="{{ form.hw_contact_num.name }}" 
+                            id="{{ form.hw_contact_num.id_for_label }}" 
+                            value="{{ form.hw_contact_num.value|default_if_none:'' }}" 
+                            class="form-control form-control-sm"
+                            placeholder="Enter contact number"
+                        >
+                        {% if form.hw_contact_num.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.hw_contact_num.errors %}
+                                    <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Contract Dates -->
+                    <div class="col-md-6">
+                        <label for="{{ form.contract_start_date.id_for_label }}" class="form-label fw-semibold small">
+                            Contract Start Date
+                        </label>
+                        <input 
+                            type="date" 
+                            name="{{ form.contract_start_date.name }}" 
+                            id="{{ form.contract_start_date.id_for_label }}" 
+                            value="{{ form.contract_start_date.value|date:'Y-m-d'|default_if_none:'' }}" 
+                            class="form-control form-control-sm"
+                        >
+                        {% if form.contract_start_date.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.contract_start_date.errors %}
+                                    <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="{{ form.contract_end_date.id_for_label }}" class="form-label fw-semibold small">
+                            Contract End Date
+                        </label>
+                        <input 
+                            type="date" 
+                            name="{{ form.contract_end_date.name }}" 
+                            id="{{ form.contract_end_date.id_for_label }}" 
+                            value="{{ form.contract_end_date.value|date:'Y-m-d'|default_if_none:'' }}" 
+                            class="form-control form-control-sm"
+                        >
+                        {% if form.contract_end_date.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.contract_end_date.errors %}
+                                    <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Fee Fields -->
+                    <div class="col-md-6">
+                        <label for="{{ form.deposit_fee.id_for_label }}" class="form-label fw-semibold small">
+                            Deposit Fee (¥) <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">¥</span>
+                            <input 
+                                type="number" 
+                                step="0.01" 
+                                name="{{ form.deposit_fee.name }}" 
+                                id="{{ form.deposit_fee.id_for_label }}" 
+                                value="{{ form.deposit_fee.value|default_if_none:'' }}" 
+                                class="form-control" 
+                                required
+                                placeholder="0.00"
+                            >
+                        </div>
+                        {% if form.deposit_fee.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.deposit_fee.errors %}
+                                    <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="{{ form.initial_fee.id_for_label }}" class="form-label fw-semibold small">
+                            Initial Fee (¥) <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">¥</span>
+                            <input 
+                                type="number" 
+                                step="0.01" 
+                                name="{{ form.initial_fee.name }}" 
+                                id="{{ form.initial_fee.id_for_label }}" 
+                                value="{{ form.initial_fee.value|default_if_none:'' }}" 
+                                class="form-control" 
+                                required
+                                placeholder="0.00"
+                            >
+                        </div>
+                        {% if form.initial_fee.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.initial_fee.errors %}
+                                    <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+
+
+                    <!-- Hostel Manager Field -->
+                    <div class="col-md-6">
+                        <label for="{{ form.hostel_manager.id_for_label }}" class="form-label fw-semibold small">
+                            Hostel Manager
+                        </label>
+                        <select 
+                            name="{{ form.hostel_manager.name }}" 
+                            id="{{ form.hostel_manager.id_for_label }}" 
+                            class="form-select form-select-sm"
+                        >
+                            <option value="">Select hostel manager</option>
+                            {% for value, label in form.hostel_manager.field.choices %}
+                                <option value="{{ value }}" {% if form.hostel_manager.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.hostel_manager.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.hostel_manager.errors %}
+                                    <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Image Field -->
+                    <div class="col-md-6">
+                        <label for="{{ form.image.id_for_label }}" class="form-label fw-semibold small">
+                            Hostel Image
+                        </label>
+                        <input 
+                            type="file" 
+                            name="{{ form.image.name }}" 
+                            id="{{ form.image.id_for_label }}" 
+                            class="form-control form-control-sm"
+                            accept="image/*"
+                        >
+                        {% if form.image.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.image.errors %}
+                                    <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Memo Field -->
+                    <div class="col-12">
+                        <label for="{{ form.memo.id_for_label }}" class="form-label fw-semibold small">
+                            Memo
+                        </label>
+                        <textarea 
+                            name="{{ form.memo.name }}" 
+                            id="{{ form.memo.id_for_label }}" 
+                            class="form-control form-control-sm" 
+                            rows="3"
+                            placeholder="Enter any additional notes or memo"
+                        >{{ form.memo.value|default_if_none:'' }}</textarea>
+                        {% if form.memo.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.memo.errors %}
+                                    <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="bi bi-check-circle me-1"></i>Save Hostel
+                            </button>
+                            <a href="{% url 'hostel:dashboard' %}" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-x-circle me-1"></i>Cancel
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
+
+<script>
+    // Auto-dismiss alerts
+    setTimeout(() => {
+        document.querySelectorAll('.auto-dismiss').forEach(alert => {
+            const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+</script>
 {% endblock %}

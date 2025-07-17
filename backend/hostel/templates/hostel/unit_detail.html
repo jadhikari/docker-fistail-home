@@ -1,101 +1,282 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Unit Details{% endblock %}
+{% block title %}Unit Details - {{ unit.get_unit_type_display }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-3">
-  <a href="{% url 'hostel:hostel_detail' unit.hostel.pk %}" class="btn btn-sm btn-outline-secondary mb-2">← Back </a>
-  <h5 class="mb-3">{{ unit.hostel.name }} - {{ unit.get_unit_type_display }}</h5>
-
-
-  <div class="mb-3 text-center">
-    {% if unit.image %}
-        <img src="{{ unit.image.url }}" class="img-fluid rounded" style="max-height: 300px;" alt="Unit Image">
-    {% else %}
-      <p class=" small">No image available.</p>
-    {% endif %}
-  </div>
-
-  <!-- Unit Type as Centered Header Below Image -->
-  <h4 class="text-center mb-1">{{ unit.get_unit_type_display }}</h4>
-  <div class="border-top my-2"></div>
-  <div class="row small">
-    <div class="col-md-6">
-      <p><strong>Unit ID:</strong> {{ unit.unit_id|default:"-" }}</p>
-      <p><strong>Bedroom No.:</strong> {{ unit.room_num|default:"-" }}</p>
-      <p><strong>Number of Beds:</strong> {{ unit.num_of_beds|default:"-" }}</p>
-      <p><strong>Memo:</strong> {{ unit.memo|default:"-" }}</p>
-    </div>
-    <div class="col-md-6">
-      <p><strong>Created:</strong> {{ unit.created_at }}</p>
-      <p><strong>Created By:</strong> {{ unit.created_by }}</p>
-      <p><strong>Updated:</strong> {{ unit.updated_at }}</p>
-      <p><strong>Updated By:</strong> {{ unit.updated_by }}</p>
-    </div>
-  </div>
-
-  {% comment %} Table to display the bed details  {% endcomment %}
-    {% if unit.unit_type == 'bedroom' %}
-        <div class="border-top my-2"></div>
-        <div class="d-flex justify-content-between align-items-center mt-4 mb-2">
-          <h5 class="mb-0">Beds in this Room</h5>
-          <a href="{% url 'hostel:add_bed' unit.id %}" class="btn btn-sm btn-outline-primary">➕ Add Bed</a>
+    {% if messages %}
+        <div class="mb-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>{{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
         </div>
+    {% endif %}
 
-        {% for bed in unit.beds.all %}
-            <div class="mb-3 border p-3 rounded small">
-            <p>
-              🛏️ <strong>Bed Number:</strong> {{ bed.bed_num }} |
-              💵 <strong>Rent(¥):</strong> {{ bed.rent }} |
-              👤 <strong>Assigned to:</strong> 
-              {% if bed.customer %}
-                  <a href="{% url 'customer:customer_detail' bed.customer.id %}">{{ bed.customer }}</a>
-              {% else %}
-                  Not assigned
-              {% endif %} |
-              📅 <strong>Assigned Date:</strong> {{ bed.assigned_date|default:"None" }} |
-              📅 <strong>Released Date:</strong> {{ bed.released_date|default:"None" }} |
-              
-              {% if bed.customer %}
-                  <a href="{% url 'hostel:edit_released_date' bed.id %}" class="btn btn-sm btn-warning">✏️ Edit Released Date</a>
-              {% else %}
-                  <a href="{% url 'hostel:assign_bed' bed.id %}" class="btn btn-sm btn-primary">👤 Assign Bed</a>
-              {% endif %}
-            </p>
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">
+                        {% if unit.unit_type == 'bedroom' %}
+                            <i class="bi bi-house-door text-primary me-2"></i>
+                        {% elif unit.unit_type == 'kitchen' %}
+                            <i class="bi bi-cup-hot text-success me-2"></i>
+                        {% elif unit.unit_type == 'bathroom' %}
+                            <i class="bi bi-droplet text-info me-2"></i>
+                        {% elif unit.unit_type == 'toilet' %}
+                            <i class="bi bi-toilet text-warning me-2"></i>
+                        {% else %}
+                            <i class="bi bi-gear text-secondary me-2"></i>
+                        {% endif %}
+                        {{ unit.get_unit_type_display }} Details
+                    </h4>
+                    <p class="text-muted mb-0 small">
+                        {{ unit.hostel.name }} | 
+                        {% if unit.room_num %}
+                            Room {{ unit.room_num }}
+                        {% elif unit.unit_id %}
+                            ID: {{ unit.unit_id }}
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'hostel:hostel_detail' unit.hostel.pk %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Hostel
+                    </a>
+                    <a href="{% url 'hostel:unit_edit' unit.pk %}" class="btn btn-outline-warning btn-sm">
+                        <i class="bi bi-pencil-square me-1"></i>Edit Unit
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 
-            {% with bed.bedassignmenthistory_set.all as history %}
-                {% if history %}
-                <h6 class="mt-0">Beds Assigned History</h6>
-                <table class="table table-sm table-bordered mt-2 text-center">
-                    <thead>
-                    <tr>
-                        <th>Customer</th>
-                        <th>Assigned Date</th>
-                        <th>Released Date</th>
-                    </tr>
+    <!-- Unit Image Section -->
+    {% if unit.image %}
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="bi bi-image me-2"></i>Unit Image</h6>
+        </div>
+        <div class="card-body text-center">
+            <img src="{{ unit.image.url }}" class="img-fluid rounded" style="max-height: 300px;" alt="Unit Image">
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Unit Information Cards -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Unit Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-borderless">
+                            <tbody>
+                                <tr>
+                                    <th class="text-muted" style="width: 150px;">Unit Type</th>
+                                    <td>
+                                        {% if unit.unit_type == 'bedroom' %}
+                                            <span class="badge bg-primary"><i class="bi bi-house-door me-1"></i>Bedroom</span>
+                                        {% elif unit.unit_type == 'kitchen' %}
+                                            <span class="badge bg-success"><i class="bi bi-cup-hot me-1"></i>Kitchen</span>
+                                        {% elif unit.unit_type == 'bathroom' %}
+                                            <span class="badge bg-info"><i class="bi bi-droplet me-1"></i>Bathroom</span>
+                                        {% elif unit.unit_type == 'toilet' %}
+                                            <span class="badge bg-warning text-dark"><i class="bi bi-toilet me-1"></i>Toilet</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary"><i class="bi bi-gear me-1"></i>{{ unit.get_unit_type_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Room Number</th>
+                                    <td>{{ unit.room_num|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Unit ID</th>
+                                    <td>{{ unit.unit_id|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Number of Beds</th>
+                                    <td>{{ unit.num_of_beds|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Memo</th>
+                                    <td>{{ unit.memo|default:"-" }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Audit Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-borderless">
+                            <tbody>
+                                <tr>
+                                    <th class="text-muted" style="width: 150px;">Created At</th>
+                                    <td>{{ unit.created_at|date:"M d, Y H:i" }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Created By</th>
+                                    <td>{{ unit.created_by|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Updated At</th>
+                                    <td>{{ unit.updated_at|date:"M d, Y H:i" }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted">Updated By</th>
+                                    <td>{{ unit.updated_by|default:"-" }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Beds Section (Only for Bedroom Units) -->
+    {% if unit.unit_type == 'bedroom' %}
+    <div class="card">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="bi bi-grid-3x3-gap me-2"></i>Beds in this Room</h6>
+            <div class="d-flex gap-2">
+                <span class="badge bg-primary small">{{ unit.beds.all|length }} beds</span>
+                <a href="{% url 'hostel:add_bed' unit.id %}" class="btn btn-success btn-sm">
+                    <i class="bi bi-plus-circle me-1"></i>Add Bed
+                </a>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            {% if unit.beds.all %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 table-sm">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="small">Bed Number</th>
+                            <th class="text-center small">Rent (¥)</th>
+                            <th class="text-center small">Internet (¥)</th>
+                            <th class="text-center small">Utilities (¥)</th>
+                            <th class="small">Assigned To</th>
+                            <th class="small">Assigned Date</th>
+                            <th class="small">Released Date</th>
+                            <th class="text-center small">Actions</th>
+                        </tr>
                     </thead>
                     <tbody>
-                    {% for record in history %}
+                        {% for bed in unit.beds.all %}
                         <tr>
-                        <td><a href="{% url 'customer:customer_detail' record.customer.id %}">{{ record.customer }}</a></td>
-                        <td>{{ record.assigned_date }}</td>
-                        <td>{{ record.released_date }}</td>
+                            <td>
+                                <span class="fw-semibold">{{ bed.bed_num }}</span>
+                            </td>
+                            <td class="text-center">{{ bed.rent|default:"0" }}</td>
+                            <td class="text-center">{{ bed.internet_fee|default:"0" }}</td>
+                            <td class="text-center">{{ bed.utilities_fee|default:"0" }}</td>
+                            <td>
+                                {% if bed.customer %}
+                                    <a href="{% url 'customer:customer_detail' bed.customer.id %}" class="text-decoration-none">
+                                        {{ bed.customer.name }}
+                                    </a>
+                                {% else %}
+                                    <span class="badge bg-secondary">Not assigned</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ bed.assigned_date|date:"M d, Y"|default:"-" }}</td>
+                            <td>{{ bed.released_date|date:"M d, Y"|default:"-" }}</td>
+                            <td class="text-center">
+                                <div class="d-flex gap-1 justify-content-center">
+                                    <a href="{% url 'hostel:bed_edit' bed.id %}" class="btn btn-sm btn-outline-primary" title="Edit Bed">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                    {% if bed.customer %}
+                                        <a href="{% url 'hostel:edit_released_date' bed.id %}" class="btn btn-sm btn-outline-warning" title="Edit Released Date">
+                                            <i class="bi bi-calendar"></i>
+                                        </a>
+                                    {% else %}
+                                        <a href="{% url 'hostel:assign_bed' bed.id %}" class="btn btn-sm btn-outline-success" title="Assign Bed">
+                                            <i class="bi bi-person-plus"></i>
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </td>
                         </tr>
-                    {% endfor %}
+                        {% endfor %}
                     </tbody>
                 </table>
-                {% else %}
-                <p class="text-muted">No assignment history for this bed.</p>
-                {% endif %}
-            {% endwith %}
             </div>
-        {% empty %}
-            <p class="text-muted">No beds in this room.</p>
-        {% endfor %}
+            {% else %}
+            <div class="text-center py-4">
+                <div class="text-muted small">
+                    <i class="bi bi-inbox h3"></i>
+                    <p class="mt-2 mb-0">No beds in this room.</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Bed Assignment History -->
+    {% for bed in unit.beds.all %}
+        {% with bed.bedassignmenthistory_set.all as history %}
+            {% if history %}
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Assignment History - Bed {{ bed.bed_num }}</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 table-sm">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="small">Customer</th>
+                                    <th class="small">Assigned Date</th>
+                                    <th class="small">Released Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in history %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'customer:customer_detail' record.customer.id %}" class="text-decoration-none">
+                                            {{ record.customer.name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ record.assigned_date|date:"M d, Y" }}</td>
+                                    <td>{{ record.released_date|date:"M d, Y" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        {% endwith %}
+    {% endfor %}
     {% endif %}
-
-
-
 </div>
 
+<script>
+    // Auto-dismiss alerts
+    setTimeout(() => {
+        document.querySelectorAll('.auto-dismiss').forEach(alert => {
+            const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+</script>
 {% endblock %}

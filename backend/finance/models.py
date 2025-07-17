@@ -47,7 +47,7 @@ class HostelRevenue(TimeStampedUserModel):
 
     title = models.CharField(max_length=20, choices=REVENUE_TYPE_CHOICES)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    year = models.IntegerField(choices=year_choices(), default=current_year)
+    year = models.IntegerField(choices=year_choices(), default=current_year)  # type: ignore
     month = models.IntegerField(choices=[(i, i) for i in range(1, 13)])
 
     # Fields for registration fee
@@ -88,18 +88,18 @@ class HostelRevenue(TimeStampedUserModel):
 
     def save(self, *args, **kwargs):
         if self.deposit and self.deposit_discount_percent is not None:
-            self.deposit_after_discount = self.deposit * (Decimal(1) - self.deposit_discount_percent / Decimal(100))
+            self.deposit_after_discount = self.deposit * (Decimal(1) - self.deposit_discount_percent / Decimal(100))  # type: ignore
 
         if self.initial_fee and self.initial_fee_discount_percent is not None:
-            self.initial_fee_after_discount = self.initial_fee * (Decimal(1) - self.initial_fee_discount_percent / Decimal(100))
+            self.initial_fee_after_discount = self.initial_fee * (Decimal(1) - self.initial_fee_discount_percent / Decimal(100))  # type: ignore
 
         if self.rent and self.rent_discount_percent is not None:
-            self.rent_after_discount = self.rent * (Decimal(1) - self.rent_discount_percent / Decimal(100))
+            self.rent_after_discount = self.rent * (Decimal(1) - self.rent_discount_percent / Decimal(100))  # type: ignore
 
         
         # Safely calculate total_amount
-        rent_total = (self.rent_after_discount or Decimal("0")) + (self.internet or Decimal("0")) + (self.utilities or Decimal("0"))
-        registration_total = (self.deposit_after_discount or Decimal("0")) + (self.initial_fee_after_discount or Decimal("0"))
+        rent_total = (self.rent_after_discount or Decimal("0")) + (self.internet or Decimal("0")) + (self.utilities or Decimal("0")) # type: ignore
+        registration_total = (self.deposit_after_discount or Decimal("0")) + (self.initial_fee_after_discount or Decimal("0")) # type: ignore
 
         if self.title == 'rent':
             self.total_amount = rent_total
@@ -111,7 +111,7 @@ class HostelRevenue(TimeStampedUserModel):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.get_title_display()} for {self.customer}"
+        return f"{self.get_title_display()} for {self.customer}" # type: ignore
 
 
 class HostelExpense(TimeStampedUserModel):
@@ -139,14 +139,14 @@ class HostelExpense(TimeStampedUserModel):
             self.transaction_code = self.generate_unique_code()
         if not self.status:
             self.status = 'pending'
-        self.amount_total = (self.amount_before_tax or Decimal("0.00")) + (self.amount_tax or Decimal("0.00"))
+        self.amount_total = (self.amount_before_tax or Decimal("0.00")) + (self.amount_tax or Decimal("0.00")) # type: ignore   
         super().save(*args, **kwargs)
 
     def generate_unique_code(self):
         chars = string.ascii_uppercase + string.digits
         while True:
             code = ''.join(random.choices(chars, k=6))
-            if not HostelExpense.objects.filter(transaction_code=code).exists():
+            if not HostelExpense.objects.filter(transaction_code=code).exists(): # type: ignore
                 return code
     
     def __str__(self):
@@ -154,7 +154,7 @@ class HostelExpense(TimeStampedUserModel):
         return f"[{self.transaction_code}] Expense by {self.purchased_by} on {self.purchased_date} for {hostel_name}"
 
 
-class UtilityExpense(models.Model):
+class UtilityExpense(TimeStampedUserModel):
     class ExpenseType(models.TextChoices):
         INTERNET = 'INTERNET', 'Internet'
         WATER = 'WATER', 'Water'
@@ -169,7 +169,7 @@ class UtilityExpense(models.Model):
     hostel = models.ForeignKey('hostel.Hostel', on_delete=models.CASCADE, related_name='utility_expenses')
     expense_type = models.CharField(max_length=20, choices=ExpenseType.choices)
     amount = models.DecimalField(max_digits=10, decimal_places=2, help_text='Total amount paid for the utility.')
-    billing_year = models.IntegerField(choices=year_choices(), default=current_year, help_text='Year the utility bill was issued.')
+    billing_year = models.IntegerField(choices=year_choices(), default=current_year, help_text='Year the utility bill was issued.') # type: ignore
     billing_month = models.IntegerField(choices=[(i, i) for i in range(1, 13)], help_text='Month the utility bill was issued.')
     date_from = models.DateField(verbose_name='Usage Start Date', help_text='Start date of the usage period.')
     date_to = models.DateField(verbose_name='Usage End Date', help_text='End date of the usage period.')
@@ -189,4 +189,4 @@ class UtilityExpense(models.Model):
 
 
     def __str__(self):
-        return f"{self.get_expense_type_display()} | {self.hostel.name} | {self.amount}"
+        return f"{self.get_expense_type_display()} | {self.hostel.name} | {self.amount}" # type: ignore

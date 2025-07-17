@@ -82,7 +82,7 @@ class BedForm(forms.ModelForm):
 
     class Meta:
         model = Bed
-        fields = ['bed_num','rent']
+        fields = ['bed_num', 'rent', 'internet_fee', 'utilities_fee']
 
     def clean(self):
         cleaned_data = super().clean()

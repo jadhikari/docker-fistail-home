@@ -71,7 +71,7 @@ def unit_create(request, hostel_id):
             return redirect('hostel:hostel_detail', pk=hostel.id)
     else:
         form = UnitForm(hostel=hostel)
-    return render(request, 'hostel/unit_form.html', {'form': form, 'hostel': hostel})
+    return render(request, 'hostel/unit_form.html', {'form': form, 'hostel': hostel, 'tit':'Add Unit'})
 
 
 @login_required(login_url='/accounts/login/')
@@ -87,7 +87,7 @@ def unit_edit(request, pk):
             return redirect('hostel:hostel_detail', pk=hostel.id)
     else:
         form = UnitForm(instance=unit, hostel=hostel)
-    return render(request, 'hostel/unit_form.html', {'form': form, 'unit': unit, 'hostel': hostel})
+    return render(request, 'hostel/unit_form.html', {'form': form, 'unit': unit, 'hostel': hostel, 'tit':'Edit Unit'})
 
 
 
@@ -196,4 +196,32 @@ def edit_released_date(request, bed_id):
         'form': form,
         'title': 'Edit Released Date',
         'bed': bed
+    })
+
+@login_required(login_url='/accounts/login/')
+def bed_edit(request, bed_id):
+    bed = get_object_or_404(Bed, id=bed_id)
+    
+    if request.method == 'POST':
+        form = BedForm(request.POST, instance=bed, unit=bed.unit)
+        
+        if form.is_valid():
+            bed = form.save(commit=False)
+            bed.updated_by = request.user
+            bed.save()
+
+            # Update unit tracking
+            bed.unit.updated_by = request.user
+            bed.unit.save()
+
+            messages.success(request, "Bed updated successfully.")
+            return redirect('hostel:unit_detail', bed.unit.id)
+    else:
+        form = BedForm(instance=bed, unit=bed.unit)
+
+    return render(request, 'hostel/bed_form.html', {
+        'form': form,
+        'unit': bed.unit,
+        'bed': bed,
+        'title': 'Edit Bed'
     })

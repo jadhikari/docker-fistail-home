@@ -1,76 +1,156 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="container-fluid mt-3">
-  <a href="{% url 'finance:expenses' %}" class="btn btn-sm btn-outline-secondary mb-3">← Back to Dashboard</a>
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-4 ">{{ form.instance.pk|yesno:"Edit Expense,Add Expense" }}</h4>
-    </div>
-  <form method="post" novalidate>
-    {% csrf_token %}
-    {% if form.non_field_errors %}
-      <div class="alert alert-danger small">{{ form.non_field_errors }}</div>
+<div class="container-fluid py-3">
+    {% if messages %}
+        <div class="mb-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>{{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
     {% endif %}
 
-    <div class="row g-3">
-      {% for field in form %}
-        <div class="{% if field.name == 'memo' %}col-12{% elif field.name in 'bill_url amount_before_tax amount_tax' %}col-md-6{% else %}col-md-4{% endif %}">
-          <label class="form-label {% if field.field.required %}required-label{% endif %}">
-            {{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
-          </label>
-          {{ field }}
-          {% if field.errors %}
-            <div class="text-danger small">{{ field.errors|striptags }}</div>
-          {% endif %}
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">
+                        <i class="bi bi-house-door text-primary me-2"></i>
+                        {{ form.instance.pk|yesno:"Edit Hostel Expense,Add Hostel Expense" }}
+                    </h4>
+                    <p class="text-muted mb-0 small">
+                        {% if form.instance.pk %}
+                            Update expense details and amounts
+                        {% else %}
+                            Create a new hostel expense record
+                        {% endif %}
+                    </p>
+                </div>
+                <a href="{% url 'finance:expenses' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+                </a>
+            </div>
         </div>
-      {% endfor %}
     </div>
 
-    <div id="taxWarning" class="text-danger mt-2" style="display: none;">
-      Tax amount must be less than amount before tax.
-    </div>
+    <!-- Form Section -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Expense Details</h6>
+        </div>
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
 
-    <div class="mt-4">
-      <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                <div class="row g-3">
+                    {% for field in form %}
+                        <div class="{% if field.name == 'memo' %}col-12{% elif field.name in 'bill_url amount_before_tax amount_tax' %}col-md-6{% else %}col-md-4{% endif %}">
+                            <label for="{{ field.id_for_label }}" class="form-label fw-semibold small">
+                                {{ field.label }}
+                                {% if field.field.required %}
+                                    <span class="text-danger">*</span>
+                                {% endif %}
+                            </label>
+                            {{ field }}
+                            {% if field.help_text %}
+                                <div class="form-text">{{ field.help_text }}</div>
+                            {% endif %}
+                            {% if field.errors %}
+                                <div class="text-danger small mt-1">
+                                    <i class="bi bi-exclamation-circle me-1"></i>
+                                    {{ field.errors|striptags }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Total Amount Display -->
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title mb-2 small"><i class="bi bi-calculator me-2"></i>Total Amount</h6>
+                                <div class="input-group">
+                                    <span class="input-group-text">¥</span>
+                                    <input type="text" id="amount_total" class="form-control fw-bold text-success" readonly>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="taxWarning" class="alert alert-warning mt-3" style="display: none;">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Tax amount must be less than amount before tax.
+                </div>
+
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-check-circle me-1"></i>
+                        {% if form.instance.pk %}Update{% else %}Save{% endif %}
+                    </button>
+                    <a href="{% url 'finance:expenses' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
     </div>
-  </form>
 </div>
-{% endblock %}
 
-{% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    const beforeTax = document.getElementById("id_amount_before_tax");
-    const tax = document.getElementById("id_amount_tax");
-    const total = document.getElementById("amount_total");
-    const warning = document.getElementById("taxWarning");
+    // Auto-dismiss alerts
+    setTimeout(() => {
+        document.querySelectorAll('.auto-dismiss').forEach(alert => {
+            const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+            bsAlert.close();
+        });
+    }, 5000);
 
-    function updateTotal() {
-        const before = parseFloat(beforeTax.value) || 0;
-        const taxVal = parseFloat(tax.value) || 0;
+    // Total calculation
+    document.addEventListener('DOMContentLoaded', function () {
+        const beforeTax = document.getElementById("id_amount_before_tax");
+        const tax = document.getElementById("id_amount_tax");
+        const total = document.getElementById("amount_total");
+        const warning = document.getElementById("taxWarning");
 
-        if (before <= 0) {
-            total.value = '';
-            warning.style.display = "none";
-            return;
+        function updateTotal() {
+            const before = parseFloat(beforeTax.value) || 0;
+            const taxVal = parseFloat(tax.value) || 0;
+
+            if (before <= 0) {
+                total.value = '';
+                warning.style.display = "none";
+                return;
+            }
+
+            if (taxVal >= before) {
+                warning.style.display = "block";
+                total.value = '';
+            } else {
+                warning.style.display = "none";
+                const totalVal = before + taxVal;
+                total.value = totalVal.toFixed(2);
+            }
         }
 
-        if (taxVal >= before) {
-            warning.style.display = "block";
-            total.value = '';
-        } else {
-            warning.style.display = "none";
-            const totalVal = before + taxVal;
-            total.value = totalVal.toFixed(2);
-        }
-    }
+        // Attach events
+        [beforeTax, tax].forEach(input => {
+            input.addEventListener("input", updateTotal);
+        });
 
-    // Attach events
-    [beforeTax, tax].forEach(input => {
-        input.addEventListener("input", updateTotal);
+        updateTotal();  // Trigger once on load
     });
-
-    updateTotal();  // Trigger once on load
-});
 </script>
-
 {% endblock %}

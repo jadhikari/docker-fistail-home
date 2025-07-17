@@ -1,52 +1,163 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}{{ title }}{% endblock %}
+{% block title %}Assign Bed - {{ bed.bed_num }}{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <a href="{% url 'hostel:unit_detail' bed.unit.id %}" class="btn btn-sm btn-outline-secondary mb-2">← Back</a>
-    <div class="card shadow-sm p-3">
-        <h4 class="text-center">{{ title }}</h4>
-        <div class="border-top mb-4"></div>
-        <form method="post">
-            {% csrf_token %}
+<div class="container-fluid py-3">
+    {% if messages %}
+        <div class="mb-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>{{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
 
-            {% if form.fields.customer.disabled %}
-                <div class="form-group">
-                    <label>Customer</label>
-                    <p class="form-control-plaintext">{{ form.instance.customer }}</p>
-                    <input type="hidden" name="customer" value="{{ form.instance.customer.id }}">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">
+                        <i class="bi bi-person-plus text-primary me-2"></i>
+                        Assign Bed {{ bed.bed_num }}
+                    </h4>
+                    <p class="text-muted mb-0 small">
+                        {{ bed.unit.hostel.name }} - Room {{ bed.unit.room_num }}
+                    </p>
                 </div>
-            {% else %}
-                <div class="form-group">
-                    {{ form.customer.label_tag }}
-                    {{ form.customer }}
-                    {{ form.customer.errors }}
+                <div class="d-flex gap-2">
+                    <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Back
+                    </a>
                 </div>
-            {% endif %}
-
-            {% if form.fields.assigned_date.disabled %}
-                <div class="form-group">
-                    <label>Assigned Date</label>
-                    <p class="form-control-plaintext">{{ form.instance.assigned_date }}</p>
-                </div>
-            {% else %}
-                <div class="form-group">
-                    {{ form.assigned_date.label_tag }}
-                    {{ form.assigned_date }}
-                    {{ form.assigned_date.errors }}
-                </div>
-            {% endif %}
-
-            <div class="form-group">
-                {{ form.released_date.label_tag }}
-                {{ form.released_date }}
-                {{ form.released_date.errors }}
             </div>
+        </div>
+    </div>
 
-            <br />
-            <button type="submit" class="btn btn-primary">Save</button>
-            <a href="{% url 'hostel:unit_detail' bed.unit.id %}" class="btn btn-secondary">Cancel</a>
-        </form>
+    <!-- Bed Information Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Bed Information</h6>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <small class="text-muted">Bed Number</small>
+                    <div class="fw-semibold">{{ bed.bed_num }}</div>
+                </div>
+                <div class="col-md-3">
+                    <small class="text-muted">Rent (¥)</small>
+                    <div class="fw-semibold text-primary">¥{{ bed.rent|default:"0" }}</div>
+                </div>
+                <div class="col-md-3">
+                    <small class="text-muted">Internet (¥)</small>
+                    <div class="fw-semibold text-info">¥{{ bed.internet_fee|default:"0" }}</div>
+                </div>
+                <div class="col-md-3">
+                    <small class="text-muted">Utilities (¥)</small>
+                    <div class="fw-semibold text-success">¥{{ bed.utilities_fee|default:"0" }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assignment Form Card -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Assign Customer</h6>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <!-- Display form-level non-field errors -->
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            <div><i class="bi bi-exclamation-triangle me-2"></i>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <div class="row g-3">
+                    <!-- Customer Field -->
+                    <div class="col-md-6">
+                        <label for="{{ form.customer.id_for_label }}" class="form-label fw-semibold small">
+                            Customer <span class="text-danger">*</span>
+                        </label>
+                        <select 
+                            name="{{ form.customer.name }}" 
+                            id="{{ form.customer.id_for_label }}" 
+                            class="form-select form-select-sm" 
+                            required
+                        >
+                            <option value="">Select customer</option>
+                            {% for value, label in form.customer.field.choices %}
+                                <option value="{{ value }}" {% if form.customer.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.customer.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.customer.errors %}
+                                    <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Assigned Date Field -->
+                    <div class="col-md-6">
+                        <label for="{{ form.assigned_date.id_for_label }}" class="form-label fw-semibold small">
+                            Assigned Date <span class="text-danger">*</span>
+                        </label>
+                        <input 
+                            type="date" 
+                            name="{{ form.assigned_date.name }}" 
+                            id="{{ form.assigned_date.id_for_label }}" 
+                            value="{{ form.assigned_date.value|date:'Y-m-d'|default_if_none:'' }}" 
+                            class="form-control form-control-sm" 
+                            required
+                        >
+                        {% if form.assigned_date.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.assigned_date.errors %}
+                                    <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="bi bi-check-circle me-1"></i>Assign Bed
+                            </button>
+                            <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-x-circle me-1"></i>Cancel
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
+
+<script>
+    // Auto-dismiss alerts
+    setTimeout(() => {
+        document.querySelectorAll('.auto-dismiss').forEach(alert => {
+            const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+</script>
 {% endblock %}

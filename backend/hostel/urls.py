@@ -14,6 +14,7 @@ urlpatterns = [
     path('unit/<int:unit_id>/bed/add/', views.add_bed, name='add_bed'),
     path('beds/<int:bed_id>/assign/', views.assign_bed, name='assign_bed'),
     path('beds/<int:bed_id>/edit-released/', views.edit_released_date, name='edit_released_date'),
+    path('beds/<int:bed_id>/edit/', views.bed_edit, name='bed_edit'),
 
 
 ]

@@ -1,36 +1,227 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}{% if is_edit %}Edit{% else %}Add{% endif %} Unit{% endblock %}
+{% block title %}{{ tit }}{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <a href="{% url 'hostel:hostel_detail' hostel.id %}" class="btn btn-sm btn-outline-secondary mb-2">← Back </a>
-    <div class= "card shadow-sm p-1">
-        <h4 class=" text-center">{% if is_edit %}Edit{% else %}Add{% endif %} Unit</h4>
-        <div class="border-top mb-2"></div>
-        <p class="text-danger mb-3">If you select Bed Room only input the bed room number and bed no need unit id. It is for other. </p> 
-        <form method="post" enctype="multipart/form-data" novalidate class="ms-3">
-            {% csrf_token %}
-            <div class="row">
-                {% for field in form %}
-                    <div class="mb-3 col-12 ">
-                        <label for="{{ field.id_for_label }}" class="form-label">
-                            {{ field.label }}:{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
-                        </label>
-                        {{ field }}
-                        {% if field.help_text %}
-                            <div class="form-text">{{ field.help_text }}</div>
+<div class="container-fluid py-3">
+    {% if messages %}
+        <div class="mb-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>{{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">
+                        <i class="bi bi-grid text-primary me-2"></i>
+                        {{ tit }}
+                    </h4>
+                    <p class="text-muted mb-0 small">
+                        {% if unit %}
+                            Editing unit in {{ unit.hostel.name }}
+                        {% else %}
+                            Adding new unit to {{ hostel.name }}
                         {% endif %}
-                        {% for error in field.errors %}
-                            <div class="text-danger">{{ error }}</div>
+                    </p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'hostel:hostel_detail' hostel.id %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Back to Hostel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Card -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="bi bi-pencil-square me-2"></i>Unit Information</h6>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <!-- Display form-level non-field errors -->
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            <div><i class="bi bi-exclamation-triangle me-2"></i>{{ error }}</div>
                         {% endfor %}
                     </div>
-                {% endfor %}
-            </div>
-            <br />
-            <button type="submit" class="btn btn-primary">Save</button>
-            <a href="{% url 'hostel:hostel_detail' hostel.id %}" class="btn btn-secondary">Cancel</a>
-            <br />
-        </form>
+                {% endif %}
+
+                <div class="row g-3">
+                    <!-- Unit Type Field -->
+                    <div class="col-md-6">
+                        <label for="{{ form.unit_type.id_for_label }}" class="form-label fw-semibold small">
+                            Unit Type <span class="text-danger">*</span>
+                        </label>
+                        <select 
+                            name="{{ form.unit_type.name }}" 
+                            id="{{ form.unit_type.id_for_label }}" 
+                            class="form-select form-select-sm" 
+                            required
+                        >
+                            <option value="">Select unit type</option>
+                            {% for value, label in form.unit_type.field.choices %}
+                                <option value="{{ value }}" {% if form.unit_type.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.unit_type.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.unit_type.errors %}
+                                    <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Room Number Field -->
+                    <div class="col-md-6">
+                        <label for="{{ form.room_num.id_for_label }}" class="form-label fw-semibold small">
+                            Room Number
+                        </label>
+                        <input 
+                            type="text" 
+                            name="{{ form.room_num.name }}" 
+                            id="{{ form.room_num.id_for_label }}" 
+                            value="{{ form.room_num.value|default_if_none:'' }}" 
+                            class="form-control form-control-sm"
+                            placeholder="Enter room number"
+                        >
+                        {% if form.room_num.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.room_num.errors %}
+                                    <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Unit ID Field -->
+                    <div class="col-md-6">
+                        <label for="{{ form.unit_id.id_for_label }}" class="form-label fw-semibold small">
+                            Unit ID
+                        </label>
+                        <input 
+                            type="text" 
+                            name="{{ form.unit_id.name }}" 
+                            id="{{ form.unit_id.id_for_label }}" 
+                            value="{{ form.unit_id.value|default_if_none:'' }}" 
+                            class="form-control form-control-sm"
+                            placeholder="Enter unit ID"
+                        >
+                        {% if form.unit_id.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.unit_id.errors %}
+                                    <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Number of Beds Field -->
+                    <div class="col-md-6">
+                        <label for="{{ form.num_of_beds.id_for_label }}" class="form-label fw-semibold small">
+                            Number of Beds
+                        </label>
+                        <input 
+                            type="number" 
+                            name="{{ form.num_of_beds.name }}" 
+                            id="{{ form.num_of_beds.id_for_label }}" 
+                            value="{{ form.num_of_beds.value|default_if_none:'' }}" 
+                            class="form-control form-control-sm"
+                            min="0"
+                            placeholder="Enter number of beds"
+                        >
+                        {% if form.num_of_beds.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.num_of_beds.errors %}
+                                    <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Image Field -->
+                    <div class="col-md-6">
+                        <label for="{{ form.image.id_for_label }}" class="form-label fw-semibold small">
+                            Unit Image
+                        </label>
+                        <input 
+                            type="file" 
+                            name="{{ form.image.name }}" 
+                            id="{{ form.image.id_for_label }}" 
+                            class="form-control form-control-sm"
+                            accept="image/*"
+                        >
+                        {% if form.image.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.image.errors %}
+                                    <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Memo Field -->
+                    <div class="col-12">
+                        <label for="{{ form.memo.id_for_label }}" class="form-label fw-semibold small">
+                            Memo
+                        </label>
+                        <textarea 
+                            name="{{ form.memo.name }}" 
+                            id="{{ form.memo.id_for_label }}" 
+                            class="form-control form-control-sm" 
+                            rows="3"
+                            placeholder="Enter any additional notes or memo"
+                        >{{ form.memo.value|default_if_none:'' }}</textarea>
+                        {% if form.memo.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.memo.errors %}
+                                    <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="bi bi-check-circle me-1"></i>Save Unit
+                            </button>
+                            <a href="{% url 'hostel:hostel_detail' hostel.id %}" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-x-circle me-1"></i>Cancel
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
+
+<script>
+    // Auto-dismiss alerts
+    setTimeout(() => {
+        document.querySelectorAll('.auto-dismiss').forEach(alert => {
+            const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+</script>
 {% endblock %}
