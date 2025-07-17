@@ -185,6 +185,13 @@ class UtilityExpense(TimeStampedUserModel):
         ordering = ['-billing_year', '-billing_month']
         verbose_name = 'Utility Expense'
         verbose_name_plural = 'Utility Expenses'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['hostel', 'billing_year', 'billing_month', 'expense_type'],
+                name='unique_utility_expense_per_hostel_year_month_type'
+            )
+        ]
+
 
 
 
