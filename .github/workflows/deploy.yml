@@ -29,7 +29,7 @@ jobs:
           python manage.py test
 
       - name: Build Docker Image
-        run: docker build -t fishtail-backend:latest .
+        run: docker build -t fishtail-backend:latest -f backend/Dockerfile .
 
   deploy:
     needs: build-test
