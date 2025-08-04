@@ -5,7 +5,6 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-      target: development
     container_name: fishtail-backend-dev
     command: >
       sh -c "
@@ -22,16 +21,11 @@ services:
     env_file:
       - .env.dev
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "python", "manage.py", "check"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
     networks:
       - fishtail-network
     depends_on:
       - postgres
+      - redis
 
   postgres:
     image: postgres:15-alpine
@@ -45,11 +39,6 @@ services:
     ports:
       - "5432:5432"
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U fishtail -d fishtaildb"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     networks:
       - fishtail-network
     command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
@@ -60,11 +49,6 @@ services:
     ports:
       - "6379:6379"
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
     networks:
       - fishtail-network
 
