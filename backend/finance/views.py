@@ -72,6 +72,7 @@ def revenues(request):
     year = request.GET.get('year')
     month = request.GET.get('month')
     title = request.GET.get('title')
+    hostel = request.GET.get('hostel')
 
     today = timezone.now()
     default_year = today.year
@@ -84,6 +85,9 @@ def revenues(request):
 
     if title:
         query &= Q(title=title)
+
+    if hostel:
+        query &= Q(customer__bed_assignment__unit__hostel__name__icontains=hostel)
 
     try:
         selected_year = int(year)
@@ -106,10 +110,14 @@ def revenues(request):
         else:
             messages.warning(request, "No data available to export.")
 
-    if request.GET and not any([name, year, month, title]):
+    if request.GET and not any([name, year, month, title, hostel]):
         messages.warning(request, "No filter parameters provided.")
 
     year_choices = HostelRevenue.objects.values_list('year', flat=True).distinct().order_by('-year')
+
+    # Get all hostels for the filter dropdown
+    from hostel.models import Hostel
+    all_hostels = Hostel.objects.all().order_by('name')
 
     return render(request, 'finance/revenues_dashboard.html', {
         'revenues': revenues,
@@ -117,9 +125,11 @@ def revenues(request):
         'selected_year': selected_year,
         'selected_month': selected_month,
         'selected_title': title,
+        'selected_hostel': hostel,
         'year_choices': year_choices,
         'month_choices': [(i, i) for i in range(1, 13)],
         'title_choices': HostelRevenue.REVENUE_TYPE_CHOICES,
+        'all_hostels': all_hostels,
     })
 
 @login_required(login_url='/accounts/login/')

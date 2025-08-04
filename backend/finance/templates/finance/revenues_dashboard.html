@@ -43,7 +43,7 @@
                 </div>
 
                 <!-- Month-Year picker -->
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="month_picker" class="form-label fw-semibold small">Month-Year</label>
                     <input type="month" id="month_picker" class="form-control form-control-sm"
                         value="{{ selected_year }}-{{ selected_month|stringformat:'02d' }}">
@@ -60,12 +60,23 @@
                     </select>
                 </div>
 
+                <!-- Hostel dropdown -->
+                <div class="col-md-2">
+                    <label for="hostel" class="form-label fw-semibold small">Hostel</label>
+                    <select id="hostel" name="hostel" class="form-select form-select-sm">
+                        <option value="">All Hostels</option>
+                        {% for hostel in all_hostels %}
+                            <option value="{{ hostel.name }}" {% if selected_hostel == hostel.name %}selected{% endif %}>{{ hostel.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
                 <!-- Hidden inputs -->
                 <input type="hidden" name="year" id="year_input" value="{{ selected_year }}">
                 <input type="hidden" name="month" id="month_input" value="{{ selected_month }}">
 
                 <!-- Action buttons -->
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label class="form-label fw-semibold small">&nbsp;</label>
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary btn-sm">
