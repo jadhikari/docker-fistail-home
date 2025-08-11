@@ -37,10 +37,18 @@
         </li>
 
         <li class="nav-item">
-            <a href="#" class="nav-link">
-                ⚙️ <span class="link-text">Settings</span>
+            <a href="{% url 'targets:contracts' %}" class="nav-link {% if request.resolver_match.app_name == 'targets' and request.resolver_match.url_name == 'contracts' %}active{% endif %}">
+                📋 <span class="link-text">Contract</span>
             </a>
         </li>
+
+        {% if user.is_superuser %}
+            <li class="nav-item">
+                <a href="{% url 'targets:management' %}" class="nav-link {% if request.resolver_match.app_name == 'targets' and request.resolver_match.url_name == 'management' %}active{% endif %}">
+                    ⚙️ <span class="link-text">Settings</span>
+                </a>
+            </li>
+        {% endif %}
     </ul>
 </div>
 

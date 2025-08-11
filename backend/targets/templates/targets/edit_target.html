@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Edit Target - Fishtail System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header Section -->
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div>
+                    <h5 class="mb-0">
+                        <i class="bi bi-pencil text-primary"></i>
+                        Edit Target
+                    </h5>
+                    <small class="text-muted">Modify target details for {{ target.user.first_name|default:target.user.email }}</small>
+                </div>
+                <div>
+                    <a href="{% url 'targets:management' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left"></i> Back to Management
+                    </a>
+                </div>
+            </div>
+
+            <!-- Form Card -->
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header py-1">
+                            <h6 class="mb-0">
+                                <i class="bi bi-bullseye"></i> Target Information
+                            </h6>
+                        </div>
+                        <div class="card-body py-2">
+                            <form method="post">
+                                {% csrf_token %}
+                                
+                                <div class="row mb-2">
+                                    <div class="col-md-6">
+                                        <label for="{{ form.user.id_for_label }}" class="form-label">
+                                            <strong>User</strong>
+                                        </label>
+                                        {{ form.user }}
+                                        {% if form.user.errors %}
+                                            <div class="text-danger small">
+                                                {{ form.user.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="{{ form.target_amount.id_for_label }}" class="form-label">
+                                            <strong>Target Amount (¥)</strong>
+                                        </label>
+                                        {{ form.target_amount }}
+                                        {% if form.target_amount.errors %}
+                                            <div class="text-danger small">
+                                                {{ form.target_amount.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2">
+                                    <div class="col-md-6">
+                                        <label for="{{ form.target_month.id_for_label }}" class="form-label">
+                                            <strong>Target Month</strong>
+                                        </label>
+                                        {{ form.target_month }}
+                                        {% if form.target_month.errors %}
+                                            <div class="text-danger small">
+                                                {{ form.target_month.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="{{ form.target_year.id_for_label }}" class="form-label">
+                                            <strong>Target Year</strong>
+                                        </label>
+                                        {{ form.target_year }}
+                                        {% if form.target_year.errors %}
+                                            <div class="text-danger small">
+                                                {{ form.target_year.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2">
+                                    <div class="col-12">
+                                        <label for="{{ form.description.id_for_label }}" class="form-label">
+                                            <strong>Description (Optional)</strong>
+                                        </label>
+                                        {{ form.description }}
+                                        {% if form.description.errors %}
+                                            <div class="text-danger small">
+                                                {{ form.description.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2">
+                                    <div class="col-12">
+                                        <label for="{{ form.status.id_for_label }}" class="form-label">
+                                            <strong>Status</strong>
+                                        </label>
+                                        {{ form.status }}
+                                        {% if form.status.errors %}
+                                            <div class="text-danger small">
+                                                {{ form.status.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-between">
+                                    <a href="{% url 'targets:management' %}" class="btn btn-outline-secondary">
+                                        <i class="bi bi-x-circle"></i> Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-check-circle"></i> Update Target
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Target Info -->
+            <div class="row justify-content-center mt-2">
+                <div class="col-md-8">
+                    <div class="card border-info">
+                        <div class="card-header bg-info text-white py-1">
+                            <h6 class="mb-0">
+                                <i class="bi bi-info-circle"></i> Current Target Details
+                            </h6>
+                        </div>
+                        <div class="card-body py-1">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>User:</strong> {{ target.user.first_name|default:target.user.email }}<br>
+                                    <strong>Amount:</strong> ¥{{ target.target_amount|floatformat:0 }}<br>
+                                    <strong>Period:</strong> {{ target.target_period }}
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Status:</strong> 
+                                    {% if target.status == 'active' %}
+                                        <span class="badge bg-primary">Active</span>
+                                    {% elif target.status == 'completed' %}
+                                        <span class="badge bg-success">Completed</span>
+                                    {% elif target.status == 'overdue' %}
+                                        <span class="badge bg-danger">Overdue</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ target.get_status_display }}</span>
+                                    {% endif %}<br>
+                                    <strong>Created:</strong> {{ target.created_at|date:"M d, Y" }}<br>
+                                    <strong>Assigned by:</strong> {{ target.assigned_by.first_name|default:target.assigned_by.email }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ title }} - Fishtail System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h4 class="mb-1">
+                <i class="bi bi-plus-circle text-success me-2"></i>{{ title }}
+            </h4>
+            <small class="text-muted">{{ subtitle }}</small>
+        </div>
+        <div>
+            <a href="{% url 'targets:profile' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left"></i> Back to Profile
+            </a>
+        </div>
+    </div>
+
+
+    <!-- Achievement Rules Info -->
+    {% if current_target %}
+        <div class="alert alert-success mb-3">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-check-circle me-2"></i>
+                <div>
+                    <strong>Target Active:</strong> You can add achievements for your current target: 
+                    <strong>{{ current_target.target_period }} - ¥{{ current_target.target_amount|floatformat:0 }}</strong>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Form Section -->
+    <div class="card">
+        <div class="card-header">
+            <h6 class="mb-0">
+                <i class="bi bi-file-earmark-text"></i> Rental Contract Information
+            </h6>
+        </div>
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                <!-- Customer Information -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="bi bi-person"></i> Customer Information
+                        </h6>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.customer_name.id_for_label }}" class="form-label fw-semibold">
+                            Customer Name <span class="text-danger">*</span>
+                        </label>
+                        {{ form.customer_name }}
+                        {% if form.customer_name.errors %}
+                            <div class="text-danger small mt-1">
+                               
+                                {{ form.customer_name.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.customer_number.id_for_label }}" class="form-label fw-semibold">
+                            Customer Phone Number <span class="text-danger">*</span>
+                        </label>
+                        {{ form.customer_number }}
+                        {% if form.customer_number.errors %}
+                            <div class="text-danger small mt-1">
+                               
+                                {{ form.customer_number.errors }}
+                            </div>
+                        {% endif %}
+                        {% if form.customer_number.help_text %}
+                            <div class="form-text">{{ form.customer_number.help_text }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Property Information -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="bi bi-building"></i> Property Information
+                        </h6>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.contract_date.id_for_label }}" class="form-label fw-semibold">
+                            Contract Date <span class="text-danger">*</span>
+                        </label>
+                        {{ form.contract_date }}
+                        {% if form.contract_date.errors %}
+                            <div class="text-danger small mt-1">
+                               
+                                {{ form.contract_date.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.living_num_people.id_for_label }}" class="form-label fw-semibold">
+                            Number of People <span class="text-danger">*</span>
+                        </label>
+                        {{ form.living_num_people }}
+                        {% if form.living_num_people.errors %}
+                            <div class="text-danger small mt-1">
+                               
+                                {{ form.living_num_people.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-12">
+                        <label for="{{ form.building_address.id_for_label }}" class="form-label fw-semibold">
+                            Building Address <span class="text-danger">*</span>
+                        </label>
+                        {{ form.building_address }}
+                        {% if form.building_address.errors %}
+                            <div class="text-danger small mt-1">
+                               
+                                {{ form.building_address.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Financial Information -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="bi bi-currency-yen"></i> Financial Information
+                        </h6>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.agent_fee.id_for_label }}" class="form-label fw-semibold">
+                            Agent Fee <span class="text-danger">*</span>
+                        </label>
+                        {{ form.agent_fee }}
+                        {% if form.agent_fee.errors %}
+                            <div class="text-danger small mt-1">
+                               
+                                {{ form.agent_fee.errors }}
+                            </div>
+                        {% endif %}
+                        {% if form.agent_fee.help_text %}
+                            <div class="form-text">{{ form.agent_fee.help_text }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.ad_fee.id_for_label }}" class="form-label fw-semibold">
+                            Advertisement Fee <span class="text-danger">*</span>
+                        </label>
+                        {{ form.ad_fee }}
+                        {% if form.ad_fee.errors %}
+                            <div class="text-danger small mt-1">
+                               
+                                {{ form.ad_fee.errors }}
+                            </div>
+                        {% endif %}
+                        {% if form.ad_fee.help_text %}
+                            <div class="form-text">{{ form.ad_fee.help_text }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Contract Details -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="bi bi-file-earmark-check"></i> Contract Details
+                        </h6>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.contract_type.id_for_label }}" class="form-label fw-semibold">
+                            Contract Type <span class="text-danger">*</span>
+                        </label>
+                        {{ form.contract_type }}
+                        {% if form.contract_type.errors %}
+                            <div class="text-danger small mt-1">
+                               
+                                {{ form.contract_type.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.rent_payment_date.id_for_label }}" class="form-label fw-semibold">
+                            Rent Payment Date <span class="text-danger">*</span>
+                        </label>
+                        {{ form.rent_payment_date }}
+                        {% if form.rent_payment_date.errors %}
+                            <div class="text-danger small mt-1">
+                               
+                                {{ form.rent_payment_date.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Additional Charges -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="bi bi-credit-card"></i> Additional Charges
+                        </h6>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="{{ form.deposit_fee.id_for_label }}" class="form-label fw-semibold">
+                            Deposit Fee <span class="text-danger">*</span>
+                        </label>
+                        {{ form.deposit_fee }}
+                        {% if form.deposit_fee.errors %}
+                            <div class="text-danger small mt-1">
+                               
+                                {{ form.deposit_fee.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="{{ form.renew_fee.id_for_label }}" class="form-label fw-semibold">
+                            Renewal Fee <span class="text-danger">*</span>
+                        </label>
+                        {{ form.renew_fee }}
+                        {% if form.renew_fee.errors %}
+                            <div class="text-danger small mt-1">
+                               
+                                {{ form.renew_fee.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-check mt-4">
+                            {{ form.cleaning_charge }}
+                            <label class="form-check-label fw-semibold" for="{{ form.cleaning_charge.id_for_label }}">
+                                Cleaning Charge Applicable
+                            </label>
+                        </div>
+                        {% if form.cleaning_charge.errors %}
+                            <div class="text-danger small mt-1">
+                               
+                                {{ form.cleaning_charge.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Cancellation Details -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="bi bi-x-circle"></i> Cancellation Details
+                        </h6>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="{{ form.cancellation_notice_period.id_for_label }}" class="form-label fw-semibold">
+                            Notice Period <span class="text-danger">*</span>
+                        </label>
+                        {{ form.cancellation_notice_period }}
+                        {% if form.cancellation_notice_period.errors %}
+                            <div class="text-danger small mt-1">
+                               
+                                {{ form.cancellation_notice_period.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="{{ form.cancellation_period.id_for_label }}" class="form-label fw-semibold">
+                            Cancellation Period <span class="text-danger">*</span>
+                        </label>
+                        {{ form.cancellation_period }}
+                        {% if form.cancellation_period.errors %}
+                            <div class="text-danger small mt-1">
+                               
+                                {{ form.cancellation_period.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="{{ form.cancellation_charge.id_for_label }}" class="form-label fw-semibold">
+                            Cancellation Charge <span class="text-danger">*</span>
+                        </label>
+                        {{ form.cancellation_charge }}
+                        {% if form.cancellation_charge.errors %}
+                            <div class="text-danger small mt-1">
+                               
+                                {{ form.cancellation_charge.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Contact Information -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="bi bi-telephone"></i> Contact Information
+                        </h6>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.support_phone.id_for_label }}" class="form-label fw-semibold">
+                            24/7 Support Phone Number <span class="text-danger">*</span>
+                        </label>
+                        {{ form.support_phone }}
+                        {% if form.support_phone.errors %}
+                            <div class="text-danger small mt-1">
+                               
+                                {{ form.support_phone.errors }}
+                            </div>
+                        {% endif %}
+                        {% if form.support_phone.help_text %}
+                            <div class="form-text">{{ form.support_phone.help_text }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.emergency_contact_person.id_for_label }}" class="form-label fw-semibold">
+                            Emergency Contact Person <span class="text-danger">*</span>
+                        </label>
+                        {{ form.emergency_contact_person }}
+                        {% if form.emergency_contact_person.errors %}
+                            <div class="text-danger small mt-1">
+                               
+                                {{ form.emergency_contact_person.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.emergency_phone.id_for_label }}" class="form-label fw-semibold">
+                            Emergency Contact Phone Number <span class="text-danger">*</span>
+                        </label>
+                        {{ form.emergency_phone }}
+                        {% if form.emergency_phone.errors %}
+                            <div class="text-danger small mt-1">
+                               
+                                {{ form.emergency_phone.errors }}
+                            </div>
+                        {% endif %}
+                        {% if form.emergency_phone.help_text %}
+                            <div class="form-text">{{ form.emergency_phone.help_text }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="d-flex gap-2 justify-content-end">
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle me-1"></i> Create Achievement
+                    </button>
+                    <a href="{% url 'targets:profile' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-1"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

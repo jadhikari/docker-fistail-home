@@ -1,0 +1,448 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}User Profile - {{ user.first_name }} - Fishtail System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header Section -->
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div>
+                    <h5 class="mb-0">
+                        <i class="bi bi-person-circle text-primary"></i>
+                        User Profile: {{ user.first_name|default:user.email }}
+                    </h5>
+                    <small class="text-muted">Target performance and achievements overview</small>
+                </div>
+                <div>
+                    <a href="{% url 'targets:management' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left"></i> Back to Management
+                    </a>
+                </div>
+            </div>
+
+            <!-- User Info Card -->
+            <div class="row mb-2">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header py-1">
+                            <h6 class="mb-0">
+                                <i class="bi bi-person"></i> User Information
+                            </h6>
+                        </div>
+                        <div class="card-body py-1">
+                            <div class="text-center mb-2">
+                                <i class="bi bi-person-circle display-4 text-muted"></i>
+                            </div>
+                            <div class="row">
+                                <div class="col-6">
+                                    <strong>Name:</strong>
+                                </div>
+                                <div class="col-6">
+                                    {{ user.first_name|default:"Not provided" }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-6">
+                                    <strong>Email:</strong>
+                                </div>
+                                <div class="col-6">
+                                    {{ user.email }}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-6">
+                                    <strong>Status:</strong>
+                                </div>
+                                <div class="col-6">
+                                    {% if user.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Inactive</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-6">
+                                    <strong>Joined:</strong>
+                                </div>
+                                <div class="col-6">
+                                    {{ user.date_joined|date:"M d, Y" }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header py-1">
+                            <h6 class="mb-0">
+                                <i class="bi bi-graph-up"></i> Performance Summary
+                            </h6>
+                        </div>
+                        <div class="card-body py-1">
+                            <div class="row text-center">
+                                <div class="col-md-3">
+                                    <div class="border-end">
+                                        <h6 class="text-primary mb-1">{{ total_targets }}</h6>
+                                        <small class="text-muted">Total Targets</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="border-end">
+                                        <h6 class="text-success mb-1">{{ completed_targets }}</h6>
+                                        <small class="text-muted">Completed</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="border-end">
+                                        <h6 class="text-info mb-1">{{ active_targets }}</h6>
+                                        <small class="text-muted">Active</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div>
+                                        <h6 class="text-warning mb-1">{{ completion_rate|floatformat:1 }}%</h6>
+                                        <small class="text-muted">Success Rate</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Achievement Rules Info -->
+            {% if not can_add_achievements %}
+                <div class="alert alert-info mb-2">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <div>
+                            <strong>Achievement Rules:</strong> You can only add achievements when you have an active target for the current month. 
+                            {% if current_target %}
+                                Your current target status is: <strong>{{ current_target.get_status_display }}</strong>
+                            {% else %}
+                                You don't have a target assigned for the current month.
+                            {% endif %}
+                            Please contact your supervisor if you need a target assigned or have questions.
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Current Target -->
+            <div class="row mb-2">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header py-1">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-bullseye"></i> Current Month Target
+                                </h6>
+                                <div>
+                                    {% if current_target and current_target.status == 'active' %}
+                                        <a href="{% url 'targets:create_rental_contract' %}" class="btn btn-success btn-sm">
+                                            <i class="bi bi-plus-circle"></i> Add Achievement
+                                        </a>
+                                    {% else %}
+                                        <button class="btn btn-secondary btn-sm" disabled title="You can only add achievements when you have an active target">
+                                            <i class="bi bi-plus-circle"></i> Add Achievement
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body py-1">
+                            {% if current_target %}
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h5 class="text-primary">¥{{ current_target.target_amount|floatformat:0 }}</h5>
+                                        <p class="text-muted mb-1">Target Amount</p>
+                                        <p class="mb-0">
+                                            <strong>Period:</strong> {{ current_target.target_period }}
+                                        </p>
+                                        {% if current_target.description %}
+                                            <p class="mb-0 mt-2">
+                                                <strong>Description:</strong> {{ current_target.description }}
+                                            </p>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="text-center">
+                                            <h6 class="text-success mb-2">Current Month Achievements</h6>
+                                            {% if current_month_achievements %}
+                                                <h4 class="text-success">¥{{ current_month_achievement_total|floatformat:0 }}</h4>
+                                                <p class="text-muted mb-1">Total Achieved</p>
+                                                <p class="mb-0">
+                                                    <strong>{{ current_month_achievements.count }}</strong> contracts
+                                                </p>
+                                            {% else %}
+                                                <i class="bi bi-trophy fs-2 text-muted"></i>
+                                                <p class="text-muted mt-2">No achievements yet</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-2">
+                                    {% if current_target.status == 'active' %}
+                                        <span class="badge bg-primary">Active</span>
+                                        <div class="mt-1">
+                                            <small class="text-success">
+                                                <i class="bi bi-check-circle"></i> You can add achievements for this target
+                                            </small>
+                                        </div>
+                                    {% elif current_target.status == 'completed' %}
+                                        <span class="badge bg-success">Completed</span>
+                                        <div class="mt-1">
+                                            <small class="text-muted">
+                                                <i class="bi bi-info-circle"></i> This target is completed. You cannot add more achievements.
+                                            </small>
+                                        </div>
+                                    {% elif current_target.status == 'overdue' %}
+                                        <span class="badge bg-danger">Overdue</span>
+                                        <div class="mt-1">
+                                            <small class="text-muted">
+                                                <i class="bi bi-info-circle"></i> This target is overdue. You cannot add more achievements.
+                                            </small>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                <div class="text-center py-3">
+                                    <i class="bi bi-calendar-x display-4 text-muted"></i>
+                                    <h5 class="text-muted mt-2">No Current Target</h5>
+                                    <p class="text-muted">You don't have a target assigned for this month.</p>
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            <i class="bi bi-info-circle"></i> You need an active target to add achievements. Please contact your supervisor.
+                                        </small>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Target History with Search -->
+            <div class="card">
+                <div class="card-header py-1">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <h6 class="mb-0">
+                            <i class="bi bi-clock-history"></i> Target History
+                        </h6>
+                        <small class="text-muted">
+                            {% if selected_month or selected_year or selected_status %}
+                                Showing filtered results
+                            {% else %}
+                                Showing all targets
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+                
+                <!-- Search Filters -->
+                <div class="card-body border-bottom py-1">
+                    <form method="get" class="row g-2">
+                        <div class="col-md-2">
+                            <select name="month" class="form-select form-select-sm">
+                                <option value="">All Months</option>
+                                {% for month_num, month_name in months %}
+                                    <option value="{{ month_num }}" {% if selected_month == month_num %}selected{% endif %}>
+                                        {{ month_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select name="year" class="form-select form-select-sm">
+                                <option value="">All Years</option>
+                                {% for year in years %}
+                                    <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>
+                                        {{ year }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select name="status" class="form-select form-select-sm">
+                                <option value="">All Status</option>
+                                <option value="active" {% if selected_status == 'active' %}selected{% endif %}>Active</option>
+                                <option value="completed" {% if selected_status == 'completed' %}selected{% endif %}>Completed</option>
+                                <option value="overdue" {% if selected_status == 'overdue' %}selected{% endif %}>Overdue</option>
+                                <option value="cancelled" {% if selected_status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="bi bi-search"></i> Search
+                            </button>
+                            <a href="{% url 'targets:profile' %}" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-x-circle"></i> Clear
+                            </a>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="card-body py-1">
+                    <!-- Table Info -->
+                    <div class="mb-2">
+                        <div class="alert alert-info py-1 mb-0">
+                            <small class="text-muted">
+                                <i class="bi bi-info-circle me-1"></i>
+                                <strong>Sorting:</strong> Targets are displayed with the latest period (most recent month/year) at the top
+                            </small>
+                        </div>
+                    </div>
+                    
+                    {% if page_obj %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover text-center">
+                                <thead>
+                                    <tr>
+                                        <th class="text-center">
+                                            Period
+                                            <br><small class="text-muted">Latest First</small>
+                                        </th>
+                                        <th class="text-center">Target Amount</th>
+                                        <th class="text-center">Status</th>
+                                        <th class="text-center">Progress</th>
+                                        <th class="text-center">Assigned By</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for target in page_obj %}
+                                        <tr>
+                                            <td class="text-center">
+                                                <a href="{% url 'targets:achievement_details' target.target_year target.target_month %}" class="text-decoration-none">
+                                                    <strong>{{ target.target_period }}</strong>
+                                                </a>
+                                                {% if target.target_month == current_month and target.target_year == current_year %}
+                                                    <br><small class="text-primary">Current Month</small>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
+                                                <strong>¥{{ target.target_amount|floatformat:0 }}</strong>
+                                            </td>
+                                            <td class="text-center">
+                                                {% if target.status == 'active' %}
+                                                    <span class="badge bg-primary">Active</span>
+                                                    <br><small class="text-success">Can add achievements</small>
+                                                {% elif target.status == 'completed' %}
+                                                    <span class="badge bg-success">Completed</span>
+                                                    <br><small class="text-muted">No more achievements</small>
+                                                {% elif target.status == 'overdue' %}
+                                                    <span class="badge bg-danger">Overdue</span>
+                                                    <br><small class="text-muted">No more achievements</small>
+                                                {% elif target.status == 'cancelled' %}
+                                                    <span class="badge bg-secondary">Cancelled</span>
+                                                    <br><small class="text-muted">No more achievements</small>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
+                                                {% for achievement in achievements_by_period %}
+                                                    {% if achievement.year == target.target_year and achievement.month == target.target_month %}
+                                                        {% if achievement.total_achieved %}
+                                                            {% widthratio achievement.total_achieved target.target_amount 100 as progress_percentage %}
+                                                            <div class="progress" style="height: 12px;">
+                                                                <div class="progress-bar {% if progress_percentage >= 100 %}bg-success{% elif progress_percentage >= 80 %}bg-warning{% else %}bg-info{% endif %}" 
+                                                                     role="progressbar" 
+                                                                     style="width: {% if progress_percentage > 100 %}100{% else %}{{ progress_percentage }}{% endif %}%"
+                                                                     title="¥{{ achievement.total_achieved|floatformat:0 }} / ¥{{ target.target_amount|floatformat:0 }} ({{ progress_percentage }}%)">
+                                                                    {{ progress_percentage }}%
+                                                                </div>
+                                                            </div>
+                                                            <small class="text-muted">¥{{ achievement.total_achieved|floatformat:0 }} / ¥{{ target.target_amount|floatformat:0 }}</small>
+                                                        {% else %}
+                                                            <span class="text-muted">No achievements</span>
+                                                        {% endif %}
+                                                    {% endif %}
+                                                {% empty %}
+                                                    <span class="text-muted">No achievements</span>
+                                                {% endfor %}
+                                            </td>
+                                            <td class="text-center">
+                                                <small>{{ target.assigned_by.first_name|default:target.assigned_by.email }}</small>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Pagination -->
+                        {% if page_obj.has_other_pages %}
+                            <nav aria-label="Target history pagination" class="mt-2">
+                                <ul class="pagination pagination-sm justify-content-center">
+                                    {% if page_obj.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page=1{% if selected_month %}&month={{ selected_month }}{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}">
+                                                <i class="bi bi-chevron-double-left"></i>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if selected_month %}&month={{ selected_month }}{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}">
+                                                <i class="bi bi-chevron-left"></i>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                    
+                                    {% for num in page_obj.paginator.page_range %}
+                                        {% if page_obj.number == num %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ num }}</span>
+                                            </li>
+                                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page={{ num }}{% if selected_month %}&month={{ selected_month }}{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}">
+                                                    {{ num }}
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+                                    
+                                    {% if page_obj.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if selected_month %}&month={{ selected_month }}{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}">
+                                                <i class="bi bi-chevron-right"></i>
+                                            </a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if selected_month %}&month={{ selected_month }}{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}">
+                                                <i class="bi bi-chevron-double-right"></i>
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                            
+                            <div class="text-center text-muted">
+                                <small>
+                                    Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} targets
+                                </small>
+                            </div>
+                        {% endif %}
+                        
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="bi bi-inbox display-4 text-muted"></i>
+                            <h5 class="text-muted mt-2">No Targets Found</h5>
+                            <p class="text-muted">
+                                {% if selected_month or selected_year or selected_status %}
+                                    No targets match your search criteria.
+                                {% else %}
+                                    You don't have any targets yet.
+                                {% endif %}
+                            </p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

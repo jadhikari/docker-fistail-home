@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Assign Target - Fishtail System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header Section -->
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div>
+                    <h5 class="mb-0">
+                        <i class="bi bi-plus-circle text-primary"></i>
+                        Assign New Target
+                    </h5>
+                    <small class="text-muted">Create a new monthly target for a user</small>
+                </div>
+                <div>
+                    <a href="{% url 'targets:management' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left"></i> Back to Management
+                    </a>
+                </div>
+            </div>
+
+            <!-- Form Card -->
+            <div class="row justify-content-center">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header py-1">
+                            <h6 class="mb-0">
+                                <i class="bi bi-bullseye"></i> Target Details
+                            </h6>
+                        </div>
+                        <div class="card-body py-2">
+                            <form method="post">
+                                {% csrf_token %}
+                                
+                                <div class="row mb-2">
+                                    <div class="col-md-6">
+                                        <label for="{{ form.user.id_for_label }}" class="form-label">
+                                            <strong>User</strong>
+                                        </label>
+                                        {{ form.user }}
+                                        {% if form.user.errors %}
+                                            <div class="text-danger small">
+                                                {{ form.user.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="{{ form.target_amount.id_for_label }}" class="form-label">
+                                            <strong>Target Amount (¥)</strong>
+                                        </label>
+                                        {{ form.target_amount }}
+                                        {% if form.target_amount.errors %}
+                                            <div class="text-danger small">
+                                                {{ form.target_amount.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2">
+                                    <div class="col-md-6">
+                                        <label for="{{ form.target_month.id_for_label }}" class="form-label">
+                                            <strong>Target Month</strong>
+                                        </label>
+                                        {{ form.target_month }}
+                                        {% if form.target_month.errors %}
+                                            <div class="text-danger small">
+                                                {{ form.target_month.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="{{ form.target_year.id_for_label }}" class="form-label">
+                                            <strong>Target Year</strong>
+                                        </label>
+                                        {{ form.target_year }}
+                                        {% if form.target_year.errors %}
+                                            <div class="text-danger small">
+                                                {{ form.target_year.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2">
+                                    <div class="col-12">
+                                        <label for="{{ form.description.id_for_label }}" class="form-label">
+                                            <strong>Description (Optional)</strong>
+                                        </label>
+                                        {{ form.description }}
+                                        {% if form.description.errors %}
+                                            <div class="text-danger small">
+                                                {{ form.description.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                        <div class="form-text">
+                                            Provide additional context or instructions for this target
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2">
+                                    <div class="col-12">
+                                        <label for="{{ form.status.id_for_label }}" class="form-label">
+                                            
+                                        </label>
+                                        {{ form.status }}
+                                        {% if form.status.errors %}
+                                            <div class="text-danger small">
+                                                {{ form.status.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-between">
+                                    <a href="{% url 'targets:management' %}" class="btn btn-outline-secondary">
+                                        <i class="bi bi-x-circle"></i> Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-check-circle"></i> Assign Target
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Help Information -->
+            <div class="row justify-content-center mt-2">
+                <div class="col-md-12">
+                    <div class="card border-info">
+                        <div class="card-header bg-info text-white py-1">
+                            <h6 class="mb-0">
+                                <i class="bi bi-info-circle"></i> Target Assignment Guidelines
+                            </h6>
+                        </div>
+                        <div class="card-body py-1">
+                            <ul class="mb-0 small">
+                                <li>Targets are typically assigned monthly to track user performance</li>
+                                <li>Active targets allow users to add achievements</li>
+                                <li>Completed targets cannot be modified</li>
+                                <li>Overdue targets indicate missed deadlines</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

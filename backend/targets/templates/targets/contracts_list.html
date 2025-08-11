@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Rental Contracts - Fistail Home{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">📋 Rental Contracts</h4>
+            </div>
+
+            <!-- Filters -->
+            <div class="card mb-3">
+                <div class="card-header py-2">
+                    <h6 class="mb-0">🔍 Filters</h6>
+                </div>
+                <div class="card-body py-2">
+                    <form method="get" class="row g-2">
+                        <div class="col-md-2">
+                            <label for="customer_name" class="form-label small mb-1">Customer Name</label>
+                            <input type="text" class="form-control form-control-sm" id="customer_name" name="customer_name" 
+                                   value="{{ filters.customer_name }}" placeholder="Search by name...">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="customer_phone" class="form-label small mb-1">Phone</label>
+                            <input type="text" class="form-control form-control-sm" id="customer_phone" name="customer_phone" 
+                                   value="{{ filters.customer_phone }}" placeholder="Search by phone...">
+                        </div>
+                        <div class="col-md-1">
+                            <label for="year" class="form-label small mb-1">Year</label>
+                            <select class="form-select form-select-sm" id="year" name="year">
+                                <option value="">All</option>
+                                {% for year in years %}
+                                    <option value="{{ year.year }}" {% if filters.year == year.year|stringformat:"s" %}selected{% endif %}>
+                                        {{ year.year }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <label for="month" class="form-label small mb-1">Month</label>
+                            <select class="form-select form-select-sm" id="month" name="month">
+                                <option value="">All</option>
+                                {% for month_num, month_name in months %}
+                                    <option value="{{ month_num }}" {% if filters.month == month_num|stringformat:"s" %}selected{% endif %}>
+                                        {{ month_name|slice:":3" }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="created_by" class="form-label small mb-1">Created By</label>
+                            <select class="form-select form-select-sm" id="created_by" name="created_by">
+                                <option value="">All Users</option>
+                                {% for user in users %}
+                                    <option value="{{ user.id }}" {% if filters.created_by == user.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ user.get_full_name|default:user.email }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary btn-sm me-1">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                            <a href="{% url 'targets:contracts' %}" class="btn btn-outline-secondary btn-sm me-1">
+                                <i class="fas fa-times"></i> Clear
+                            </a>
+                            <a href="{% url 'targets:export_contracts_excel' %}?{% for key, value in filters.items %}{% if value %}{{ key }}={{ value }}&{% endif %}{% endfor %}" class="btn btn-success btn-sm">
+                                <i class="fas fa-download"></i> Excel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Contracts Table -->
+            <div class="card">
+                <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">📋 Contracts List</h6>
+                    <small class="text-muted">Total: {{ total_contracts }} contracts</small>
+                </div>
+                <div class="card-body p-0">
+                    {% if contracts %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped table-hover mb-0">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th class="py-2 px-2">Customer</th>
+                                        <th class="py-2 px-2">Phone</th>
+                                        <th class="py-2 px-2">Date</th>
+                                        <th class="py-2 px-2">Type</th>
+                                        <th class="py-2 px-2">People</th>
+                                        <th class="py-2 px-2">Address</th>
+                                        <th class="py-2 px-2">24/7 Support</th>
+                                        <th class="py-2 px-2">Emergency</th>
+                                        <th class="py-2 px-2">Cancellation</th>
+                                        <th class="py-2 px-2">Deposit</th>
+                                        <th class="py-2 px-2">Cleaning</th>
+                                        <th class="py-2 px-2">Renew</th>
+                                        <th class="py-2 px-2">Rent Payment</th>
+                                        <th class="py-2 px-2">Created</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for contract in contracts %}
+                                    <tr>
+                                        <td class="py-1 px-2">
+                                            <strong>{{ contract.customer_name }}</strong>
+                                        </td>
+                                        <td class="py-1 px-2">{{ contract.customer_number }}</td>
+                                        <td class="py-1 px-2">
+                                            <span class="badge bg-info">{{ contract.contract_date|date:"M d, Y" }}</span>
+                                        </td>
+                                        <td class="py-1 px-2">
+                                            <span class="badge {% if contract.contract_type == 'fix_term' %}bg-warning{% else %}bg-success{% endif %}">
+                                                {{ contract.get_contract_type_display|slice:":3" }}
+                                            </span>
+                                        </td>
+                                        <td class="py-1 px-2">
+                                            <span class="badge bg-secondary">{{ contract.living_num_people }}</span>
+                                        </td>
+                                        <td class="py-1 px-2">
+                                            <small>{{ contract.building_address|truncatechars:30 }}</small>
+                                        </td>
+                                        <td class="py-1 px-2">{{ contract.support_phone }}</td>
+                                        <td class="py-1 px-2">
+                                            <small>{{ contract.emergency_contact_person|truncatechars:15 }}</small>
+                                            <br><small class="text-muted">{{ contract.emergency_phone }}</small>
+                                        </td>
+                                        <td class="py-1 px-2">
+                                            <small>
+                                                <strong>Notice:</strong> {{ contract.cancellation_notice_period|truncatechars:15 }}<br>
+                                                <strong>Period:</strong> {{ contract.cancellation_period|truncatechars:15 }}<br>
+                                                <strong>Charge:</strong> {{ contract.cancellation_charge|truncatechars:15 }}
+                                            </small>
+                                        </td>
+                                        <td class="py-1 px-2">
+                                            <small>{{ contract.deposit_fee|truncatechars:20 }}</small>
+                                        </td>
+                                        <td class="py-1 px-2">
+                                            {% if contract.cleaning_charge %}
+                                                <span class="badge bg-success">Yes</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">No</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="py-1 px-2">
+                                            <small>{{ contract.renew_fee|truncatechars:20 }}</small>
+                                        </td>
+                                        <td class="py-1 px-2">
+                                            <small>{{ contract.rent_payment_date|truncatechars:20 }}</small>
+                                        </td>
+                                        <td class="py-1 px-2">
+                                            <small class="text-muted">
+                                                {{ contract.created_at|date:"M d, Y" }}
+                                                <br>
+                                                {{ contract.created_by.get_full_name|default:contract.created_by.email|truncatechars:15 }}
+                                            </small>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        {% if contracts.has_other_pages %}
+                        <nav aria-label="Contracts pagination" class="p-2">
+                            <ul class="pagination pagination-sm justify-content-center mb-0">
+                                {% if contracts.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ contracts.previous_page_number }}{% for key, value in filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                            <i class="fas fa-chevron-left"></i> Prev
+                                        </a>
+                                    </li>
+                                {% endif %}
+
+                                {% for num in contracts.paginator.page_range %}
+                                    {% if contracts.number == num %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ num }}</span>
+                                        </li>
+                                    {% elif num > contracts.number|add:'-3' and num < contracts.number|add:'3' %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ num }}{% for key, value in filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+
+                                {% if contracts.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ contracts.next_page_number }}{% for key, value in filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                            Next <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-file-contract fa-2x text-muted mb-2"></i>
+                            <h6 class="text-muted">No contracts found</h6>
+                            <p class="text-muted small">Try adjusting your filters.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-submit form when filters change
+    document.addEventListener('DOMContentLoaded', function() {
+        const filterSelects = document.querySelectorAll('select[name="year"], select[name="month"], select[name="contract_type"]');
+        filterSelects.forEach(select => {
+            select.addEventListener('change', function() {
+                this.closest('form').submit();
+            });
+        });
+    });
+</script>
+{% endblock %} 

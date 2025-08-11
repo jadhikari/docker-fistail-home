@@ -1,0 +1,375 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Target Statistics - Fishtail System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2">
+    <div class="row">
+        <div class="col-12">
+            <!-- Header Section -->
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div>
+                    <h5 class="mb-0">
+                        <i class="bi bi-graph-up text-primary"></i>
+                        Target Statistics
+                    </h5>
+                    <small class="text-muted">Overview of target performance and analytics</small>
+                </div>
+                <div>
+                    <a href="{% url 'targets:management' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left"></i> Back to Management
+                    </a>
+                </div>
+            </div>
+
+            <!-- Key Metrics Overview -->
+            <div class="row mb-2">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body text-center py-1">
+                            <i class="bi bi-people fs-5 mb-1"></i>
+                            <h6 class="mb-0">{{ total_users }}</h6>
+                            <small>Active Users</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body text-center py-1">
+                            <i class="bi bi-bullseye fs-5 mb-1"></i>
+                            <h6 class="mb-0">{{ total_targets }}</h6>
+                            <small>Total Targets</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body text-center py-1">
+                            <i class="bi bi-check-circle fs-5 mb-1"></i>
+                            <h6 class="mb-0">{{ completed_targets }}</h6>
+                            <small>Completed</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body text-center py-1">
+                            <i class="bi bi-percent fs-5 mb-1"></i>
+                            <h6 class="mb-0">{{ completion_rate|floatformat:1 }}%</h6>
+                            <small>Success Rate</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Month Performance -->
+            <div class="row mb-2">
+                <div class="col-12">
+                    <div class="card border-primary">
+                        <div class="card-header bg-primary text-white py-1">
+                            <h6 class="mb-0">
+                                <i class="bi bi-calendar-event"></i> 
+                                Current Month Performance ({{ current_month }}/{{ current_year }})
+                            </h6>
+                        </div>
+                        <div class="card-body py-1">
+                            <div class="row text-center">
+                                <div class="col-md-3">
+                                    <div class="border-end">
+                                        <h6 class="text-primary mb-1">{{ current_month_total }}</h6>
+                                        <small class="text-muted">Total Targets</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="border-end">
+                                        <h6 class="text-success mb-1">{{ current_month_completed }}</h6>
+                                        <small class="text-muted">Completed</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="border-end">
+                                        <h6 class="text-info mb-1">{{ current_month_active }}</h6>
+                                        <small class="text-muted">Active</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div>
+                                        <h6 class="text-danger mb-1">{{ current_month_overdue }}</h6>
+                                        <small class="text-muted">Overdue</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Statistics -->
+            <div class="row">
+                <!-- Monthly Performance Trends -->
+                <div class="col-lg-8 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="bi bi-calendar-range"></i> Monthly Performance Trends
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {% if monthly_stats %}
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover">
+                                        <thead class="custom-thead">
+                                            <tr>
+                                                <th>Period</th>
+                                                <th>Total</th>
+                                                <th>Completed</th>
+                                                <th>Active</th>
+                                                <th>Overdue</th>
+                                                <th>Success Rate</th>
+                                                <th>Avg Amount</th>
+                                                <th>Total Amount</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for stat in monthly_stats %}
+                                                <tr class="{% if stat.target_month == current_month and stat.target_year == current_year %}table-primary{% endif %}">
+                                                    <td>
+                                                        <strong>{{ stat.target_month }}/{{ stat.target_year }}</strong>
+                                                        {% if stat.target_month == current_month and stat.target_year == current_year %}
+                                                            <br><small class="text-primary">Current</small>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-primary">{{ stat.total_targets }}</span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-success">{{ stat.completed_targets }}</span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-info">{{ stat.active_targets }}</span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-danger">{{ stat.overdue_targets }}</span>
+                                                    </td>
+                                                    <td>
+                                                        <div class="progress" style="height: 20px; width: 80px;">
+                                                            <div class="progress-bar 
+                                                                {% if stat.completion_rate >= 80 %}bg-success
+                                                                {% elif stat.completion_rate >= 60 %}bg-warning
+                                                                {% else %}bg-danger{% endif %}"
+                                                                role="progressbar" 
+                                                                style="--progress-width: {% if stat.completion_rate > 100 %}100{% else %}{{ stat.completion_rate }}{% endif %}%; width: var(--progress-width);">
+                                                                {{ stat.completion_rate|floatformat:1 }}%
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <strong>¥{{ stat.avg_target_amount|floatformat:0 }}</strong>
+                                                    </td>
+                                                    <td>
+                                                        <strong>¥{{ stat.total_target_amount|floatformat:0 }}</strong>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="text-center py-4">
+                                    <i class="bi bi-calendar-x display-1 text-muted"></i>
+                                    <p class="text-muted mt-2">No monthly performance data available</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Performers & Status Distribution -->
+                <div class="col-lg-4 mb-4">
+                    <!-- Top Performers -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="bi bi-trophy"></i> Top Performers
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            {% if user_stats %}
+                                {% for stat in user_stats|slice:":5" %}
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="me-3">
+                                            <i class="bi bi-person-circle fs-4 text-muted"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <strong>{{ stat.user__first_name|default:"No Name" }}</strong>
+                                                <span class="badge bg-success">{{ stat.completion_rate|floatformat:0 }}%</span>
+                                            </div>
+                                            <small class="text-muted">{{ stat.user__email }}</small>
+                                            <div class="mt-1">
+                                                <small class="text-muted">
+                                                    {{ stat.completed_targets }}/{{ stat.total_targets }} completed
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% if not forloop.last %}<hr class="my-2">{% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center py-3">
+                                    <i class="bi bi-people display-1 text-muted"></i>
+                                    <p class="text-muted mt-2">No user performance data</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Status Distribution -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="bi bi-pie-chart"></i> Status Distribution
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-6 mb-3">
+                                    <div class="border-end">
+                                        <h5 class="text-success mb-1">{{ completed_targets }}</h5>
+                                        <small class="text-muted">Completed</small>
+                                    </div>
+                                </div>
+                                <div class="col-6 mb-3">
+                                    <div>
+                                        <h5 class="text-info mb-1">{{ active_targets }}</h5>
+                                        <small class="text-muted">Active</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="border-end">
+                                        <h5 class="text-danger mb-1">{{ overdue_targets }}</h5>
+                                        <small class="text-muted">Overdue</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div>
+                                        <h5 class="text-secondary mb-1">{{ cancelled_targets }}</h5>
+                                        <small class="text-muted">Cancelled</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Yearly Summary -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="bi bi-calendar-year"></i> Yearly Performance Summary
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {% if yearly_stats %}
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover">
+                                        <thead class="custom-thead">
+                                            <tr>
+                                                <th>Year</th>
+                                                <th>Total Targets</th>
+                                                <th>Completed</th>
+                                                <th>Success Rate</th>
+                                                <th>Total Amount</th>
+                                                <th>Average Amount</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for stat in yearly_stats %}
+                                                <tr class="{% if stat.target_year == current_year %}table-primary{% endif %}">
+                                                    <td>
+                                                        <strong>{{ stat.target_year }}</strong>
+                                                        {% if stat.target_year == current_year %}
+                                                            <br><small class="text-primary">Current Year</small>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-primary">{{ stat.total_targets }}</span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-success">{{ stat.completed_targets }}</span>
+                                                    </td>
+                                                    <td>
+                                                        <div class="progress" style="height: 20px; width: 80px;">
+                                                            <div class="progress-bar 
+                                                                {% if stat.completion_rate >= 80 %}bg-success
+                                                                {% elif stat.completion_rate >= 60 %}bg-warning
+                                                                {% else %}bg-danger{% endif %}"
+                                                                role="progressbar" 
+                                                                style="--progress-width: {% if stat.completion_rate > 100 %}100{% else %}{{ stat.completion_rate }}{% endif %}%; width: var(--progress-width);">
+                                                                {{ stat.completion_rate|floatformat:1 }}%
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <strong>¥{{ stat.total_amount|floatformat:0 }}</strong>
+                                                    </td>
+                                                    <td>
+                                                        <strong>¥{{ stat.avg_amount|floatformat:0 }}</strong>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="text-center py-3">
+                                    <i class="bi bi-calendar-x display-1 text-muted"></i>
+                                    <p class="text-muted mt-2">No yearly data available</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="row mt-4">
+                <div class="col-md-4 mb-3">
+                    <div class="card border-primary">
+                        <div class="card-body text-center">
+                            <i class="bi bi-plus-circle display-1 text-primary mb-3"></i>
+                            <h5 class="card-title">Assign New Target</h5>
+                            <p class="card-text">Create and assign new monthly targets to users.</p>
+                            <a href="{% url 'targets:assign' %}" class="btn btn-primary">Assign Target</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card border-info">
+                        <div class="card-body text-center">
+                            <i class="bi bi-list-ul display-1 text-info mb-3"></i>
+                            <h5 class="card-title">Manage Targets</h5>
+                            <p class="card-text">View, edit, and manage all existing targets.</p>
+                            <a href="{% url 'targets:management' %}" class="btn btn-info">View Targets</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card border-success">
+                        <div class="card-body text-center">
+                            <i class="bi bi-download display-1 text-success mb-3"></i>
+                            <h5 class="card-title">Export Data</h5>
+                            <p class="card-text">Download statistics and reports for analysis.</p>
+                            <button class="btn btn-success" disabled>Coming Soon</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

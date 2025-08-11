@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Delete Target - Fishtail System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <!-- Header Section -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="bi bi-trash text-danger"></i>
+                        Delete Target
+                    </h2>
+                    <p class="text-muted mb-0">Confirm target deletion</p>
+                </div>
+                <div>
+                    <a href="{% url 'targets:management' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to Management
+                    </a>
+                </div>
+            </div>
+
+            <!-- Confirmation Card -->
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-exclamation-triangle"></i> Confirm Deletion
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <div class="d-flex">
+                            <i class="bi bi-exclamation-triangle fs-4 me-3 text-warning"></i>
+                            <div>
+                                <strong>Warning!</strong> This action cannot be undone. 
+                                All progress data associated with this target will also be deleted.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Target Details -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Target Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>User:</strong><br>
+                                    <div class="d-flex align-items-center mt-1">
+                                        <i class="bi bi-person-circle fs-4 text-muted me-2"></i>
+                                        <div>
+                                            {{ target.user.first_name|default:"No Name" }}<br>
+                                            <small class="text-muted">{{ target.user.email }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Target Period:</strong><br>
+                                    <span class="badge bg-light text-dark fs-6 mt-1">{{ target.target_period }}</span>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Target Amount:</strong><br>
+                                    <span class="text-primary fs-5">¥{{ target.target_amount|floatformat:0 }}</span>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Status:</strong><br>
+                                    {% if target.status == 'active' %}
+                                        <span class="badge bg-primary">Active</span>
+                                    {% elif target.status == 'completed' %}
+                                        <span class="badge bg-success">Completed</span>
+                                    {% elif target.status == 'overdue' %}
+                                        <span class="badge bg-danger">Overdue</span>
+                                    {% elif target.status == 'cancelled' %}
+                                        <span class="badge bg-secondary">Cancelled</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% if target.description %}
+                                <hr>
+                                <strong>Description:</strong><br>
+                                <p class="text-muted mb-0">{{ target.description }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Progress Information (if available) -->
+                    {% if target.achievement %}
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0 text-warning">
+                                    <i class="bi bi-graph-up"></i> Progress Data (Will be deleted)
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                {% with achievement=target.achievement %}
+                                    <div class="row text-center">
+                                        <div class="col-4">
+                                            <h6 class="text-success">¥{{ achievement.achieved_amount|floatformat:0 }}</h6>
+                                            <small class="text-muted">Achieved Amount</small>
+                                        </div>
+                                        <div class="col-4">
+                                            <h6 class="text-primary">{{ achievement.percentage_achieved|floatformat:1 }}%</h6>
+                                            <small class="text-muted">Progress</small>
+                                        </div>
+                                        <div class="col-4">
+                                            <h6 class="text-muted">{{ achievement.updated_at|date:"M d, Y" }}</h6>
+                                            <small class="text-muted">Last Updated</small>
+                                        </div>
+                                    </div>
+                                {% endwith %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Assignment Information -->
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Assigned By:</strong><br>
+                                    <small>{{ target.assigned_by.first_name|default:target.assigned_by.email }}</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Created:</strong><br>
+                                    <small>{{ target.created_at|date:"M d, Y g:i A" }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Confirmation Form -->
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="confirmDelete" required>
+                            <label class="form-check-label" for="confirmDelete">
+                                I understand that this action is permanent and cannot be undone
+                            </label>
+                        </div>
+
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="{% url 'targets:management' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger" id="deleteButton" disabled>
+                                <i class="bi bi-trash"></i> Delete Target
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmCheckbox = document.getElementById('confirmDelete');
+    const deleteButton = document.getElementById('deleteButton');
+    
+    confirmCheckbox.addEventListener('change', function() {
+        deleteButton.disabled = !this.checked;
+    });
+    
+    // Final confirmation on form submit
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const userConfirm = confirm('Are you absolutely sure you want to delete this target? This action cannot be undone.');
+        if (!userConfirm) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}

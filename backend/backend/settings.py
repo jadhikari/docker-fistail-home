@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'hostel',
     'customer',
     'finance',
+    'targets',  # Target management app
     'django_countries', # this is for display all the country name
 ]
 
@@ -79,6 +80,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'targets.context_processors.current_target_context',
             ],
         },
     },

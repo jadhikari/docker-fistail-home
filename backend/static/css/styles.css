@@ -98,5 +98,112 @@
 }
 .custom-thead {
     background-color:rgb(148, 212, 247) !important;
-    color: Black !important;
+}
+
+/* Compact styling for targets templates */
+.card-header h6, .card-header h5 {
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.form-label {
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.card-body {
+    padding: 0.75rem;
+}
+
+.alert-sm {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.form-select-sm, .form-control-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.table-sm td, .table-sm th {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.875rem;
+}
+
+.progress {
+    height: 0.75rem;
+}
+
+.badge {
+    font-size: 0.75rem;
+}
+
+/* Additional compact styling */
+.container-fluid.py-2 {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+}
+
+.mb-2 {
+    margin-bottom: 0.5rem !important;
+}
+
+.py-1 {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+}
+
+.py-2 {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+}
+
+.mt-2 {
+    margin-top: 0.5rem !important;
+}
+
+.mt-1 {
+    margin-top: 0.25rem !important;
+}
+
+/* Classic table styling */
+.table {
+    font-size: 0.875rem;
+}
+
+.table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+/* Compact card styling */
+.card {
+    border: 1px solid #dee2e6;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+/* Progress bar styling */
+.progress {
+    background-color: #e9ecef;
+    border-radius: 0.25rem;
+}
+
+.progress-bar {
+    font-size: 0.75rem;
+    line-height: 0.75rem;
 }
