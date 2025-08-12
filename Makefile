@@ -12,115 +12,115 @@ help: ## Show this help message
 
 # Development commands
 dev: ## Start development environment
-	docker-compose -f docker-compose.dev.yml up --build
+	docker compose -f docker-compose.dev.yml up --build
 
 dev-detach: ## Start development environment in background
-	docker-compose -f docker-compose.dev.yml up --build -d
+	docker compose -f docker-compose.dev.yml up --build -d
 
 dev-logs: ## Show development logs
-	docker-compose -f docker-compose.dev.yml logs -f
+	docker compose -f docker-compose.dev.yml logs -f
 
 # Production commands
 prod: ## Start production environment
-	docker-compose -f docker-compose.prod.yml up --build -d
+	docker compose -f docker-compose.prod.yml up --build -d
 
 prod-logs: ## Show production logs
-	docker-compose -f docker-compose.prod.yml logs -f
+	docker compose -f docker-compose.prod.yml logs -f
 
 # Build commands
 build-dev: ## Build development images
-	docker-compose -f docker-compose.dev.yml build
+	docker compose -f docker-compose.dev.yml build
 
 build-prod: ## Build production images
-	docker-compose -f docker-compose.prod.yml build
+	docker compose -f docker-compose.prod.yml build
 
 # Stop commands
 down-dev: ## Stop development environment
-	docker-compose -f docker-compose.dev.yml down
+	docker compose -f docker-compose.dev.yml down
 
 down-prod: ## Stop production environment
-	docker-compose -f docker-compose.prod.yml down
+	docker compose -f docker-compose.prod.yml down
 
 # Database commands
 migrate: ## Run database migrations
-	docker-compose -f docker-compose.prod.yml --profile migrate up migrate
+	docker compose -f docker-compose.prod.yml --profile migrate up migrate
 
 migrate-dev: ## Run database migrations in development
-	docker-compose -f docker-compose.dev.yml exec backend python manage.py migrate
+	docker compose -f docker-compose.dev.yml exec backend python manage.py migrate
 
 makemigrations: ## Create new migrations
-	docker-compose -f docker-compose.dev.yml exec backend python manage.py makemigrations
+	docker compose -f docker-compose.dev.yml exec backend python manage.py makemigrations
 
 # Migration commands (SIMPLE)
 migration-status: ## Check migration status
-	docker-compose -f docker-compose.dev.yml exec backend python manage.py showmigrations
+	docker compose -f docker-compose.dev.yml exec backend python manage.py showmigrations
 
 migration-fake: ## Fake migrations (use when tables exist but migrations missing)
-	docker-compose -f docker-compose.dev.yml exec backend python manage.py migrate --fake
+	docker compose -f docker-compose.dev.yml exec backend python manage.py migrate --fake
 
 migration-fake-initial: ## Fake initial migrations
-	docker-compose -f docker-compose.dev.yml exec backend python manage.py migrate --fake-initial
+	docker compose -f docker-compose.dev.yml exec backend python manage.py migrate --fake-initial
 
 # Django commands
 collectstatic: ## Collect static files
-	docker-compose -f docker-compose.prod.yml exec backend python manage.py collectstatic --noinput
+	docker compose -f docker-compose.prod.yml exec backend python manage.py collectstatic --noinput
 
 createsuperuser: ## Create Django superuser
 	docker exec -it fishtail-backend-dev python manage.py createsuperuser
 
 shell: ## Open Django shell
-	docker-compose -f docker-compose.dev.yml exec backend python manage.py shell
+	docker compose -f docker-compose.dev.yml exec backend python manage.py shell
 
 # Database backup and restore
 backup: ## Create database backup
-	docker-compose -f docker-compose.prod.yml exec postgres pg_dump -U $$POSTGRES_USER $$POSTGRES_DB > backup_$(shell date +%Y%m%d_%H%M%S).sql
+	docker compose -f docker-compose.prod.yml exec postgres pg_dump -U $$POSTGRES_USER $$POSTGRES_DB > backup_$(shell date +%Y%m%d_%H%M%S).sql
 
 restore: ## Restore database from backup (usage: make restore BACKUP_FILE=backup_20240101_120000.sql)
-	docker-compose -f docker-compose.prod.yml exec -T postgres psql -U $$POSTGRES_USER $$POSTGRES_DB < $(BACKUP_FILE)
+	docker compose -f docker-compose.prod.yml exec -T postgres psql -U $$POSTGRES_USER $$POSTGRES_DB < $(BACKUP_FILE)
 
 # SSL certificate management
 ssl-setup: ## Setup SSL certificates
-	docker-compose -f docker-compose.prod.yml --profile ssl up certbot
+	docker compose -f docker-compose.prod.yml --profile ssl up certbot
 
 ssl-renew: ## Renew SSL certificates
-	docker-compose -f docker-compose.prod.yml run --rm certbot renew
+	docker compose -f docker-compose.prod.yml run --rm certbot renew
 
 # Maintenance commands
 clean: ## Remove all containers, images, and volumes
 	docker system prune -a --volumes -f
 
 clean-dev: ## Clean development environment
-	docker-compose -f docker-compose.dev.yml down -v --rmi all
+	docker compose -f docker-compose.dev.yml down -v --rmi all
 
 clean-prod: ## Clean production environment
-	docker-compose -f docker-compose.prod.yml down -v --rmi all
+	docker compose -f docker-compose.prod.yml down -v --rmi all
 
 # Health checks
 health: ## Check service health
-	docker-compose -f docker-compose.prod.yml ps
+	docker compose -f docker-compose.prod.yml ps
 
 health-dev: ## Check development service health
-	docker-compose -f docker-compose.dev.yml ps
+	docker compose -f docker-compose.dev.yml ps
 
 # Logs
 logs-backend: ## Show backend logs
-	docker-compose -f docker-compose.prod.yml logs -f backend
+	docker compose -f docker-compose.prod.yml logs -f backend
 
 logs-nginx: ## Show nginx logs
-	docker-compose -f docker-compose.prod.yml logs -f nginx
+	docker compose -f docker-compose.prod.yml logs -f nginx
 
 logs-postgres: ## Show postgres logs
-	docker-compose -f docker-compose.prod.yml logs -f postgres
+	docker compose -f docker-compose.prod.yml logs -f postgres
 
 # Development utilities
 test: ## Run tests
-	docker-compose -f docker-compose.dev.yml exec backend python manage.py test
+	docker compose -f docker-compose.dev.yml exec backend python manage.py test
 
 lint: ## Run code linting
-	docker-compose -f docker-compose.dev.yml exec backend python -m flake8 .
+	docker compose -f docker-compose.dev.yml exec backend python -m flake8 .
 
 format: ## Format code
-	docker-compose -f docker-compose.dev.yml exec backend python -m black .
+	docker compose -f docker-compose.dev.yml exec backend python -m black .
 
 # Monitoring
 monitor: ## Show resource usage
@@ -128,7 +128,7 @@ monitor: ## Show resource usage
 
 # Quick commands
 restart: ## Restart all services
-	docker-compose -f docker-compose.prod.yml restart
+	docker compose -f docker-compose.prod.yml restart
 
 restart-dev: ## Restart development services
-	docker-compose -f docker-compose.dev.yml restart 
+	docker compose -f docker-compose.dev.yml restart 
