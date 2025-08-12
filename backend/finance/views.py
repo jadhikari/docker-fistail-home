@@ -9,6 +9,7 @@ from django.utils import timezone
 from django.db.models import Q
 import openpyxl #type: ignore
 from django.http import HttpResponse
+from django.core.paginator import Paginator
 
 from .finance_helpers.rent_defaulters import get_rent_defaulters
 from datetime import date, datetime
@@ -110,6 +111,11 @@ def revenues(request):
         else:
             messages.warning(request, "No data available to export.")
 
+    # Pagination
+    page_number = request.GET.get('page', 1)
+    paginator = Paginator(revenues, 25)  # Show 25 records per page
+    page_obj = paginator.get_page(page_number)
+
     if request.GET and not any([name, year, month, title, hostel]):
         messages.warning(request, "No filter parameters provided.")
 
@@ -120,7 +126,8 @@ def revenues(request):
     all_hostels = Hostel.objects.all().order_by('name')
 
     return render(request, 'finance/revenues_dashboard.html', {
-        'revenues': revenues,
+        'revenues': page_obj,
+        'page_obj': page_obj,
         'name': name,
         'selected_year': selected_year,
         'selected_month': selected_month,
