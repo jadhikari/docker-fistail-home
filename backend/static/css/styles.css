@@ -55,10 +55,14 @@
 }
 
 .navbar{
-    background-color: rgb(148, 212, 247);
+    background-color: rgb(148, 212, 247) !important;
     border-bottom: 1px solid black;
 }
 
+/* Ensure navbar background color is applied */
+.navbar.fixed-top {
+    background-color: rgb(148, 212, 247) !important;
+}
 
 /* Scrollable tbody inside a fixed table header */
 .scrollable-table {
@@ -96,8 +100,82 @@
     height: 50vh;
     width: 100%;
 }
+
+/* Custom table header styling - override Bootstrap's table-dark */
 .custom-thead {
-    background-color:rgb(148, 212, 247) !important;
+    background-color: rgb(148, 212, 247) !important;
+    color: #333 !important;
+}
+
+.custom-thead th {
+    background-color: rgb(148, 212, 247) !important;
+    color: #333 !important;
+    border-color: #dee2e6 !important;
+}
+
+/* Override Bootstrap table-dark class for custom headers */
+.table-dark.custom-thead,
+.table-dark.custom-thead th {
+    background-color: rgb(148, 212, 247) !important;
+    color: #333 !important;
+    border-color: #dee2e6 !important;
+}
+
+/* Compact table styling */
+.table {
+    font-size: 0.8rem;
+    margin-bottom: 0;
+}
+
+.table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+    padding: 0.4rem 0.3rem;
+    font-size: 0.8rem;
+}
+
+.table td {
+    vertical-align: middle;
+    padding: 0.4rem 0.3rem;
+    font-size: 0.8rem;
+}
+
+/* Make table-sm even more compact */
+.table-sm th, .table-sm td {
+    padding: 0.3rem 0.2rem;
+    font-size: 0.75rem;
+}
+
+/* Ensure table-responsive works properly */
+.table-responsive {
+    border: 0;
+}
+
+.table-responsive .table {
+    margin-bottom: 0;
+}
+
+/* Additional compact styling for better table appearance */
+.table-hover tbody tr:hover {
+    background-color: rgba(148, 212, 247, 0.1);
+}
+
+/* Ensure sticky headers work properly with custom-thead */
+.sticky-top.custom-thead {
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+}
+
+/* Compact card styling for better table containers */
+.card-body.p-0 {
+    padding: 0 !important;
+}
+
+.card-header.bg-light {
+    background-color: #f8f9fa !important;
+    border-bottom: 1px solid #dee2e6;
 }
 
 /* Compact styling for targets templates */
@@ -127,11 +205,6 @@
 
 .form-select-sm, .form-control-sm {
     padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
-}
-
-.table-sm td, .table-sm th {
-    padding: 0.5rem 0.25rem;
     font-size: 0.875rem;
 }
 
@@ -169,21 +242,6 @@
 
 .mt-1 {
     margin-top: 0.25rem !important;
-}
-
-/* Classic table styling */
-.table {
-    font-size: 0.875rem;
-}
-
-.table th {
-    font-weight: 600;
-    background-color: #f8f9fa;
-    border-color: #dee2e6;
-}
-
-.table td {
-    vertical-align: middle;
 }
 
 /* Compact card styling */
