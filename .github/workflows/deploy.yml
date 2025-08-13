@@ -50,3 +50,5 @@ jobs:
             cd /home/${{ secrets.SERVER_USER }}/docker-fistail-home/
             git pull origin main
             docker compose -f docker-compose.prod.yml up --build -d
+            docker compose -f docker-compose.prod.yml exec backend python -c "import time; time.sleep(10)"
+            docker compose -f docker-compose.prod.yml exec backend python manage.py collectstatic --noinput

@@ -59,11 +59,57 @@
                 });
             }
 
-
         });
 
-
     </script>
+
+    {% if user.is_authenticated %}
+    <script>
+        // Session timeout handling
+        (function() {
+            let sessionTimeout;
+            let warningTimeout;
+            const SESSION_TIMEOUT_MINUTES = 20;
+            const WARNING_BEFORE_TIMEOUT = 2; // Show warning 2 minutes before timeout
+
+            function resetSessionTimer() {
+                clearTimeout(sessionTimeout);
+                clearTimeout(warningTimeout);
+                
+                // Set warning timeout (18 minutes)
+                warningTimeout = setTimeout(function() {
+                    showSessionWarning();
+                }, (SESSION_TIMEOUT_MINUTES - WARNING_BEFORE_TIMEOUT) * 60 * 1000);
+                
+                // Set session timeout (20 minutes)
+                sessionTimeout = setTimeout(function() {
+                    window.location.href = '{% url "login" %}';
+                }, SESSION_TIMEOUT_MINUTES * 60 * 1000);
+            }
+
+            function showSessionWarning() {
+                const warningDiv = document.createElement('div');
+                warningDiv.className = 'alert alert-warning alert-dismissible fade show position-fixed';
+                warningDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+                warningDiv.innerHTML = `
+                    <strong>Session Timeout Warning!</strong><br>
+                    Your session will expire in ${WARNING_BEFORE_TIMEOUT} minutes due to inactivity.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.body.appendChild(warningDiv);
+            }
+
+            // Reset timer on user activity
+            const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+            events.forEach(function(event) {
+                document.addEventListener(event, resetSessionTimer, true);
+            });
+
+            // Initialize timer
+            resetSessionTimer();
+        })();
+    </script>
+    {% endif %}
 
 </body>
 </html>

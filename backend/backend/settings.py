@@ -65,6 +65,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'backend.middleware.SessionTimeoutMiddleware',  # Custom session timeout middleware
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -161,6 +162,13 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Session Configuration
+# Sessions expire after 20 minutes of inactivity
+SESSION_COOKIE_AGE = 1200  # 20 minutes in seconds
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_SAVE_EVERY_REQUEST = True  # Extend session on each request
+SESSION_IDLE_TIMEOUT = 1200  # 20 minutes in seconds
 
 # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
