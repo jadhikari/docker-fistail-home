@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}{{ target.user.first_name|default:target.user.email }} - {{ target.target_period }} - Target Achievements - Fishtail System{% endblock %}
+{% block title %}{{ target.target_to.first_name|default:target.target_to.email }} - {{ target.target_period }} - Target Achievements - Fishtail System{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-3">
@@ -10,8 +10,8 @@
             <!-- Header Section -->
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>
-                    <h4 class="mb-1">{{ target.user.first_name|default:"No Name" }} - {{ target.target_period }}</h4>
-                    <small class="text-muted">{{ target.user.email }} | Target: ¥{{ target.target_amount|floatformat:0 }}</small>
+                    <h4 class="mb-1">{{ target.target_to.first_name|default:"No Name" }} - {{ target.target_period }}</h4>
+                    <small class="text-muted">{{ target.target_to.email }} | Target: ¥{{ target.target_amount|floatformat:0 }}</small>
                 </div>
                 <div>
                     <a href="{% url 'targets:management' %}" class="btn btn-outline-secondary btn-sm">
@@ -96,7 +96,7 @@
                         <div class="card-body">
                             <div class="row">
                                 <div class="col-md-6">
-                                    <p><strong>User:</strong> {{ target.user.first_name|default:"No Name" }} ({{ target.user.email }})</p>
+                                    <p><strong>User:</strong> {{ target.target_to.first_name|default:"No Name" }} ({{ target.target_to.email }})</p>
                                     <p><strong>Target Period:</strong> {{ target.target_period }}</p>
                                     <p><strong>Target Amount:</strong> ¥{{ target.target_amount|floatformat:0 }}</p>
                                 </div>

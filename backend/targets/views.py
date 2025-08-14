@@ -14,6 +14,7 @@ from decimal import Decimal
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
+import traceback
 
 User = get_user_model()
 
@@ -36,7 +37,7 @@ def target_management(request):
     # Get all targets - ordered by latest period first (most recent year/month on top)
     from django.db.models import F
     targets = Target.objects.select_related(
-        'user', 'assigned_by'
+        'target_to', 'assigned_by'
     ).annotate(
         # Create a computed field for better chronological ordering
         # Formula: year * 100 + month ensures proper chronological order
@@ -58,7 +59,7 @@ def target_management(request):
     if year_filter and year_filter.strip():
         targets = targets.filter(target_year=int(year_filter))
     if user_filter and user_filter.strip():
-        targets = targets.filter(user_id=int(user_filter))
+        targets = targets.filter(target_to_id=int(user_filter))
     if status_filter and status_filter.strip():
         targets = targets.filter(status=status_filter)
     
@@ -69,7 +70,7 @@ def target_management(request):
     
     # Get all achievements (rental contracts) for progress calculation
     all_achievements = RentalContract.objects.values(
-        'created_by', 'created_at__year', 'created_at__month'
+        'target__target_to', 'target__target_year', 'target__target_month'
     ).annotate(
         total_achieved=Sum('agent_fee') + Sum('ad_fee')
     )
@@ -77,12 +78,12 @@ def target_management(request):
     # Create a dictionary for easier lookup by user, year, and month
     achievements_by_user_period = {}
     for achievement in all_achievements:
-        key = (achievement['created_by'], achievement['created_at__year'], achievement['created_at__month'])
+        key = (achievement['target__target_to'], achievement['target__target_year'], achievement['target__target_month'])
         achievements_by_user_period[key] = achievement['total_achieved']
     
     # Add progress data to each target for easier template access
     for target in page_obj:
-        key = (target.user.id, target.target_year, target.target_month)
+        key = (target.target_to.id, target.target_year, target.target_month)
         target.progress_amount = achievements_by_user_period.get(key, 0)
         if target.progress_amount > 0:
             # Convert Decimal to float for calculations
@@ -156,7 +157,7 @@ def export_targets_excel(request):
     # Get all targets with related data - ordered by latest period first
     from django.db.models import F
     targets = Target.objects.select_related(
-        'user', 'assigned_by'
+        'target_to', 'assigned_by'
     ).annotate(
         # Create a computed field for better chronological ordering
         # Formula: year * 100 + month ensures proper chronological order
@@ -177,13 +178,13 @@ def export_targets_excel(request):
     if year_filter and year_filter.strip():
         targets = targets.filter(target_year=int(year_filter))
     if user_filter and user_filter.strip():
-        targets = targets.filter(user_id=int(user_filter))
+        targets = targets.filter(target_to_id=int(user_filter))
     if status_filter and status_filter.strip():
         targets = targets.filter(status=status_filter)
     
     # Get all achievements for progress calculation
     all_achievements = RentalContract.objects.values(
-        'created_by', 'created_at__year', 'created_at__month'
+        'target__target_to', 'target__target_year', 'target__target_month'
     ).annotate(
         total_achieved=Sum('agent_fee') + Sum('ad_fee')
     )
@@ -191,12 +192,12 @@ def export_targets_excel(request):
     # Create a dictionary for easier lookup
     achievements_by_user_period = {}
     for achievement in all_achievements:
-        key = (achievement['created_by'], achievement['created_at__year'], achievement['created_at__month'])
+        key = (achievement['target__target_to'], achievement['target__target_year'], achievement['target__target_month'])
         achievements_by_user_period[key] = achievement['total_achieved']
     
     # Add progress data to each target
     for target in targets:
-        key = (target.user.id, target.target_year, target.target_month)
+        key = (target.target_to.id, target.target_year, target.target_month)
         target.progress_amount = achievements_by_user_period.get(key, 0)
         if target.progress_amount > 0:
             progress_amount = float(target.progress_amount)
@@ -318,8 +319,8 @@ def export_targets_excel(request):
     # Add data rows
     if targets.exists():
         for target in targets:
-            ws.cell(row=row_offset, column=1, value=target.user.first_name or target.user.email)
-            ws.cell(row=row_offset, column=2, value=target.user.email)
+            ws.cell(row=row_offset, column=1, value=target.target_to.first_name or target.target_to.email)
+            ws.cell(row=row_offset, column=2, value=target.target_to.email)
             ws.cell(row=row_offset, column=3, value=target.target_period)
             ws.cell(row=row_offset, column=4, value=float(target.target_amount))
             ws.cell(row=row_offset, column=5, value=target.status.title())
@@ -403,7 +404,7 @@ def assign_target(request):
             
             messages.success(
                 request, 
-                f'Target of ${target.target_amount} assigned to {target.user} for {target.target_period}'
+                f'Target of ¥{target.target_amount} assigned to {target.target_to.first_name or target.target_to.email} for {target.target_period}'
             )
             return redirect('targets:management')
     else:
@@ -444,7 +445,7 @@ def delete_target(request, target_id):
     target = get_object_or_404(Target, id=target_id)
     
     if request.method == 'POST':
-        user_name = target.user.first_name or target.user.email
+        user_name = target.target_to.first_name or target.target_to.email
         target.delete()
         messages.success(request, f'Target for {user_name} deleted successfully!')
         return redirect('targets:management')
@@ -462,7 +463,7 @@ def user_profile(request):
     # Get user's targets - ordered by latest period first (most recent year/month on top)
     from django.db.models import F
     user_targets = Target.objects.filter(
-        user=user
+        target_to=user
     ).select_related('assigned_by').annotate(
         # Create a computed field for better chronological ordering
         # Formula: year * 100 + month ensures proper chronological order
@@ -474,8 +475,8 @@ def user_profile(request):
     
     # Get all achievements (rental contracts) for this user
     user_achievements = RentalContract.objects.filter(
-        created_by=user
-    ).values('created_at__year', 'created_at__month').annotate(
+        target__target_to=user
+    ).values('target__target_year', 'target__target_month').annotate(
         total_achieved=Sum('agent_fee') + Sum('ad_fee')
     )
     
@@ -483,8 +484,8 @@ def user_profile(request):
     achievements_by_period = []
     for achievement in user_achievements:
         achievements_by_period.append({
-            'year': achievement['created_at__year'],
-            'month': achievement['created_at__month'],
+            'year': achievement['target__target_year'],
+            'month': achievement['target__target_month'],
             'total_achieved': achievement['total_achieved']
         })
     
@@ -497,11 +498,11 @@ def user_profile(request):
     # Check if user can add achievements (only if they have an active target)
     can_add_achievements = current_target and current_target.status == 'active'
     
-    # Get current month achievements (rental contracts created by this user)
+    # Get current month achievements (rental contracts for current month targets)
     current_month_achievements = RentalContract.objects.filter(
-        created_by=user,
-        created_at__month=today.month,
-        created_at__year=today.year
+        target__target_to=user,
+        target__target_month=today.month,
+        target__target_year=today.year
     ).order_by('-created_at')
     
     # Calculate current month achievement total
@@ -592,9 +593,9 @@ def achievement_details(request, year, month):
     
     # Get achievements (rental contracts) for the specified year/month
     achievements = RentalContract.objects.filter(
-        created_by=user,
-        created_at__year=year,
-        created_at__month=month
+        target__target_to=user,
+        target__target_year=year,
+        target__target_month=month
     ).order_by('-created_at')
     
     # Get month name
@@ -628,33 +629,44 @@ def create_rental_contract(request):
     
     # Check if user has an active target for the current month
     current_target = Target.objects.filter(
-        user=user,
+        target_to=user,
         target_month=today.month,
         target_year=today.year,
         status='active'
     ).first()
     
-    if not current_target:
-        messages.error(
-            request, 
-            'You can only add achievements when you have an active target for the current month. '
-            'Please contact your supervisor if you need a target assigned.'
-        )
-        return redirect('targets:profile')
+    # if not current_target:
+    #     messages.error(
+    #         request, 
+    #         'You can only add achievements when you have an active target for the current month. '
+    #         'Please contact your supervisor if you need a target assigned.'
+    #     )
+    #     return redirect('targets:profile')
     
     if request.method == 'POST':
+        # print(f"POST data received: {request.POST}")
+        # print(f"POST data keys: {list(request.POST.keys())}")
         form = RentalContractForm(request.POST)
+        # print(f"Form is valid: {form.is_valid()}")
+        # if not form.is_valid():
+        #     print(f"Form errors: {form.errors}")
+        #     print(f"Form non-field errors: {form.non_field_errors}")
         if form.is_valid():
             try:
                 rental_contract = form.save(commit=False)
                 rental_contract.created_by = request.user
                 rental_contract.updated_by = request.user
-                rental_contract.save()
+                rental_contract.target = current_target  # Set the target automatically
+                print(f"Target set to: {current_target}")
+                print(f"Rental contract data: {rental_contract.__dict__}")
+                
+                # Save without calling full_clean to avoid validation issues
+                rental_contract.save(force_insert=True)
                 
                 messages.success(
                     request, 
-                    f'Rental contract for {rental_contract.customer_name} created successfully! '
-                    f'Total amount: ¥{rental_contract.total_amount}'
+                    f'Achievement added successfully! Rental contract for {rental_contract.customer_name} '
+                    f'with total amount: ¥{rental_contract.total_amount} has been added to your current month target.'
                 )
                 return redirect('targets:profile')
             except Exception as e:
@@ -662,6 +674,10 @@ def create_rental_contract(request):
                     request, 
                     f'Error creating rental contract: {str(e)}. Please try again.'
                 )
+                # Log the error for debugging
+                # print(f"Error creating rental contract: {str(e)}")
+                
+                traceback.print_exc()
         else:
             # Log form errors for debugging
             for field, errors in form.errors.items():
@@ -671,12 +687,17 @@ def create_rental_contract(request):
                         f'Field "{field}": {error}'
                     )
     else:
-        form = RentalContractForm()
+        # Create form with current target as initial data
+        initial_data = {'target': current_target}
+        form = RentalContractForm(initial=initial_data)
+        
+        # Debug: Check if form can be created
+        # print(f"Form created successfully with {len(form.fields)} fields")
+        # print(f"Form field names: {list(form.fields.keys())}")
+        # print(f"Current target: {current_target}")
     
     context = {
         'form': form,
-        'title': 'Add Achievement',
-        'subtitle': 'Create a new rental contract',
         'current_target': current_target
     }
     
@@ -798,11 +819,9 @@ def target_achievements(request, target_id):
     
     target = get_object_or_404(Target, id=target_id)
     
-    # Get achievements (rental contracts) for this specific target period and user
+    # Get achievements (rental contracts) for this specific target
     target_achievements = RentalContract.objects.filter(
-        created_by=target.user,
-        created_at__year=target.target_year,
-        created_at__month=target.target_month
+        target=target
     ).order_by('-created_at')
     
     # Calculate progress for this specific target
@@ -848,7 +867,7 @@ def export_contracts_excel(request):
     """Export contracts to Excel file"""
     
     # Get all contracts with the same filtering logic as the list view
-    contracts = RentalContract.objects.select_related('created_by', 'updated_by').order_by('-created_at')
+    contracts = RentalContract.objects.select_related('created_by', 'updated_by', 'target', 'target__target_to').order_by('-created_at')
     
     # Apply filters
     customer_name_filter = request.GET.get('customer_name', '').strip()
@@ -879,10 +898,11 @@ def export_contracts_excel(request):
     
     # Define headers
     headers = [
-        'Customer Name', 'Phone', 'Contract Date', 'Contract Type', 'People',
+        'Target User', 'Target Period', 'Customer Name', 'Phone', 'Contract Date', 'Contract Type', 'People',
         'Building Address', 'Support Phone', 'Emergency Contact', 'Emergency Phone',
         'Cancellation Notice', 'Cancellation Period', 'Cancellation Charge',
         'Deposit Fee', 'Cleaning Charge', 'Renew Fee', 'Rent Payment Date',
+        'Management Company', 'Management Phone', 'Memo',
         'Created Date', 'Created By', 'Updated Date', 'Updated By'
     ]
     
@@ -895,28 +915,39 @@ def export_contracts_excel(request):
     
     # Add data rows
     for row, contract in enumerate(contracts, 2):
-        ws.cell(row=row, column=1, value=contract.customer_name)
-        ws.cell(row=row, column=2, value=contract.customer_number)
-        ws.cell(row=row, column=3, value=contract.contract_date)
-        ws.cell(row=row, column=4, value=contract.get_contract_type_display())
-        ws.cell(row=row, column=5, value=contract.living_num_people)
-        ws.cell(row=row, column=6, value=contract.building_address)
-        ws.cell(row=row, column=7, value=contract.support_phone)
-        ws.cell(row=row, column=8, value=contract.emergency_contact_person)
-        ws.cell(row=row, column=9, value=contract.emergency_phone)
-        ws.cell(row=row, column=10, value=contract.cancellation_notice_period)
-        ws.cell(row=row, column=11, value=contract.cancellation_period)
-        ws.cell(row=row, column=12, value=contract.cancellation_charge)
-        ws.cell(row=row, column=13, value=contract.deposit_fee)
-        ws.cell(row=row, column=14, value="Yes" if contract.cleaning_charge else "No")
-        ws.cell(row=row, column=15, value=contract.renew_fee)
-        ws.cell(row=row, column=16, value=contract.rent_payment_date)
+        # Target information
+        target_user = contract.target.target_to.get_full_name() if contract.target.target_to.get_full_name() else contract.target.target_to.email
+        ws.cell(row=row, column=1, value=target_user)
+        ws.cell(row=row, column=2, value=f"{contract.target.target_month}/{contract.target.target_year}")
+        
+        # Contract information
+        ws.cell(row=row, column=3, value=contract.customer_name)
+        ws.cell(row=row, column=4, value=contract.customer_number)
+        ws.cell(row=row, column=5, value=contract.contract_date)
+        ws.cell(row=row, column=6, value=contract.get_contract_type_display())
+        ws.cell(row=row, column=7, value=contract.living_num_people)
+        ws.cell(row=row, column=8, value=contract.building_address)
+        ws.cell(row=row, column=9, value=contract.support_phone)
+        ws.cell(row=row, column=10, value=contract.emergency_contact_person)
+        ws.cell(row=row, column=11, value=contract.emergency_phone)
+        ws.cell(row=row, column=12, value=contract.cancellation_notice_period)
+        ws.cell(row=row, column=13, value=contract.cancellation_period)
+        ws.cell(row=row, column=14, value=contract.cancellation_charge)
+        ws.cell(row=row, column=15, value=contract.deposit_fee)
+        ws.cell(row=row, column=16, value="Yes" if contract.cleaning_charge else "No")
+        ws.cell(row=row, column=17, value=contract.renew_fee)
+        ws.cell(row=row, column=18, value=contract.rent_payment_date)
+        
+        # Management company information
+        ws.cell(row=row, column=19, value=contract.management_company_name or "")
+        ws.cell(row=row, column=20, value=contract.management_company_phone_number or "")
+        ws.cell(row=row, column=21, value=contract.memo or "")
         
         # Convert timezone-aware datetime to timezone-naive for Excel
         created_at = contract.created_at
         if created_at and created_at.tzinfo:
             created_at = created_at.replace(tzinfo=None)
-        ws.cell(row=row, column=17, value=created_at)
+        ws.cell(row=row, column=22, value=created_at)
         
         # Safely get user display name
         created_by_name = ""
@@ -924,13 +955,13 @@ def export_contracts_excel(request):
             created_by_name = contract.created_by.get_full_name()
         if not created_by_name:
             created_by_name = contract.created_by.email
-        ws.cell(row=row, column=18, value=created_by_name)
+        ws.cell(row=row, column=23, value=created_by_name)
         
         # Convert timezone-aware datetime to timezone-naive for Excel
         updated_at = contract.updated_at
         if updated_at and updated_at.tzinfo:
             updated_at = updated_at.replace(tzinfo=None)
-        ws.cell(row=row, column=19, value=updated_at)
+        ws.cell(row=row, column=24, value=updated_at)
         
         # Safely get updated by user display name
         updated_by_name = ""
@@ -939,7 +970,7 @@ def export_contracts_excel(request):
                 updated_by_name = contract.updated_by.get_full_name()
             if not updated_by_name:
                 updated_by_name = contract.updated_by.email
-        ws.cell(row=row, column=20, value=updated_by_name)
+        ws.cell(row=row, column=25, value=updated_by_name)
     
     # Auto-adjust column widths
     for column in ws.columns:
@@ -969,7 +1000,7 @@ def contracts_list(request):
     """Display all rental contracts with filtering options"""
     
     # Get all contracts ordered by creation date (newest first)
-    contracts = RentalContract.objects.select_related('created_by', 'updated_by').order_by('-created_at')
+    contracts = RentalContract.objects.select_related('created_by', 'updated_by', 'target', 'target__target_to').order_by('-created_at')
     
     # Apply filters
     customer_name_filter = request.GET.get('customer_name', '').strip()

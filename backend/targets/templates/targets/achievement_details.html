@@ -6,40 +6,52 @@
 {% block content %}
 <div class="container-fluid py-2">
     <!-- Header Section -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-2">
         <div>
-            <h4 class="mb-1">Achievement Details</h4>
-            <small class="text-muted">{{ month_name }} {{ year }} - Rental Contracts</small>
+            <h5 class="mb-0">Achievement Details</h5>
+            <small class="text-muted">{{ month_name }} {{ year }} - Rental Contract Achievements</small>
         </div>
         <div>
             <a href="{% url 'targets:profile' %}" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-arrow-left"></i> Back to Profile
+                <i class="bi bi-arrow-left"></i> Back
             </a>
         </div>
     </div>
 
-    <!-- Summary Card -->
-    <div class="row mb-3">
+    <!-- Info Alert -->
+    <div class="alert alert-info mb-2 py-2">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-info-circle me-2"></i>
+            <div>
+                <strong>Achievements:</strong> Rental contracts count toward your monthly target. 
+                Total achievement amount is the sum of agent fees and advertisement fees.
+                <br><small class="text-muted">Linked to {{ month_name }} {{ year }} target.</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-2">
         <div class="col-md-4">
             <div class="card bg-success text-white">
-                <div class="card-body text-center py-3">
-                    <h4 class="mb-0">¥{{ total_amount|floatformat:0 }}</h4>
-                    <small>Total Achievement Amount</small>
+                <div class="card-body text-center py-2">
+                    <h5 class="mb-0">¥{{ total_amount|floatformat:0 }}</h5>
+                    <small>Total Achievement</small>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
             <div class="card bg-info text-white">
-                <div class="card-body text-center py-3">
-                    <h4 class="mb-0">{{ achievements.count }}</h4>
+                <div class="card-body text-center py-2">
+                    <h5 class="mb-0">{{ achievements.count }}</h5>
                     <small>Total Contracts</small>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
             <div class="card bg-primary text-white">
-                <div class="card-body text-center py-3">
-                    <h4 class="mb-0">{{ month_name }}</h4>
+                <div class="card-body text-center py-2">
+                    <h5 class="mb-0">{{ month_name }}</h5>
                     <small>{{ year }}</small>
                 </div>
             </div>
@@ -48,55 +60,55 @@
 
     <!-- Achievements List -->
     <div class="card">
-        <div class="card-header">
+        <div class="card-header py-2">
             <h6 class="mb-0">
                 <i class="bi bi-trophy"></i> Rental Contracts for {{ month_name }} {{ year }}
             </h6>
         </div>
         
-        <div class="card-body">
+        <div class="card-body py-2">
             {% if achievements %}
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table table-sm table-hover">
                         <thead>
                             <tr>
-                                <th>Customer</th>
-                                <th>Property</th>
-                                <th>Contract Type</th>
-                                <th>Agent Fee</th>
-                                <th>AD Fee</th>
-                                <th>Total Amount</th>
-                                <th>Created Date</th>
-                                <th>Actions</th>
+                                <th class="small">Customer</th>
+                                <th class="small">Property</th>
+                                <th class="small">Type</th>
+                                <th class="small">Agent Fee</th>
+                                <th class="small">AD Fee</th>
+                                <th class="small">Total</th>
+                                <th class="small">Date</th>
+                                <th class="small">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for achievement in achievements %}
                                 <tr>
                                     <td>
-                                        <strong>{{ achievement.customer_name }}</strong>
+                                        <strong class="small">{{ achievement.customer_name }}</strong>
                                         <br><small class="text-muted">{{ achievement.customer_number }}</small>
                                     </td>
                                     <td>
-                                        <strong>{{ achievement.contract_date|date:"M d, Y" }}</strong>
-                                        <br><small class="text-muted">{{ achievement.building_address|truncatechars:50 }}</small>
+                                        <small>{{ achievement.contract_date|date:"M d" }}</small>
+                                        <br><small class="text-muted">{{ achievement.building_address|truncatechars:40 }}</small>
                                     </td>
                                     <td>
-                                        <span class="badge {% if achievement.contract_type == 'fix_term' %}bg-warning{% else %}bg-info{% endif %}">
+                                        <span class="badge {% if achievement.contract_type == 'fix_term' %}bg-warning{% else %}bg-info{% endif %} small">
                                             {{ achievement.get_contract_type_display }}
                                         </span>
                                     </td>
                                     <td>
-                                        <strong class="text-success">¥{{ achievement.agent_fee|floatformat:0 }}</strong>
+                                        <strong class="text-success small">¥{{ achievement.agent_fee|floatformat:0 }}</strong>
                                     </td>
                                     <td>
-                                        <strong class="text-info">¥{{ achievement.ad_fee|floatformat:0 }}</strong>
+                                        <strong class="text-info small">¥{{ achievement.ad_fee|floatformat:0 }}</strong>
                                     </td>
                                     <td>
-                                        <strong class="text-primary">¥{{ achievement.total_amount|floatformat:0 }}</strong>
+                                        <strong class="text-primary small">¥{{ achievement.total_amount|floatformat:0 }}</strong>
                                     </td>
                                     <td>
-                                        <small>{{ achievement.created_at|date:"M d, Y" }}</small>
+                                        <small>{{ achievement.created_at|date:"M d" }}</small>
                                         <br><small class="text-muted">{{ achievement.created_at|date:"H:i" }}</small>
                                     </td>
                                     <td>
@@ -112,60 +124,154 @@
                                 <div class="modal fade" id="achievementModal{{ achievement.id }}" tabindex="-1">
                                     <div class="modal-dialog modal-lg">
                                         <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title">Contract Details</h5>
+                                            <div class="modal-header py-2">
+                                                <h6 class="modal-title mb-0">Rental Contract Details</h6>
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                             </div>
-                                            <div class="modal-body">
-                                                <div class="row">
+                                            <div class="modal-body py-3">
+                                                <!-- Customer & Property Information -->
+                                                <div class="row mb-3">
                                                     <div class="col-md-6">
-                                                        <h6>Customer Information</h6>
-                                                        <p><strong>Name:</strong> {{ achievement.customer_name }}</p>
-                                                        <p><strong>Number:</strong> {{ achievement.customer_number }}</p>
-                                                        <p><strong>Emergency Contact:</strong> {{ achievement.emergency_contact_person }}</p>
-                                                        <p><strong>Emergency Contact Phone Number:</strong> {{ achievement.emergency_phone }}</p>
+                                                        <h6 class="text-primary small">Customer Information</h6>
+                                                        <div class="row mb-2">
+                                                            <div class="col-4"><small class="text-muted">Name:</small></div>
+                                                            <div class="col-8"><small>{{ achievement.customer_name }}</small></div>
+                                                        </div>
+                                                        <div class="row mb-2">
+                                                            <div class="col-4"><small class="text-muted">Phone:</small></div>
+                                                            <div class="col-8"><small>{{ achievement.customer_number }}</small></div>
+                                                        </div>
+                                                        <div class="row mb-2">
+                                                            <div class="col-4"><small class="text-muted">Emergency Contact:</small></div>
+                                                            <div class="col-8"><small>{{ achievement.emergency_contact_person }}</small></div>
+                                                        </div>
+                                                        <div class="row mb-2">
+                                                            <div class="col-4"><small class="text-muted">Emergency Phone:</small></div>
+                                                            <div class="col-8"><small>{{ achievement.emergency_phone }}</small></div>
+                                                        </div>
                                                     </div>
                                                     <div class="col-md-6">
-                                                        <h6>Property Information</h6>
-                                                        <p><strong>Contract Date:</strong> {{ achievement.contract_date|date:"M d, Y" }}</p>
-                                                        <p><strong>Address:</strong> {{ achievement.building_address }}</p>
-                                                        <p><strong>Living People:</strong> {{ achievement.living_num_people }}</p>
-                                                        <p><strong>Rent Payment Date:</strong> {{ achievement.rent_payment_date }}</p>
+                                                        <h6 class="text-primary small">Property Information</h6>
+                                                        <div class="row mb-2">
+                                                            <div class="col-4"><small class="text-muted">Contract Date:</small></div>
+                                                            <div class="col-8"><small>{{ achievement.contract_date|date:"M d, Y" }}</small></div>
+                                                        </div>
+                                                        <div class="row mb-2">
+                                                            <div class="col-4"><small class="text-muted">Address:</small></div>
+                                                            <div class="col-8"><small>{{ achievement.building_address }}</small></div>
+                                                        </div>
+                                                        <div class="row mb-2">
+                                                            <div class="col-4"><small class="text-muted">Number of People:</small></div>
+                                                            <div class="col-8"><small>{{ achievement.living_num_people }}</small></div>
+                                                        </div>
+                                                        <div class="row mb-2">
+                                                            <div class="col-4"><small class="text-muted">Rent Payment Date:</small></div>
+                                                            <div class="col-8"><small>{{ achievement.rent_payment_date }}</small></div>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <hr>
-                                                <div class="row">
+                                                <hr class="my-2">
+                                                
+                                                <!-- Financial & Contract Details -->
+                                                <div class="row mb-3">
                                                     <div class="col-md-6">
-                                                        <h6>Financial Details</h6>
-                                                        <p><strong>Agent Fee:</strong> ¥{{ achievement.agent_fee|floatformat:0 }}</p>
-                                                        <p><strong>AD Fee:</strong> ¥{{ achievement.ad_fee|floatformat:0 }}</p>
-                                                        <p><strong>Total Amount:</strong> ¥{{ achievement.total_amount|floatformat:0 }}</p>
-                                                        <p><strong>Deposit Fee:</strong> {{ achievement.deposit_fee }}</p>
-                                                        <p><strong>Renew Fee:</strong> {{ achievement.renew_fee }}</p>
+                                                        <h6 class="text-primary small">Financial Details</h6>
+                                                        <div class="row mb-2">
+                                                            <div class="col-4"><small class="text-muted">Agent Fee:</small></div>
+                                                            <div class="col-8"><small class="text-success">¥{{ achievement.agent_fee|floatformat:0 }}</small></div>
+                                                        </div>
+                                                        <div class="row mb-2">
+                                                            <div class="col-4"><small class="text-muted">AD Fee:</small></div>
+                                                            <div class="col-8"><small class="text-info">¥{{ achievement.ad_fee|floatformat:0 }}</small></div>
+                                                        </div>
+                                                        <div class="row mb-2">
+                                                            <div class="col-4"><small class="text-muted">Total Amount:</small></div>
+                                                            <div class="col-8"><small class="text-primary fw-bold">¥{{ achievement.total_amount|floatformat:0 }}</small></div>
+                                                        </div>
+                                                        <div class="row mb-2">
+                                                            <div class="col-4"><small class="text-muted">Deposit Fee:</small></div>
+                                                            <div class="col-8"><small>{{ achievement.deposit_fee }}</small></div>
+                                                        </div>
+                                                        <div class="row mb-2">
+                                                            <div class="col-4"><small class="text-muted">Renewal Fee:</small></div>
+                                                            <div class="col-8"><small>{{ achievement.renew_fee }}</small></div>
+                                                        </div>
                                                     </div>
                                                     <div class="col-md-6">
-                                                        <h6>Contract Details</h6>
-                                                        <p><strong>Type:</strong> {{ achievement.get_contract_type_display }}</p>
-                                                        <p><strong>Cancellation Notice:</strong> {{ achievement.cancellation_notice_period }}</p>
-                                                        <p><strong>Cancellation Period:</strong> {{ achievement.cancellation_period }}</p>
-                                                        <p><strong>Cancellation Charge:</strong> {{ achievement.cancellation_charge }}</p>
-                                                        <p><strong>Cleaning Charge:</strong> {% if achievement.cleaning_charge %}Yes{% else %}No{% endif %}</p>
+                                                        <h6 class="text-primary small">Contract Details</h6>
+                                                        <div class="row mb-2">
+                                                            <div class="col-4"><small class="text-muted">Contract Type:</small></div>
+                                                            <div class="col-8"><small>{{ achievement.get_contract_type_display }}</small></div>
+                                                        </div>
+                                                        <div class="row mb-2">
+                                                            <div class="col-4"><small class="text-muted">Notice Period:</small></div>
+                                                            <div class="col-8"><small>{{ achievement.cancellation_notice_period }}</small></div>
+                                                        </div>
+                                                        <div class="row mb-2">
+                                                            <div class="col-4"><small class="text-muted">Cancellation Period:</small></div>
+                                                            <div class="col-8"><small>{{ achievement.cancellation_period }}</small></div>
+                                                        </div>
+                                                        <div class="row mb-2">
+                                                            <div class="col-4"><small class="text-muted">Cancellation Charge:</small></div>
+                                                            <div class="col-8"><small>{{ achievement.cancellation_charge }}</small></div>
+                                                        </div>
+                                                        <div class="row mb-2">
+                                                            <div class="col-4"><small class="text-muted">Cleaning Charge:</small></div>
+                                                            <div class="col-8"><small>{% if achievement.cleaning_charge %}Yes{% else %}No{% endif %}</small></div>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <hr>
-                                                <div class="row">
-                                                    <div class="col-12">
-                                                        <h6>Support Information</h6>
-                                                        <p><strong>24/7 Support Phone Number:</strong> {{ achievement.support_phone }}</p>
-                                                        <p><strong>Created:</strong> {{ achievement.created_at|date:"F d, Y at H:i" }}</p>
+                                                <hr class="my-2">
+                                                
+                                                <!-- Management & Support Information -->
+                                                <div class="row mb-3">
+                                                    <div class="col-md-6">
+                                                        <h6 class="text-primary small">Management Company</h6>
+                                                        <div class="row mb-2">
+                                                            <div class="col-4"><small class="text-muted">Company Name:</small></div>
+                                                            <div class="col-8"><small>{{ achievement.management_company_name }}</small></div>
+                                                        </div>
+                                                        <div class="row mb-2">
+                                                            <div class="col-4"><small class="text-muted">Phone Number:</small></div>
+                                                            <div class="col-8"><small>{{ achievement.management_company_phone_number }}</small></div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <h6 class="text-primary small">Support Information</h6>
+                                                        <div class="row mb-2">
+                                                            <div class="col-4"><small class="text-muted">Support Phone:</small></div>
+                                                            <div class="col-8"><small>{{ achievement.support_phone }}</small></div>
+                                                        </div>
+                                                        <div class="row mb-2">
+                                                            <div class="col-4"><small class="text-muted">Created Date:</small></div>
+                                                            <div class="col-8"><small>{{ achievement.created_at|date:"M d, Y H:i" }}</small></div>
+                                                        </div>
                                                         {% if achievement.updated_at != achievement.created_at %}
-                                                            <p><strong>Last Updated:</strong> {{ achievement.updated_at|date:"F d, Y at H:i" }}</p>
+                                                            <div class="row mb-2">
+                                                                <div class="col-4"><small class="text-muted">Last Updated:</small></div>
+                                                                <div class="col-8"><small>{{ achievement.updated_at|date:"M d, Y H:i" }}</small></div>
+                                                            </div>
                                                         {% endif %}
                                                     </div>
                                                 </div>
+                                                
+                                                <!-- Memo/Notes Section -->
+                                                {% if achievement.memo %}
+                                                <hr class="my-2">
+                                                <div class="row">
+                                                    <div class="col-12">
+                                                        <h6 class="text-primary small">Additional Notes</h6>
+                                                        <div class="row mb-2">
+                                                            <div class="col-12">
+                                                                <small>{{ achievement.memo }}</small>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {% endif %}
                                             </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                            <div class="modal-footer py-2">
+                                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
                                             </div>
                                         </div>
                                     </div>
@@ -175,10 +281,10 @@
                     </table>
                 </div>
             {% else %}
-                <div class="text-center py-4">
-                    <i class="bi bi-inbox display-1 text-muted"></i>
-                    <h5 class="text-muted mt-3">No Achievements Found</h5>
-                    <p class="text-muted">No rental contracts were created in {{ month_name }} {{ year }}.</p>
+                <div class="text-center py-3">
+                    <i class="bi bi-inbox display-4 text-muted"></i>
+                    <h6 class="text-muted mt-2">No Achievements Found</h6>
+                    <p class="text-muted small">No rental contracts created in {{ month_name }} {{ year }}.</p>
                 </div>
             {% endif %}
         </div>

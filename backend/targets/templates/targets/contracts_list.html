@@ -88,77 +88,89 @@
                             <table class="table table-sm table-striped table-hover mb-0">
                                 <thead class="custom-thead">
                                     <tr>
-                                        <th class="py-2 px-2">Customer</th>
-                                        <th class="py-2 px-2">Phone</th>
-                                        <th class="py-2 px-2">Date</th>
-                                        <th class="py-2 px-2">Type</th>
-                                        <th class="py-2 px-2">People</th>
-                                        <th class="py-2 px-2">Address</th>
-                                        <th class="py-2 px-2">24/7 Support</th>
-                                        <th class="py-2 px-2">Emergency</th>
-                                        <th class="py-2 px-2">Cancellation</th>
-                                        <th class="py-2 px-2">Deposit</th>
-                                        <th class="py-2 px-2">Cleaning</th>
-                                        <th class="py-2 px-2">Renew</th>
-                                        <th class="py-2 px-2">Rent Payment</th>
-                                        <th class="py-2 px-2">Created</th>
+                                        <th class="py-2 px-2 text-center">Customer</th>
+                                        <th class="py-2 px-2 text-center">Phone</th>
+                                        <th class="py-2 px-2 text-center">Date</th>
+                                        <th class="py-2 px-2 text-center">Type</th>
+                                        <th class="py-2 px-2 text-center">People</th>
+                                        <th class="py-2 px-2 text-center">Address</th>
+                                        <th class="py-2 px-2 text-center">24/7 Support</th>
+                                        <th class="py-2 px-2 text-center">Emergency</th>
+                                        <th class="py-2 px-2 text-center">Cancellation</th>
+                                        <th class="py-2 px-2 text-center">Deposit</th>
+                                        <th class="py-2 px-2 text-center">Cleaning</th>
+                                        <th class="py-2 px-2 text-center">Renew</th>
+                                        <th class="py-2 px-2 text-center">Rent Payment</th>
+                                        <th class="py-2 px-2 text-center">Management Company</th>
+                                        <th class="py-2 px-2 text-center">Memo</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for contract in contracts %}
                                     <tr>
-                                        <td class="py-1 px-2">
-                                            <strong>{{ contract.customer_name }}</strong>
+                                        <td class="py-1 px-2 text-center">
+                                            <strong title="{{ contract.customer_name }}">{{ contract.customer_name|truncatechars:20 }}</strong>
                                         </td>
-                                        <td class="py-1 px-2">{{ contract.customer_number }}</td>
-                                        <td class="py-1 px-2">
+                                        <td class="py-1 px-2 text-center" title="{{ contract.customer_number }}">{{ contract.customer_number|truncatechars:15 }}</td>
+                                        <td class="py-1 px-2 text-center">
                                             <span class="badge bg-info">{{ contract.contract_date|date:"M d, Y" }}</span>
                                         </td>
-                                        <td class="py-1 px-2">
+                                        <td class="py-1 px-2 text-center">
                                             <span class="badge {% if contract.contract_type == 'fix_term' %}bg-warning{% else %}bg-success{% endif %}">
                                                 {{ contract.get_contract_type_display|slice:":3" }}
                                             </span>
                                         </td>
-                                        <td class="py-1 px-2">
+                                        <td class="py-1 px-2 text-center">
                                             <span class="badge bg-secondary">{{ contract.living_num_people }}</span>
                                         </td>
-                                        <td class="py-1 px-2">
-                                            <small>{{ contract.building_address|truncatechars:30 }}</small>
+                                        <td class="py-1 px-2 text-center">
+                                            <div class="address-cell" title="{{ contract.building_address }}">
+                                                {% if contract.building_address|length > 30 %}
+                                                    <div class="address-line">{{ contract.building_address|slice:":30" }}</div>
+                                                    <div class="address-line">{{ contract.building_address|slice:"30:"|truncatechars:30 }}</div>
+                                                {% else %}
+                                                    <div class="address-line">{{ contract.building_address }}</div>
+                                                {% endif %}
+                                            </div>
                                         </td>
-                                        <td class="py-1 px-2">{{ contract.support_phone }}</td>
-                                        <td class="py-1 px-2">
-                                            <small>{{ contract.emergency_contact_person|truncatechars:15 }}</small>
-                                            <br><small class="text-muted">{{ contract.emergency_phone }}</small>
+                                        <td class="py-1 px-2 text-center" title="{{ contract.support_phone }}">{{ contract.support_phone|truncatechars:5 }}</td>
+                                        <td class="py-1 px-2 text-center">
+                                            <div title="{{ contract.emergency_contact_person }} - {{ contract.emergency_phone }}">
+                                                <small>{{ contract.emergency_contact_person|truncatechars:5 }}</small>
+                                                <br><small class="text-muted">{{ contract.emergency_phone|truncatechars:15 }}</small>
+                                            </div>
                                         </td>
-                                        <td class="py-1 px-2">
-                                            <small>
-                                                <strong>Notice:</strong> {{ contract.cancellation_notice_period|truncatechars:15 }}<br>
-                                                <strong>Period:</strong> {{ contract.cancellation_period|truncatechars:15 }}<br>
-                                                <strong>Charge:</strong> {{ contract.cancellation_charge|truncatechars:15 }}
-                                            </small>
+                                        <td class="py-1 px-2 text-center">
+                                            <div title="Notice: {{ contract.cancellation_notice_period }} | Period: {{ contract.cancellation_period }} | Charge: {{ contract.cancellation_charge }}">
+                                                <small>
+                                                    <strong>Notice:</strong> {{ contract.cancellation_notice_period|truncatechars:5 }}<br>
+                                                    <strong>Period:</strong> {{ contract.cancellation_period|truncatechars:5 }}<br>
+                                                    <strong>Charge:</strong> {{ contract.cancellation_charge|truncatechars:5 }}
+                                                </small>
+                                            </div>
                                         </td>
-                                        <td class="py-1 px-2">
-                                            <small>{{ contract.deposit_fee|truncatechars:20 }}</small>
-                                        </td>
-                                        <td class="py-1 px-2">
+                                        <td class="py-1 px-2 text-center" title="{{ contract.deposit_fee }}">{{ contract.deposit_fee|truncatechars:10 }}</td>
+                                        <td class="py-1 px-2 text-center">
                                             {% if contract.cleaning_charge %}
                                                 <span class="badge bg-success">Yes</span>
                                             {% else %}
                                                 <span class="badge bg-secondary">No</span>
                                             {% endif %}
                                         </td>
-                                        <td class="py-1 px-2">
-                                            <small>{{ contract.renew_fee|truncatechars:20 }}</small>
+                                        <td class="py-1 px-2 text-center" title="{{ contract.renew_fee }}">{{ contract.renew_fee|truncatechars:10 }}</td>
+                                        <td class="py-1 px-2 text-center" title="{{ contract.rent_payment_date }}">{{ contract.rent_payment_date|truncatechars:10 }}</td>
+                                        <td class="py-1 px-2 text-center">
+                                            <div title="{{ contract.management_company_name }} - {{ contract.management_company_phone_number }}">
+                                                <small><strong>{{ contract.management_company_name|truncatechars:20 }}</strong></small>
+                                                <br><small class="text-muted">{{ contract.management_company_phone_number|truncatechars:5 }}</small>
+                                            </div>
                                         </td>
-                                        <td class="py-1 px-2">
-                                            <small>{{ contract.rent_payment_date|truncatechars:20 }}</small>
-                                        </td>
-                                        <td class="py-1 px-2">
-                                            <small class="text-muted">
-                                                {{ contract.created_at|date:"M d, Y" }}
-                                                <br>
-                                                {{ contract.created_by.get_full_name|default:contract.created_by.email|truncatechars:15 }}
-                                            </small>
+                                        <td class="py-1 px-2 text-center" title="{{ contract.memo|default:'No memo' }}">
+                                            {% if contract.memo %}
+                                                {{ contract.memo|truncatechars:15 }}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -213,6 +225,41 @@
         </div>
     </div>
 </div>
+
+<style>
+    .address-cell {
+        max-width: 200px;
+        word-wrap: break-word;
+    }
+    
+    .address-line {
+        line-height: 1.2;
+        margin-bottom: 2px;
+    }
+    
+    .table td {
+        vertical-align: middle;
+        max-width: 150px;
+    }
+    
+    .table td[title] {
+        cursor: help;
+    }
+    
+    .table td[title]:hover::after {
+        content: attr(title);
+        position: absolute;
+        background: #333;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        white-space: pre-wrap;
+        max-width: 300px;
+        z-index: 1000;
+        pointer-events: none;
+    }
+</style>
 {% endblock %}
 
 {% block extra_js %}

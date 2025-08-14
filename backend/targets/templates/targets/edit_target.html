@@ -14,7 +14,7 @@
                         <i class="bi bi-pencil text-primary"></i>
                         Edit Target
                     </h5>
-                    <small class="text-muted">Modify target details for {{ target.user.first_name|default:target.user.email }}</small>
+                    <small class="text-muted">Modify target details for {{ target.target_to.first_name|default:target.target_to.email }}</small>
                 </div>
                 <div>
                     <a href="{% url 'targets:management' %}" class="btn btn-outline-secondary btn-sm">
@@ -38,15 +38,15 @@
                                 
                                 <div class="row mb-2">
                                     <div class="col-md-6">
-                                        <label for="{{ form.user.id_for_label }}" class="form-label">
+                                        <label class="form-label">
                                             <strong>User</strong>
                                         </label>
-                                        {{ form.user }}
-                                        {% if form.user.errors %}
-                                            <div class="text-danger small">
-                                                {{ form.user.errors.0 }}
-                                            </div>
-                                        {% endif %}
+                                        <div class="form-control-plaintext">
+                                            <i class="bi bi-person-circle text-muted me-1"></i>
+                                            {{ target.target_to.first_name|default:"No Name" }}
+                                            <br>
+                                            <small class="text-muted">{{ target.target_to.email }}</small>
+                                        </div>
                                     </div>
                                     <div class="col-md-6">
                                         <label for="{{ form.target_amount.id_for_label }}" class="form-label">
@@ -140,7 +140,7 @@
                         <div class="card-body py-1">
                             <div class="row">
                                 <div class="col-md-6">
-                                    <strong>User:</strong> {{ target.user.first_name|default:target.user.email }}<br>
+                                    <strong>User:</strong> {{ target.target_to.first_name|default:target.target_to.email }}<br>
                                     <strong>Amount:</strong> ¥{{ target.target_amount|floatformat:0 }}<br>
                                     <strong>Period:</strong> {{ target.target_period }}
                                 </div>

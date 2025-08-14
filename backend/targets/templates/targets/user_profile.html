@@ -138,7 +138,7 @@
                             {% else %}
                                 You don't have a target assigned for the current month.
                             {% endif %}
-                            Please contact your supervisor if you need a target assigned or have questions.
+                            <br><small class="text-muted">Achievements are rental contracts that count toward your monthly target. Please contact your supervisor if you need a target assigned or have questions.</small>
                         </div>
                     </div>
                 </div>
@@ -159,7 +159,7 @@
                                             <i class="bi bi-plus-circle"></i> Add Achievement
                                         </a>
                                     {% else %}
-                                        <button class="btn btn-secondary btn-sm" disabled title="You can only add achievements when you have an active target">
+                                        <button class="btn btn-secondary btn-sm" disabled title="You can only add achievements when you have an active target for the current month">
                                             <i class="bi bi-plus-circle"></i> Add Achievement
                                         </button>
                                     {% endif %}
@@ -188,11 +188,13 @@
                                                 <h4 class="text-success">¥{{ current_month_achievement_total|floatformat:0 }}</h4>
                                                 <p class="text-muted mb-1">Total Achieved</p>
                                                 <p class="mb-0">
-                                                    <strong>{{ current_month_achievements.count }}</strong> contracts
+                                                    <strong>{{ current_month_achievements.count }}</strong> rental contracts
                                                 </p>
+                                                <small class="text-muted">Each contract counts as an achievement</small>
                                             {% else %}
                                                 <i class="bi bi-trophy fs-2 text-muted"></i>
                                                 <p class="text-muted mt-2">No achievements yet</p>
+                                                <small class="text-muted">Click "Add Achievement" to start</small>
                                             {% endif %}
                                         </div>
                                     </div>
@@ -203,7 +205,7 @@
                                         <span class="badge bg-primary">Active</span>
                                         <div class="mt-1">
                                             <small class="text-success">
-                                                <i class="bi bi-check-circle"></i> You can add achievements for this target
+                                                <i class="bi bi-check-circle"></i> You can add rental contract achievements for this target
                                             </small>
                                         </div>
                                     {% elif current_target.status == 'completed' %}
@@ -305,23 +307,21 @@
                         <div class="alert alert-info py-1 mb-0">
                             <small class="text-muted">
                                 <i class="bi bi-info-circle me-1"></i>
-                                <strong>Sorting:</strong> Targets are displayed with the latest period (most recent month/year) at the top
+                                <strong>Sorting:</strong> Targets are displayed with the latest period (most recent month/year) at the top. 
+                                <strong>Achievements:</strong> Each rental contract you create counts as an achievement toward your target.
                             </small>
                         </div>
                     </div>
                     
                     {% if page_obj %}
                         <div class="table-responsive">
-                            <table class="table table-sm table-hover text-center">
-                                <thead>
+                            <table class="table table-sm table-striped table-hover mb-0">
+                                <thead class="custom-thead">
                                     <tr>
-                                        <th class="text-center">
-                                            Period
-                                            <br><small class="text-muted">Latest First</small>
-                                        </th>
+                                        <th class="text-center">Period</th>
                                         <th class="text-center">Target Amount</th>
                                         <th class="text-center">Status</th>
-                                        <th class="text-center">Progress</th>
+                                        <th class="text-center">Achievements Progress</th>
                                         <th class="text-center">Assigned By</th>
                                     </tr>
                                 </thead>
@@ -342,7 +342,7 @@
                                             <td class="text-center">
                                                 {% if target.status == 'active' %}
                                                     <span class="badge bg-primary">Active</span>
-                                                    <br><small class="text-success">Can add achievements</small>
+                                                    <br><small class="text-success">Can add rental contract achievements</small>
                                                 {% elif target.status == 'completed' %}
                                                     <span class="badge bg-success">Completed</span>
                                                     <br><small class="text-muted">No more achievements</small>
@@ -368,12 +368,15 @@
                                                                 </div>
                                                             </div>
                                                             <small class="text-muted">¥{{ achievement.total_achieved|floatformat:0 }} / ¥{{ target.target_amount|floatformat:0 }}</small>
+                                                            <br><small class="text-success">Rental contracts count as achievements</small>
                                                         {% else %}
                                                             <span class="text-muted">No achievements</span>
+                                                            <br><small class="text-muted">No rental contracts yet</small>
                                                         {% endif %}
                                                     {% endif %}
                                                 {% empty %}
                                                     <span class="text-muted">No achievements</span>
+                                                    <br><small class="text-muted">No rental contracts yet</small>
                                                 {% endfor %}
                                             </td>
                                             <td class="text-center">

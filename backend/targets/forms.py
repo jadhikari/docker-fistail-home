@@ -55,9 +55,9 @@ class TargetAssignmentForm(forms.ModelForm):
     
     class Meta:
         model = Target
-        fields = ['user', 'target_amount', 'target_month', 'target_year', 'description']
+        fields = ['target_to', 'target_amount', 'target_month', 'target_year', 'description']
         widgets = {
-            'user': forms.Select(attrs={'class': 'form-select'}),
+            'target_to': forms.Select(attrs={'class': 'form-select'}),
             'target_amount': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
@@ -68,7 +68,7 @@ class TargetAssignmentForm(forms.ModelForm):
             'target_year': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': '2020',
-                'max': '2030'
+                'max': '2999'
             }),
             'description': forms.Textarea(attrs={
                 'class': 'form-control',
@@ -81,7 +81,7 @@ class TargetAssignmentForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         
         # Show only regular active users (exclude superusers)
-        self.fields['user'].queryset = User.objects.filter(
+        self.fields['target_to'].queryset = User.objects.filter(
             is_active=True,
             is_superuser=False
         ).order_by('first_name', 'email')
@@ -95,7 +95,7 @@ class TargetAssignmentForm(forms.ModelForm):
             else:
                 return f"{user.email}"
         
-        self.fields['user'].label_from_instance = format_user_display
+        self.fields['target_to'].label_from_instance = format_user_display
         
         # Set month choices
         months = [
@@ -110,7 +110,7 @@ class TargetAssignmentForm(forms.ModelForm):
         self.fields['target_year'].initial = current_year
         
         # Add help text
-        self.fields['user'].help_text = "Select the user to assign this target to"
+        self.fields['target_to'].help_text = "Select the user to assign this target to"
         self.fields['target_amount'].help_text = "Monthly target amount in Japanese Yen"
         self.fields['target_month'].help_text = "Month for which this target applies"
         self.fields['target_year'].help_text = "Year for which this target applies"
@@ -118,14 +118,14 @@ class TargetAssignmentForm(forms.ModelForm):
     def clean(self):
         """Validate that user doesn't already have target for this month/year"""
         cleaned_data = super().clean()
-        user = cleaned_data.get('user')
+        user = cleaned_data.get('target_to')
         target_month = cleaned_data.get('target_month')
         target_year = cleaned_data.get('target_year')
         
         if user and target_month and target_year:
             # Check if target already exists for this user/month/year
             existing_target = Target.objects.filter(
-                user=user,
+                target_to=user,
                 target_month=target_month,
                 target_year=target_year
             )
@@ -170,7 +170,8 @@ class RentalContractForm(forms.ModelForm):
             'agent_fee', 'ad_fee', 'support_phone', 'contract_type',
             'cancellation_notice_period', 'cancellation_period', 'cancellation_charge',
             'deposit_fee', 'cleaning_charge', 'emergency_contact_person',
-            'emergency_phone', 'renew_fee', 'living_num_people', 'rent_payment_date'
+            'emergency_phone', 'renew_fee', 'living_num_people', 'rent_payment_date',
+            'management_company_name', 'management_company_phone_number', 'memo'
         ]
         widgets = {
             'customer_name': forms.TextInput(attrs={
@@ -210,19 +211,19 @@ class RentalContractForm(forms.ModelForm):
             'contract_type': forms.Select(attrs={'class': 'form-select'}),
             'cancellation_notice_period': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Enter cancellation notice period'
+                'placeholder': 'eg. 1 month before'
             }),
             'cancellation_period': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Enter cancellation period'
+                'placeholder': 'eg. after 2 years only'
             }),
             'cancellation_charge': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Enter cancellation charge'
+                'placeholder': 'eg. 1 month before 2 years only'
             }),
             'deposit_fee': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Enter deposit fee'
+                'placeholder': 'eg. 1 month rent'
             }),
             'cleaning_charge': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'emergency_contact_person': forms.TextInput(attrs={
@@ -235,16 +236,29 @@ class RentalContractForm(forms.ModelForm):
             }),
             'renew_fee': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Enter renewal fee'
+                'placeholder': 'eg. 1 month rent'
             }),
             'living_num_people': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'min': '1',
-                'placeholder': 'Enter number of people'
+                'placeholder': 'Enter number of people can leave'
             }),
             'rent_payment_date': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Enter rent payment date'
+                'placeholder': 'eg. 25th of a month auto bank transfer'
+            }),
+            'management_company_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter management company or owner name'
+            }),
+            'management_company_phone_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter management company or owner name phone number (max 11 digits)'
+            }),
+            'memo': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Enter additional notes or memo'
             }),
         }
 
@@ -255,6 +269,19 @@ class RentalContractForm(forms.ModelForm):
         self.fields['emergency_phone'].help_text = "Maximum 11 digits"
         self.fields['agent_fee'].help_text = "Agent fee amount"
         self.fields['ad_fee'].help_text = "Advertisement fee amount"
+        self.fields['management_company_name'].help_text = "Name of the management company or person (required)"
+        self.fields['management_company_phone_number'].help_text = "Management company phone number, maximum 11 digits (required)"
+        self.fields['memo'].help_text = "Additional notes or memo about the contract (optional)"
+        
+        # Add some basic validation
+        for field_name, field in self.fields.items():
+            if field.required:
+                field.widget.attrs['required'] = 'required'
+        
+        # Debug: Print field information
+        print(f"Form initialized with {len(self.fields)} fields")
+        for field_name, field in self.fields.items():
+            print(f"Field: {field_name}, Required: {field.required}, Type: {type(field)}")
 
 
 class BulkTargetAssignmentForm(forms.Form):

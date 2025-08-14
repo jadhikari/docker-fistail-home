@@ -33,7 +33,7 @@ class Target(TimeStampedUserModel):
     """Model to store monthly targets assigned by super users to regular users"""
     
     # User who receives the target
-    user = models.ForeignKey(
+    target_to = models.ForeignKey(
         User, 
         on_delete=models.CASCADE, 
         related_name='assigned_targets',
@@ -93,13 +93,13 @@ class Target(TimeStampedUserModel):
 
     class Meta:
         # Ensure one target per user per month/year
-        unique_together = ['user', 'target_month', 'target_year']
-        ordering = ['-target_year', '-target_month', 'user__first_name']
+        unique_together = ['target_to', 'target_month', 'target_year']
+        ordering = ['-target_year', '-target_month', 'target_to__first_name']
         verbose_name = "Monthly Target"
         verbose_name_plural = "Monthly Targets"
 
     def __str__(self):
-        return f"{self.user.first_name or self.user.email} - {self.target_month}/{self.target_year} - ¥{self.target_amount}"
+        return f"{self.target_to.first_name or self.target_to.email} - {self.target_month}/{self.target_year} - ¥{self.target_amount}"
 
     @property
     def target_period(self):
@@ -138,6 +138,16 @@ class Target(TimeStampedUserModel):
 
 class RentalContract(TimeStampedUserModel):
     """Model to store rental property contracts and agreements"""
+    
+    # Target relationship - one target can have multiple rental contracts
+    target = models.ForeignKey(
+        Target,
+        on_delete=models.CASCADE,
+        related_name='rental_contracts',
+        help_text="Target this rental contract belongs to",
+        null=True,  # Temporarily allow null for existing records
+        blank=True
+    )
     
     # Customer Information
     customer_name = models.CharField(
@@ -249,6 +259,23 @@ class RentalContract(TimeStampedUserModel):
         max_length=255,
         help_text="Rent payment due date"
     )
+    
+    # Management Company Information
+    memo = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Additional notes or memo about the contract"
+    )
+    
+    management_company_name = models.CharField(
+        max_length=255,
+        help_text="Name of the management company or person"
+    )
+    
+    management_company_phone_number = models.CharField(
+        max_length=11,
+        help_text="Management company phone number (maximum 11 digits)"
+    )
 
     class Meta:
         verbose_name = "Rental Contract"
@@ -259,9 +286,8 @@ class RentalContract(TimeStampedUserModel):
         return f"{self.customer_name} - {self.contract_date} - ¥{self.total_amount}"
 
     def clean(self):
-        """Validate phone numbers are maximum 11 digits and user has active target"""
+        """Validate phone numbers are maximum 11 digits and target relationship"""
         from django.core.exceptions import ValidationError
-        from django.utils import timezone
         
         # Validate phone numbers (maximum 11 digits)
         if len(self.customer_number) > 11:
@@ -273,28 +299,26 @@ class RentalContract(TimeStampedUserModel):
         if len(self.emergency_phone) > 11:
             raise ValidationError("Emergency phone cannot exceed 11 digits")
         
-        # Validate that user has an active target for the current month
-        if self.created_by and not self.pk:  # Only check for new contracts
-            today = timezone.now().date()
-            
-            # Use get_model to avoid circular import
-            from django.apps import apps
-            Target = apps.get_model('targets', 'Target')
-            
-            active_target = Target.objects.filter(
-                user=self.created_by,
-                target_month=today.month,
-                target_year=today.year,
-                status='active'
-            ).first()
-            
-            if not active_target:
-                raise ValidationError(
-                    "You can only create achievements when you have an active target for the current month. "
-                    "Please contact your supervisor if you need a target assigned."
-                )
+        # Validate management company phone number if provided
+        if self.management_company_phone_number and len(self.management_company_phone_number) > 11:
+            raise ValidationError("Management company phone number cannot exceed 11 digits")
+        
+        # Validate target relationship - only if target is set
+        if hasattr(self, 'target') and self.target:
+            # Validate that the target belongs to the user creating the contract
+            if self.created_by and self.target.target_to != self.created_by:
+                raise ValidationError("You can only create rental contracts for your own targets")
+        
+        # Validate mandatory management company fields
+        if not self.management_company_name:
+            raise ValidationError("Management company name is required")
+        
+        if not self.management_company_phone_number:
+            raise ValidationError("Management company phone number is required")
     
     def save(self, *args, **kwargs):
-        """Ensure validation is called before saving"""
-        self.full_clean()
+        """Save the rental contract"""
+        # Only call full_clean if explicitly requested
+        if kwargs.pop('validate', False):
+            self.full_clean()
         super().save(*args, **kwargs)
