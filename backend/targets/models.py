@@ -33,7 +33,7 @@ class Target(TimeStampedUserModel):
     """Model to store monthly targets assigned by super users to regular users"""
     
     # User who receives the target
-    target_to = models.ForeignKey(
+    target = models.ForeignKey(
         User, 
         on_delete=models.CASCADE, 
         related_name='assigned_targets',
