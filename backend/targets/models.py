@@ -140,7 +140,7 @@ class RentalContract(TimeStampedUserModel):
     """Model to store rental property contracts and agreements"""
     
     # Target relationship - one target can have multiple rental contracts
-    target = models.ForeignKey(
+    target_to = models.ForeignKey(
         Target,
         on_delete=models.CASCADE,
         related_name='rental_contracts',
