@@ -33,7 +33,7 @@ class Target(TimeStampedUserModel):
     """Model to store monthly targets assigned by super users to regular users"""
     
     # User who receives the target
-    target = models.ForeignKey(
+    target_to = models.ForeignKey(
         User, 
         on_delete=models.CASCADE, 
         related_name='assigned_targets',
@@ -93,7 +93,7 @@ class Target(TimeStampedUserModel):
 
     class Meta:
         # Ensure one target per user per month/year
-        unique_together = ['target', 'target_month', 'target_year']
+        unique_together = ['target_to', 'target_month', 'target_year']
         ordering = ['-target_year', '-target_month', 'target_to__first_name']
         verbose_name = "Monthly Target"
         verbose_name_plural = "Monthly Targets"
