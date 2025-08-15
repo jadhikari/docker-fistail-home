@@ -12,6 +12,10 @@ class RentalContractInline(admin.TabularInline):
     fields = ('customer_name', 'contract_date', 'total_amount', 'contract_type', 'created_at')
     can_delete = False
     max_num = 0  # Read-only inline
+    
+    def has_add_permission(self, request, obj=None):
+        """Disable adding new rental contracts from target admin"""
+        return False
 
 
 @admin.register(Target)
@@ -74,20 +78,20 @@ class TargetAdmin(admin.ModelAdmin):
 @admin.register(RentalContract)
 class RentalContractAdmin(admin.ModelAdmin):
     list_display = [
-        'customer_name', 'target', 'contract_date', 'total_amount', 'contract_type', 
+        'customer_name', 'target_to', 'contract_date', 'total_amount', 'contract_type', 
         'living_num_people', 'created_at'
     ]
     list_filter = [
-        'contract_type', 'cleaning_charge', 'created_at', 'updated_at', 'target__target_to'
+        'contract_type', 'cleaning_charge', 'created_at', 'updated_at', 'target_to__target_to'
     ]
     search_fields = [
-        'customer_name', 'customer_number', 'building_address', 'target__target_to__email'
+        'customer_name', 'customer_number', 'building_address', 'target_to__target_to__email'
     ]
     readonly_fields = ('total_amount', 'created_at', 'updated_at', 'created_by', 'updated_by')
     
     fieldsets = (
         ('Target Information', {
-            'fields': ('target',)
+            'fields': ('target_to',)
         }),
         ('Customer Information', {
             'fields': ('customer_name', 'customer_number')
@@ -127,4 +131,4 @@ class RentalContractAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         """Optimize queries"""
-        return super().get_queryset(request).select_related('created_by', 'updated_by')
+        return super().get_queryset(request).select_related('target_to', 'created_by', 'updated_by')

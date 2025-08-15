@@ -70,7 +70,7 @@ def target_management(request):
     
     # Get all achievements (rental contracts) for progress calculation
     all_achievements = RentalContract.objects.values(
-        'target__target_to', 'target__target_year', 'target__target_month'
+        'target_to__target_to', 'target_to__target_year', 'target_to__target_month'
     ).annotate(
         total_achieved=Sum('agent_fee') + Sum('ad_fee')
     )
@@ -78,7 +78,7 @@ def target_management(request):
     # Create a dictionary for easier lookup by user, year, and month
     achievements_by_user_period = {}
     for achievement in all_achievements:
-        key = (achievement['target__target_to'], achievement['target__target_year'], achievement['target__target_month'])
+        key = (achievement['target_to__target_to'], achievement['target_to__target_year'], achievement['target_to__target_month'])
         achievements_by_user_period[key] = achievement['total_achieved']
     
     # Add progress data to each target for easier template access
@@ -184,7 +184,7 @@ def export_targets_excel(request):
     
     # Get all achievements for progress calculation
     all_achievements = RentalContract.objects.values(
-        'target__target_to', 'target__target_year', 'target__target_month'
+        'target_to__target_to', 'target_to__target_year', 'target_to__target_month'
     ).annotate(
         total_achieved=Sum('agent_fee') + Sum('ad_fee')
     )
@@ -192,7 +192,7 @@ def export_targets_excel(request):
     # Create a dictionary for easier lookup
     achievements_by_user_period = {}
     for achievement in all_achievements:
-        key = (achievement['target__target_to'], achievement['target__target_year'], achievement['target__target_month'])
+        key = (achievement['target_to__target_to'], achievement['target_to__target_year'], achievement['target_to__target_month'])
         achievements_by_user_period[key] = achievement['total_achieved']
     
     # Add progress data to each target
@@ -475,8 +475,8 @@ def user_profile(request):
     
     # Get all achievements (rental contracts) for this user
     user_achievements = RentalContract.objects.filter(
-        target__target_to=user
-    ).values('target__target_year', 'target__target_month').annotate(
+        target_to__target_to=user
+    ).values('target_to__target_year', 'target_to__target_month').annotate(
         total_achieved=Sum('agent_fee') + Sum('ad_fee')
     )
     
@@ -484,8 +484,8 @@ def user_profile(request):
     achievements_by_period = []
     for achievement in user_achievements:
         achievements_by_period.append({
-            'year': achievement['target__target_year'],
-            'month': achievement['target__target_month'],
+            'year': achievement['target_to__target_year'],
+            'month': achievement['target_to__target_month'],
             'total_achieved': achievement['total_achieved']
         })
     
@@ -500,9 +500,9 @@ def user_profile(request):
     
     # Get current month achievements (rental contracts for current month targets)
     current_month_achievements = RentalContract.objects.filter(
-        target__target_to=user,
-        target__target_month=today.month,
-        target__target_year=today.year
+        target_to__target_to=user,
+        target_to__target_month=today.month,
+        target_to__target_year=today.year
     ).order_by('-created_at')
     
     # Calculate current month achievement total
@@ -593,9 +593,9 @@ def achievement_details(request, year, month):
     
     # Get achievements (rental contracts) for the specified year/month
     achievements = RentalContract.objects.filter(
-        target__target_to=user,
-        target__target_year=year,
-        target__target_month=month
+        target_to__target_to=user,
+        target_to__target_year=year,
+        target_to__target_month=month
     ).order_by('-created_at')
     
     # Get month name
@@ -656,7 +656,7 @@ def create_rental_contract(request):
                 rental_contract = form.save(commit=False)
                 rental_contract.created_by = request.user
                 rental_contract.updated_by = request.user
-                rental_contract.target = current_target  # Set the target automatically
+                rental_contract.target_to = current_target  # Set the target automatically
                 print(f"Target set to: {current_target}")
                 print(f"Rental contract data: {rental_contract.__dict__}")
                 
@@ -688,7 +688,7 @@ def create_rental_contract(request):
                     )
     else:
         # Create form with current target as initial data
-        initial_data = {'target': current_target}
+        initial_data = {'target_to': current_target}
         form = RentalContractForm(initial=initial_data)
         
         # Debug: Check if form can be created
@@ -821,7 +821,7 @@ def target_achievements(request, target_id):
     
     # Get achievements (rental contracts) for this specific target
     target_achievements = RentalContract.objects.filter(
-        target=target
+        target_to=target
     ).order_by('-created_at')
     
     # Calculate progress for this specific target
@@ -867,7 +867,7 @@ def export_contracts_excel(request):
     """Export contracts to Excel file"""
     
     # Get all contracts with the same filtering logic as the list view
-    contracts = RentalContract.objects.select_related('created_by', 'updated_by', 'target', 'target__target_to').order_by('-created_at')
+    contracts = RentalContract.objects.select_related('created_by', 'updated_by', 'target_to', 'target_to__target_to').order_by('-created_at')
     
     # Apply filters
     customer_name_filter = request.GET.get('customer_name', '').strip()
@@ -916,9 +916,9 @@ def export_contracts_excel(request):
     # Add data rows
     for row, contract in enumerate(contracts, 2):
         # Target information
-        target_user = contract.target.target_to.get_full_name() if contract.target.target_to.get_full_name() else contract.target.target_to.email
+        target_user = contract.target_to.target_to.get_full_name() if contract.target_to.target_to.get_full_name() else contract.target_to.target_to.email
         ws.cell(row=row, column=1, value=target_user)
-        ws.cell(row=row, column=2, value=f"{contract.target.target_month}/{contract.target.target_year}")
+        ws.cell(row=row, column=2, value=f"{contract.target_to.target_month}/{contract.target_to.target_year}")
         
         # Contract information
         ws.cell(row=row, column=3, value=contract.customer_name)
@@ -1000,7 +1000,7 @@ def contracts_list(request):
     """Display all rental contracts with filtering options"""
     
     # Get all contracts ordered by creation date (newest first)
-    contracts = RentalContract.objects.select_related('created_by', 'updated_by', 'target', 'target__target_to').order_by('-created_at')
+    contracts = RentalContract.objects.select_related('created_by', 'updated_by', 'target_to', 'target_to__target_to').order_by('-created_at')
     
     # Apply filters
     customer_name_filter = request.GET.get('customer_name', '').strip()

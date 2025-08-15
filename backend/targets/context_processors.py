@@ -26,9 +26,9 @@ def current_target_context(request):
             
             # Calculate current month achievements (rental contracts for current month target)
             current_month_achievements = RentalContract.objects.filter(
-                target__target_to=request.user,
-                target__target_year=today.year,
-                target__target_month=today.month
+                target_to__target_to=request.user,
+                target_to__target_year=today.year,
+                target_to__target_month=today.month
             )
             
             # Calculate current month achievement total

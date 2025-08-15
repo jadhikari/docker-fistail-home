@@ -304,9 +304,9 @@ class RentalContract(TimeStampedUserModel):
             raise ValidationError("Management company phone number cannot exceed 11 digits")
         
         # Validate target relationship - only if target is set
-        if hasattr(self, 'target') and self.target:
+        if hasattr(self, 'target_to') and self.target_to:
             # Validate that the target belongs to the user creating the contract
-            if self.created_by and self.target.target_to != self.created_by:
+            if self.created_by and self.target_to.target_to != self.created_by:
                 raise ValidationError("You can only create rental contracts for your own targets")
         
         # Validate mandatory management company fields
