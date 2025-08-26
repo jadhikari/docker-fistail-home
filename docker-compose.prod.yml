@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   backend:
     build:
@@ -22,7 +24,9 @@ services:
         python manage.py collectstatic --noinput &&
         gunicorn backend.wsgi:application --bind 0.0.0.0:8000 --workers 3
       "
-  
+    networks:
+      - fishtail-network
+
   postgres:
     image: postgres:15
     container_name: postgres-db-prod
@@ -35,23 +39,41 @@ services:
       - ./config/postgresql.conf:/etc/postgresql/postgresql.conf
       - ./config/pg_hba.conf:/etc/postgresql/pg_hba.conf
     command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+    networks:
+      - fishtail-network
 
   nginx:
-    image: nginx
+    image: nginx:alpine
     container_name: nginx-prod
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
-      - /etc/letsencrypt/live:/etc/letsencrypt/live:ro
-      - /etc/letsencrypt/archive:/etc/letsencrypt/archive:ro
-      - /etc/letsencrypt/keys:/etc/letsencrypt/keys:ro
-      - /etc/letsencrypt/renewal:/etc/letsencrypt/renewal:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
       - ./staticfiles:/app/staticfiles
       - ./media:/app/media
+      - ./scripts/nginx/certbot:/var/www/certbot
     depends_on:
       - backend
+    networks:
+      - fishtail-network
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - ./scripts/nginx/certbot:/var/www/certbot
+    depends_on:
+      - nginx
+    networks:
+      - fishtail-network
+    command: certonly --webroot -w /var/www/certbot -d sys.fishtail.jp --email your-email@example.com --agree-tos --non-interactive --keep-until-expiring
 
 volumes:
   postgres-db-prod:
+
+networks:
+  fishtail-network:
+    driver: bridge
