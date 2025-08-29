@@ -1,0 +1,35 @@
+        // Add Bootstrap validation classes
+        const form = document.querySelector('form');
+        const inputs = form.querySelectorAll('input, textarea, select');
+        
+        // Auto-update status based on end date for existing staff
+        {% if staff %}
+            const endDateInput = document.getElementById('{{ form.end_date.id_for_label }}');
+            const statusDisplay = document.getElementById('status_display');
+            const statusHidden = document.getElementById('status_hidden');
+            
+            function updateStatusBasedOnEndDate() {
+                const endDate = endDateInput.value;
+                if (endDate) {
+                    // If end date is set, status should be Inactive
+                    statusDisplay.value = 'Inactive';
+                    statusHidden.value = 'Inactive';
+                    statusDisplay.className = 'form-control text-danger';
+                } else {
+                    // If no end date, status should be Active
+                    statusDisplay.value = 'Active';
+                    statusHidden.value = 'Active';
+                    statusDisplay.className = 'form-control text-success';
+                }
+            }
+            
+            // Initialize status on page load
+            updateStatusBasedOnEndDate();
+            
+            // Update status when end date changes
+            if (endDateInput) {
+                endDateInput.addEventListener('change', updateStatusBasedOnEndDate);
+            }
+        {% endif %}
+        
+        form.addEventListener('submit', function(e) {

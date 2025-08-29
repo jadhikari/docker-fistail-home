@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'customer',
     'finance',
     'targets',  # Target management app
+    'keisan',  # Keisan business management app
     'django_countries', # this is for display all the country name
 ]
 

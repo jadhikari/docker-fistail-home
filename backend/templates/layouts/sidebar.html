@@ -37,6 +37,12 @@
         </li>
 
         <li class="nav-item">
+            <a href="{% url 'keisan:dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'keisan' %}active{% endif %}">
+                🏢 <span class="link-text">Keisan</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
             <a href="{% url 'targets:contracts' %}" class="nav-link {% if request.resolver_match.app_name == 'targets' and request.resolver_match.url_name == 'contracts' %}active{% endif %}">
                 📋 <span class="link-text">Contract</span>
             </a>

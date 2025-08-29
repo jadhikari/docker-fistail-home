@@ -1,0 +1,587 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if staff %}Edit Staff Member{% else %}Add New Staff Member{% endif %} - Keisan{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    {% if messages %}
+        <div class="mb-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>{{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    <!-- Compact Header -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1 text-gray-800">
+                        <i class="fas fa-user-plus me-2"></i>
+                        {% if staff %}Edit Staff Member{% else %}Add New Staff Member{% endif %}
+                    </h4>
+                    <small class="text-muted">
+                        {% if staff %}Update staff member information{% else %}Create a new staff member record{% endif %}
+                    </small>
+                </div>
+                <a href="{% if business %}{% url 'keisan:business_detail' business.pk %}{% elif shop %}{% url 'keisan:shop_detail' shop.pk %}{% else %}{% url 'keisan:business_list' %}{% endif %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-body py-3">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Assignment Section (Moved to Top) -->
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <h6 class="text-primary mb-2">
+                                    <i class="fas fa-building me-1"></i>Assignment
+                                </h6>
+                                
+                                {% if staff %}
+                                    <!-- Current Assignment Display (for editing) -->
+                                    <div class="alert alert-light mb-3">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        <strong>Current Assignment:</strong> 
+                                        {% if staff.business %}
+                                            <span class="badge bg-primary me-2">{{ staff.business.name }}</span>
+                                            {% if staff.shop %}
+                                                <span class="badge bg-info">{{ staff.shop.name }}</span>
+                                            {% else %}
+                                                <span class="text-muted">No specific shop assigned</span>
+                                            {% endif %}
+                                        {% elif staff.shop %}
+                                            <span class="badge bg-info">{{ staff.shop.name }}</span>
+                                            <span class="text-muted">(via shop assignment)</span>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                                
+                                {% if business %}
+                                    <!-- Pre-selected Business Display -->
+                                    <div class="alert alert-success mb-3">
+                                        <i class="fas fa-check-circle me-2"></i>
+                                        <strong>Business Assignment:</strong> 
+                                        <span class="badge bg-primary me-2">{{ business.name }}</span>
+                                        <small class="text-muted">(This staff member will be assigned to this business)</small>
+                                    </div>
+                                {% endif %}
+                                
+                                <div class="alert alert-info mb-3">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Assignment Rules:</strong> 
+                                    {% if business %}
+                                        Staff will be assigned to <strong>{{ business.name }}</strong>. 
+                                        You can optionally assign them to a specific shop within this business.
+                                    {% else %}
+                                        Staff can belong to either a business or a shop, but not both. 
+                                        If you select a business, you can optionally assign them to a specific shop within that business.
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-2">
+                                <label for="{{ form.business.id_for_label }}" class="form-label small mb-1">
+                                    Business
+                                </label>
+                                {% if business %}
+                                    <!-- Show business as read-only when pre-selected -->
+                                    <input type="text" class="form-control" value="{{ business.name }}" readonly>
+                                    <input type="hidden" name="business" value="{{ business.id }}">
+                                    <small class="form-text text-muted">
+                                        {% if shop %}
+                                            Business is automatically set to {{ shop.business.name }} (via shop assignment)
+                                        {% else %}
+                                            Business is pre-selected and cannot be changed
+                                        {% endif %}
+                                    </small>
+                                {% else %}
+                                    <!-- Allow business selection when not pre-selected -->
+                                    {{ form.business }}
+                                    <small class="form-text text-muted">Select the business this staff member belongs to</small>
+                                {% endif %}
+                                {% if form.business.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.business.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-2">
+                                <label for="{{ form.shop.id_for_label }}" class="form-label small mb-1">
+                                    Shop (Optional)
+                                </label>
+                                {% if shop %}
+                                    <!-- Show shop as read-only when pre-selected -->
+                                    <input type="text" class="form-control" value="{{ shop.name }}" readonly>
+                                    <input type="hidden" name="shop" value="{{ shop.id }}">
+                                    <small class="form-text text-muted">Shop is pre-selected and cannot be changed</small>
+                                {% elif business %}
+                                    <!-- Show only shops for the pre-selected business -->
+                                    {{ form.shop }}
+                                    <small class="form-text text-muted">Select a shop within {{ business.name }} (optional)</small>
+                                {% else %}
+                                    <!-- Show all shops with business context when no business is pre-selected -->
+                                    {{ form.shop }}
+                                    <small class="form-text text-muted">Select a shop if staff belongs to a specific shop within the business</small>
+                                {% endif %}
+                                {% if form.shop.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.shop.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Personal Information Section (All fields on same line) -->
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <h6 class="text-primary mb-2">
+                                    <i class="fas fa-user me-1"></i>Personal Information
+                                </h6>
+                            </div>
+                            
+                            <div class="col-md-3 mb-2">
+                                <label for="{{ form.full_name.id_for_label }}" class="form-label small mb-1">
+                                    Full Name <span class="text-danger">*</span>
+                                </label>
+                                {{ form.full_name }}
+                                {% if form.full_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.full_name.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-3 mb-2">
+                                <label for="{{ form.dob.id_for_label }}" class="form-label small mb-1">
+                                    Date of Birth
+                                </label>
+                                {{ form.dob }}
+                                {% if form.dob.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.dob.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-3 mb-2">
+                                <label for="{{ form.gender.id_for_label }}" class="form-label small mb-1">
+                                    Gender
+                                </label>
+                                {{ form.gender }}
+                                {% if form.gender.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.gender.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-3 mb-2">
+                                <label for="{{ form.contact_number.id_for_label }}" class="form-label small mb-1">
+                                    Contact Number <span class="text-danger">*</span>
+                                </label>
+                                {{ form.contact_number }}
+                                {% if form.contact_number.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.contact_number.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Additional Personal Information (Second Row) -->
+                        <div class="row mb-3">
+                            <div class="col-md-6 mb-2">
+                                <label for="{{ form.email.id_for_label }}" class="form-label small mb-1">
+                                    Email
+                                </label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.email.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-2">
+                                <label for="{{ form.address.id_for_label }}" class="form-label small mb-1">
+                                    Address
+                                </label>
+                                {{ form.address }}
+                                {% if form.address.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.address.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Employment Details Section -->
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <h6 class="text-primary mb-2">
+                                    <i class="fas fa-briefcase me-1"></i>Employment Details
+                                </h6>
+                            </div>
+                            
+                            <div class="col-md-3 mb-2">
+                                <label for="{{ form.role.id_for_label }}" class="form-label small mb-1">
+                                    Role <span class="text-danger">*</span>
+                                </label>
+                                {{ form.role }}
+                                {% if form.role.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.role.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-3 mb-2">
+                                <label for="{{ form.employment_type.id_for_label }}" class="form-label small mb-1">
+                                    Employment Type <span class="text-danger">*</span>
+                                </label>
+                                {{ form.employment_type }}
+                                {% if form.employment_type.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.employment_type.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-3 mb-2">
+                                <label for="{{ form.start_date.id_for_label }}" class="form-label small mb-1">
+                                    Start Date <span class="text-danger">*</span>
+                                </label>
+                                {{ form.start_date }}
+                                {% if form.start_date.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.start_date.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-3 mb-2">
+                                <label for="{{ form.salary.id_for_label }}" class="form-label small mb-1">
+                                    Salary <span class="text-danger">*</span>
+                                </label>
+                                {{ form.salary }}
+                                {% if form.salary.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.salary.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Employment Status Section (Second Row) -->
+                        <div class="row mb-3">
+                            <div class="col-md-4 mb-2">
+                                <label for="{{ form.end_date.id_for_label }}" class="form-label small mb-1">
+                                    End Date
+                                </label>
+                                {% if staff %}
+                                    <!-- Show end date when editing existing staff -->
+                                    {{ form.end_date }}
+                                    <small class="form-text text-muted">Set end date when staff leaves the organization</small>
+                                {% else %}
+                                    <!-- Hide end date for new staff -->
+                                    <input type="date" class="form-control" name="end_date" id="id_end_date" style="display: none;">
+                                    <small class="form-text text-muted">End date will be available after staff creation</small>
+                                {% endif %}
+                                {% if form.end_date.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.end_date.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-2">
+                                <label for="{{ form.status.id_for_label }}" class="form-label small mb-1">
+                                    Status
+                                </label>
+                                {% if staff %}
+                                    <!-- Show status as read-only when editing, automatically determined by end date -->
+                                    <input type="text" class="form-control" id="status_display" readonly>
+                                    <input type="hidden" name="status" id="status_hidden" value="{{ staff.status }}">
+                                    <small class="form-text text-muted">Status automatically set based on end date</small>
+                                    <div id="status_indicator" class="mt-1">
+                                        <span class="badge" id="status_badge"></span>
+                                    </div>
+                                {% else %}
+                                    <!-- Allow status selection for new staff -->
+                                    {{ form.status }}
+                                    <small class="form-text text-muted">Select initial status for new staff member</small>
+                                {% endif %}
+                                {% if form.status.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.status.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-2">
+                                <!-- Empty column for spacing -->
+                            </div>
+                        </div>
+
+                        <!-- Zairyucard Information Section -->
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <h6 class="text-primary mb-2">
+                                    <i class="fas fa-id-card me-1"></i>Zairyucard Information
+                                </h6>
+                            </div>
+                            
+                            <div class="col-md-4 mb-2">
+                                <label for="{{ form.zairyucard_number.id_for_label }}" class="form-label small mb-1">
+                                    Zairyucard Number <span class="text-danger">*</span>
+                                </label>
+                                {{ form.zairyucard_number }}
+                                {% if form.zairyucard_number.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.zairyucard_number.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-2">
+                                <label for="{{ form.zairyucard_issue_date.id_for_label }}" class="form-label small mb-1">
+                                    Issue Date
+                                </label>
+                                {{ form.zairyucard_issue_date }}
+                                {% if form.zairyucard_issue_date.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.zairyucard_issue_date.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-2">
+                                <label for="{{ form.zairyucard_expiry_date.id_for_label }}" class="form-label small mb-1">
+                                    Expiry Date
+                                </label>
+                                {{ form.zairyucard_expiry_date }}
+                                {% if form.zairyucard_expiry_date.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.zairyucard_expiry_date.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="row">
+                            <div class="col-12">
+                                <hr class="my-3">
+                                <div class="d-flex justify-content-end gap-2">
+                                    <a href="{% if business %}{% url 'keisan:business_detail' business.pk %}{% elif shop %}{% url 'keisan:shop_detail' shop.pk %}{% else %}{% url 'keisan:business_list' %}{% endif %}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-times me-1"></i>Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-save me-1"></i>
+                                        {% if staff %}Update Staff Member{% else %}Create Staff Member{% endif %}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const businessSelect = document.getElementById('{{ form.business.id_for_label }}');
+        const shopSelect = document.getElementById('{{ form.shop.id_for_label }}');
+        
+        // Check if business is pre-selected by looking for the hidden input
+        const businessHiddenInput = document.querySelector('input[name="business"][type="hidden"]');
+        const isBusinessPreSelected = businessHiddenInput !== null;
+        
+        // Only run JavaScript if business selection is allowed (not pre-selected)
+        if (!isBusinessPreSelected && businessSelect) {
+            // Store original shop options for fallback
+            const originalShopOptions = [];
+            Array.from(shopSelect.options).forEach(option => {
+                if (option.value) {
+                    originalShopOptions.push({
+                        value: option.value,
+                        text: option.textContent,
+                        business: option.textContent.match(/\(([^)]+)\)/)?.[1] || ''
+                    });
+                }
+            });
+            
+            // Function to filter shops based on selected business
+            function filterShopsByBusiness() {
+                const selectedBusinessId = businessSelect.value;
+                
+                // Clear current shop selection
+                shopSelect.value = '';
+                
+                if (selectedBusinessId) {
+                    // Get the selected business name
+                    const selectedBusinessOption = businessSelect.options[businessSelect.selectedIndex];
+                    const selectedBusinessName = selectedBusinessOption.textContent;
+                    
+                    // Clear existing options
+                    shopSelect.innerHTML = '<option value="">---------</option>';
+                    
+                    // Filter shops by business name
+                    const availableShops = originalShopOptions.filter(shop => 
+                        shop.business === selectedBusinessName
+                    );
+                    
+                    if (availableShops.length > 0) {
+                        // Add shops for the selected business
+                        availableShops.forEach(shop => {
+                            const option = document.createElement('option');
+                            option.value = shop.value;
+                            option.textContent = shop.text;
+                            shopSelect.appendChild(option);
+                        });
+                    } else {
+                        // No shops available for this business
+                        const noShopOption = document.createElement('option');
+                        noShopOption.value = '';
+                        noShopOption.textContent = 'No shops available for this business';
+                        noShopOption.disabled = true;
+                        shopSelect.appendChild(noShopOption);
+                    }
+                } else {
+                    // No business selected, restore all original options
+                    shopSelect.innerHTML = '<option value="">---------</option>';
+                    originalShopOptions.forEach(shopOption => {
+                        const option = document.createElement('option');
+                        option.value = shopOption.value;
+                        option.textContent = shopOption.text;
+                        shopSelect.appendChild(option);
+                    });
+                }
+            }
+            
+            // Event listener for business selection change
+            businessSelect.addEventListener('change', filterShopsByBusiness);
+            
+            // Initialize on page load
+            filterShopsByBusiness();
+        }
+        
+        // Add Bootstrap validation classes
+        const form = document.querySelector('form');
+        const inputs = form.querySelectorAll('input, textarea, select');
+        
+        // Auto-update status based on end date for existing staff
+        const endDateInput = document.getElementById('id_end_date');
+        const statusDisplay = document.getElementById('status_display');
+        const statusHidden = document.getElementById('status_hidden');
+        const statusIndicator = document.getElementById('status_indicator');
+        const statusBadge = document.getElementById('status_badge');
+        
+        if (endDateInput && statusDisplay && statusHidden) {
+            function updateStatusBasedOnEndDate() {
+                const endDate = endDateInput.value;
+                if (endDate) {
+                    // If end date is set, status should be Inactive
+                    statusDisplay.value = 'Inactive';
+                    statusHidden.value = 'Inactive';
+                    statusDisplay.className = 'form-control text-danger';
+                    statusBadge.textContent = 'Inactive';
+                    statusBadge.className = 'badge bg-danger';
+                    statusIndicator.style.display = 'block';
+                } else {
+                    // If no end date, status should be Active
+                    statusDisplay.value = 'Active';
+                    statusHidden.value = 'Active';
+                    statusDisplay.className = 'form-control text-success';
+                    statusBadge.textContent = 'Active';
+                    statusBadge.className = 'badge bg-success';
+                    statusIndicator.style.display = 'block';
+                }
+            }
+            
+            // Initialize status on page load
+            updateStatusBasedOnEndDate();
+            
+            // Update status when end date changes
+            endDateInput.addEventListener('change', updateStatusBasedOnEndDate);
+        }
+        
+        form.addEventListener('submit', function(e) {
+            let isValid = true;
+            
+            inputs.forEach(input => {
+                if (input.hasAttribute('required') && input.value.trim() === '') {
+                    input.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    input.classList.remove('is-invalid');
+                    input.classList.add('is-valid');
+                }
+            });
+            
+            if (!isValid) {
+                e.preventDefault();
+            }
+        });
+    });
+
+     // Auto-dismiss alerts
+     setTimeout(() => {
+        document.querySelectorAll('.auto-dismiss').forEach(alert => {
+            const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+            bsAlert.close();
+        });
+    }, 5000);s
+</script>
+{% endblock %}

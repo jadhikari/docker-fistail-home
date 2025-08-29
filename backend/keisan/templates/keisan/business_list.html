@@ -1,0 +1,246 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Keisan Business Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    {% if messages %}
+        <div class="mb-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>{{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    <!-- Compact Header -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1 text-gray-800">
+                        <i class="fas fa-chart-line me-2"></i>Keisan Business Management
+                    </h4>
+                    <small class="text-muted">Complete business management dashboard</small>
+                </div>
+                <a href="{% url 'keisan:business_create' %}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus me-1"></i>Add Business
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compact Search and Filter Form -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header py-1">
+                    <h6 class="m-0 font-weight-bold text-primary small">
+                        <i class="fas fa-search me-1"></i>Search & Filter
+                    </h6>
+                </div>
+                <div class="card-body py-2">
+                    <form method="get" class="row g-2">
+                        <div class="col-md-3">
+                            {{ form.name }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.business_type }}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.owner_name }}
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-sm btn-primary me-2">
+                                <i class="fas fa-search"></i>Search
+                            </button>
+                            <a href="{% url 'keisan:business_list' %}" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-times"></i>Clear
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compact Results Summary -->
+    <div class="row mb-2">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                    Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ total_count }} businesses
+                </small>
+                {% if form.data %}
+                    <small class="text-muted">
+                        <i class="fas fa-filter me-1"></i>Filtered results
+                    </small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Compact Business List -->
+    <div class="row" id="business-list">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header py-1">
+                    <h6 class="m-0 font-weight-bold text-primary small">
+                        <i class="fas fa-building me-2"></i>All Businesses
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    {% if page_obj %}
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="py-2 text-center">Business Name</th>
+                                        <th class="py-2 text-center">Type</th>
+                                        <th class="py-2 text-center">Owner</th>
+                                        <th class="py-2 text-center">Contact</th>
+                                        <th class="py-2 text-center">Salary</th>
+                                        <th class="py-2 text-center">Office Rent</th>
+                                        <th class="py-2 text-center">Created</th>
+                                        <th class="py-2 text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for business in page_obj %}
+                                    <tr>
+                                        <td class="py-2 text-center">
+                                            <div>
+                                                <strong class="small">{{ business.name }}</strong>
+                                                {% if business.registration_number %}
+                                                    <br><small class="text-muted">Reg: {{ business.registration_number }}</small>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td class="py-2 text-center">
+                                            <span class="badge bg-primary">{{ business.business_type }}</span>
+                                            {% if business.industry_category %}
+                                                <br><small class="text-muted">{{ business.industry_category }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td class="py-2 text-center">
+                                            <div>
+                                                <strong class="small">{{ business.owner_name }}</strong>
+                                                {% if business.owner_contact_number %}
+                                                    <br><small class="text-muted">{{ business.owner_contact_number }}</small>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td class="py-2 text-center">
+                                            <div>
+                                                <i class="fas fa-envelope me-1"></i><small>{{ business.email }}</small>
+                                                {% if business.phone %}
+                                                    <br><i class="fas fa-phone me-1"></i><small>{{ business.phone }}</small>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td class="py-2 text-center">
+                                            <span class="text-success font-weight-bold small">¥{{ business.owner_salary|floatformat:2 }}</span>
+                                        </td>
+                                        <td class="py-2 text-center">
+                                            <span class="text-success font-weight-bold small">¥{{ business.office_rent|floatformat:2 }}</span>
+                                        </td>
+                                        <td class="py-2 text-center">
+                                            <small class="text-muted">{{ business.created_at|date:"M d, Y" }}</small>
+                                        </td>
+                                        <td class="py-2 text-center">
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <a href="{% url 'keisan:business_detail' business.pk %}" class="btn btn-outline-primary btn-sm" title="View">
+                                                    <i class="fas fa-eye me-1"></i>View
+                                                </a>
+                                                <a href="{% url 'keisan:business_edit' business.pk %}" class="btn btn-outline-warning btn-sm" title="Edit">
+                                                    <i class="fas fa-edit me-1"></i>Edit
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        {% if page_obj.has_other_pages %}
+                        <nav aria-label="Business pagination" class="mt-4">
+                            <ul class="pagination justify-content-center">
+                                {% if page_obj.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page=1{% if form.data.name %}&name={{ form.data.name }}{% endif %}{% if form.data.business_type %}&business_type={{ form.data.business_type }}{% endif %}{% if form.data.owner_name %}&owner_name={{ form.data.owner_name }}{% endif %}">
+                                            <i class="fas fa-angle-double-left"></i>
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if form.data.name %}&name={{ form.data.name }}{% endif %}{% if form.data.business_type %}&business_type={{ form.data.business_type }}{% endif %}{% if form.data.owner_name %}&owner_name={{ form.data.owner_name }}{% endif %}">
+                                            <i class="fas fa-angle-left"></i>
+                                        </a>
+                                    </li>
+                                {% endif %}
+
+                                {% for num in page_obj.paginator.page_range %}
+                                    {% if page_obj.number == num %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ num }}</span>
+                                        </li>
+                                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ num }}{% if form.data.name %}&name={{ form.data.name }}{% endif %}{% if form.data.business_type %}&business_type={{ form.data.business_type }}{% endif %}{% if form.data.owner_name %}&owner_name={{ form.data.owner_name }}{% endif %}">{{ num }}</a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+
+                                {% if page_obj.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if form.data.name %}&name={{ form.data.name }}{% endif %}{% if form.data.business_type %}&business_type={{ form.data.business_type }}{% endif %}{% if form.data.owner_name %}&owner_name={{ form.data.owner_name }}{% endif %}">
+                                            <i class="fas fa-angle-right"></i>
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if form.data.name %}&name={{ form.data.name }}{% endif %}{% if form.data.business_type %}&business_type={{ form.data.business_type }}{% endif %}{% if form.data.owner_name %}&owner_name={{ form.data.owner_name }}{% endif %}">
+                                            <i class="fas fa-angle-double-right"></i>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-building fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No businesses found</h5>
+                            <p class="text-muted">
+                                {% if form.data %}
+                                    Try adjusting your search criteria.
+                                {% else %}
+                                    Get started by adding your first business.
+                                {% endif %}
+                            </p>
+                            {% if not form.data %}
+                                <a href="{% url 'keisan:business_create' %}" class="btn btn-primary">
+                                    <i class="fas fa-plus me-2"></i>Add Business
+                                </a>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-dismiss alerts
+    setTimeout(() => {
+        document.querySelectorAll('.auto-dismiss').forEach(alert => {
+            const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+            bsAlert.close();
+        });
+    }, 5000);s
+</script>
+{% endblock %}

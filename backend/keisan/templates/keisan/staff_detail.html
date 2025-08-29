@@ -1,0 +1,352 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ staff.full_name }} - Staff Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    {% if messages %}
+        <div class="mb-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>{{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0 text-gray-800">
+                        <i class="fas fa-user me-2"></i>{{ staff.full_name }}
+                    </h1>
+                    <p class="text-muted">Staff Member Details & Management</p>
+                </div>
+                <a href="{% if staff.business %}{% url 'keisan:business_detail' staff.business.pk %}{% elif staff.shop %}{% url 'keisan:shop_detail' staff.shop.pk %}{% else %}{% url 'keisan:business_list' %}{% endif %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Staff Actions -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header py-2">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-tools me-1"></i>Actions
+                    </h6>
+                </div>
+                <div class="card-body py-3">
+                    {% if staff.status == 'Active' %}
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'keisan:staff_edit' staff.pk %}" class="btn btn-warning">
+                                <i class="fas fa-edit me-1"></i>Edit Staff Member
+                            </a>
+                            <a href="{% url 'keisan:dependent_create' staff.pk %}" class="btn btn-success">
+                                <i class="fas fa-plus me-1"></i>Add Dependent
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning mb-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Staff Member is {{ staff.status }}</strong><br>
+                            <small class="text-muted">
+                                {% if staff.end_date %}
+                                    This staff member left on {{ staff.end_date|date:"M d, Y" }}. 
+                                    Inactive staff members cannot be edited or have new dependents added.
+                                {% else %}
+                                    This staff member is currently {{ staff.status|lower }}. 
+                                    Inactive staff members cannot be edited or have new dependents added.
+                                {% endif %}
+                            </small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Staff Information Cards -->
+    <div class="row mb-4">
+        <!-- Personal Information -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-user me-2"></i>Personal Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-sm-6 mb-2">
+                            <strong class="small">Full Name:</strong> 
+                            <span class="text-muted small">{{ staff.full_name }}</span>
+                        </div>
+                        <div class="col-sm-6 mb-2">
+                            <strong class="small">Role:</strong> 
+                            <span class="badge bg-primary small">{{ staff.role }}</span>
+                        </div>
+                        <div class="col-sm-6 mb-2">
+                            <strong class="small">Date of Birth:</strong> 
+                            <span class="text-muted small">{{ staff.dob|date:"M d, Y"|default:"Not provided" }}</span>
+                        </div>
+                        <div class="col-sm-6 mb-2">
+                            <strong class="small">Gender:</strong> 
+                            <span class="text-muted small">{{ staff.get_gender_display }}</span>
+                        </div>
+                        <div class="col-sm-6 mb-2">
+                            <strong class="small">Contact Number:</strong> 
+                            <a href="tel:{{ staff.contact_number }}" class="text-primary small">{{ staff.contact_number }}</a>
+                        </div>
+                        <div class="col-sm-6 mb-2">
+                            <strong class="small">Email:</strong> 
+                            {% if staff.email %}
+                                <a href="mailto:{{ staff.email }}" class="text-primary small">{{ staff.email }}</a>
+                            {% else %}
+                                <span class="text-muted small">Not provided</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-12 mb-2">
+                            <strong class="small">Address:</strong> 
+                            <span class="text-muted small">{{ staff.address|default:"No address provided" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employment Information -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow h-100">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-briefcase me-2"></i>Employment Details
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-sm-6 mb-2">
+                            <strong class="small">Employment Type:</strong> 
+                            <span class="badge {% if staff.employment_type == 'FT' %}bg-success{% elif staff.employment_type == 'PT' %}bg-warning{% else %}bg-info{% endif %} small">
+                                {{ staff.get_employment_type_display }}
+                            </span>
+                        </div>
+                        <div class="col-sm-6 mb-2">
+                            <strong class="small">Start Date:</strong> 
+                            <span class="text-muted small">{{ staff.start_date|date:"M d, Y" }}</span>
+                        </div>
+                        <div class="col-sm-6 mb-2">
+                            <strong class="small">End Date:</strong> 
+                            {% if staff.end_date %}
+                                <span class="text-danger small">{{ staff.end_date|date:"M d, Y" }}</span>
+                            {% else %}
+                                <span class="text-muted small">Still active</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-sm-6 mb-2">
+                            <strong class="small">Status:</strong> 
+                            <span class="badge {% if staff.status == 'Active' %}bg-success{% elif staff.status == 'Inactive' %}bg-secondary{% elif staff.status == 'Terminated' %}bg-danger{% else %}bg-warning{% endif %} small">
+                                {{ staff.status }}
+                            </span>
+                        </div>
+                        <div class="col-sm-6 mb-2">
+                            <strong class="small">Current Salary:</strong> 
+                            <span class="text-success font-weight-bold small">${{ staff.salary|floatformat:2 }}</span>
+                        </div>
+                        <div class="col-12 mb-2">
+                            <strong class="small">Assignment:</strong> 
+                            {% if staff.business %}
+                                <a href="{% url 'keisan:business_detail' staff.business.pk %}" class="text-primary small">
+                                    <i class="fas fa-building me-1"></i>{{ staff.business.name }}
+                                </a>
+                            {% elif staff.shop %}
+                                <a href="{% url 'keisan:shop_detail' staff.shop.pk %}" class="text-success small">
+                                    <i class="fas fa-store me-1"></i>{{ staff.shop.name }}
+                                </a>
+                                <div class="text-muted small">Business: {{ staff.shop.business.name }}</div>
+                            {% else %}
+                                <span class="text-muted small">Not assigned</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zairyucard Information -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-id-card me-2"></i>Zairyucard Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <strong>Zairyucard Number:</strong><br>
+                            <span class="badge bg-info fs-6">{{ staff.zairyucard_number }}</span>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <strong>Issue Date:</strong><br>
+                            <span class="text-muted">{{ staff.zairyucard_issue_date|date:"M d, Y"|default:"Not provided" }}</span>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <strong>Expiry Date:</strong><br>
+                            <span class="text-muted">{{ staff.zairyucard_expiry_date|date:"M d, Y"|default:"Not provided" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dependents -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-users me-1"></i>Dependents ({{ dependents.count }})
+                    </h6>
+                    {% if staff.status == 'Active' %}
+                        <a href="{% url 'keisan:dependent_create' staff.pk %}" class="btn btn-sm btn-success">
+                            <i class="fas fa-plus me-1"></i>Add Dependent
+                        </a>
+                    {% else %}
+                        <span class="badge bg-secondary">Cannot add dependents</span>
+                    {% endif %}
+                </div>
+                <div class="card-body p-0">
+                    {% if dependents %}
+                        {% if staff.status != 'Active' %}
+                            <div class="alert alert-info m-3 mb-0">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Note:</strong> Dependents are displayed for reference only. 
+                                Since {{ staff.full_name }} is {{ staff.status|lower }}, dependents cannot be edited.
+                            </div>
+                        {% endif %}
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="py-2 text-center">Name</th>
+                                        <th class="py-2 text-center">Relationship</th>
+                                        <th class="py-2 text-center">Date of Birth</th>
+                                        <th class="py-2 text-center">Contact Number</th>
+                                        <th class="py-2 text-center">Address</th>
+                                        <th class="py-2 text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for dependent in dependents %}
+                                    <tr>
+                                        <td class="py-2 text-center">
+                                            <strong class="small">{{ dependent.full_name }}</strong>
+                                        </td>
+                                        <td class="py-2 text-center">
+                                            <span class="badge bg-secondary">{{ dependent.relationship }}</span>
+                                        </td>
+                                        <td class="py-2 text-center">
+                                            {% if dependent.dob %}
+                                                <small>{{ dependent.dob|date:"M d, Y" }}</small>
+                                            {% else %}
+                                                <span class="text-muted small">Not provided</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="py-2 text-center">
+                                            {% if dependent.contact_number %}
+                                                <a href="tel:{{ dependent.contact_number }}" class="text-primary small">{{ dependent.contact_number }}</a>
+                                            {% else %}
+                                                <span class="text-muted small">Not provided</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="py-2 text-center">
+                                            {% if dependent.address %}
+                                                <small>{{ dependent.address }}</small>
+                                            {% else %}
+                                                <span class="text-muted small">No address</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="py-2 text-center">
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <a href="{% url 'keisan:dependent_edit' dependent.pk %}" class="btn btn-outline-warning btn-sm">
+                                                    <i class="fas fa-edit me-1"></i>Edit
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                            <h6 class="text-muted">No dependents registered</h6>
+                            <p class="text-muted">This staff member doesn't have any dependents yet.</p>
+                            <a href="{% url 'keisan:dependent_create' staff.pk %}" class="btn btn-success">
+                                <i class="fas fa-plus me-2"></i>Add First Dependent
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Information -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-cog me-2"></i>System Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Created:</strong> {{ staff.created_at|date:"F d, Y \a\t g:i A" }}<br>
+                            {% if staff.created_by %}
+                                <strong>Created by:</strong> 
+                                {% if staff.created_by.first_name or staff.created_by.last_name %}
+                                    {{ staff.created_by.get_full_name }}
+                                {% else %}
+                                    {{ staff.created_by.email }}
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Last Updated:</strong> {{ staff.updated_at|date:"F d, Y \a\t g:i A" }}<br>
+                            {% if staff.updated_by %}
+                                <strong>Updated by:</strong> 
+                                {% if staff.updated_by.first_name or staff.created_by.last_name %}
+                                    {{ staff.updated_by.get_full_name }}
+                                {% else %}
+                                    {{ staff.updated_by.email }}
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> 
+<script>
+     // Auto-dismiss alerts
+     setTimeout(() => {
+        document.querySelectorAll('.auto-dismiss').forEach(alert => {
+            const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+            bsAlert.close();
+        });
+    }, 5000);s
+</script>
+{% endblock %}
