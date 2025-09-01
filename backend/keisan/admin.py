@@ -3,7 +3,7 @@ from .models import Business, MunicipalShop, Staff, Dependent
 
 @admin.register(Business)
 class BusinessAdmin(admin.ModelAdmin):
-    list_display = ['name', 'registration_number', 'business_type', 'owner_name', 'owner_salary', 'office_rent', 'created_at']
+    list_display = ['name', 'registration_number', 'business_type', 'owner_name', 'office_rent', 'created_at']
     list_filter = ['business_type', 'industry_category', 'created_at']
     search_fields = ['name', 'registration_number', 'owner_name', 'email']
     readonly_fields = ['created_at', 'created_by', 'updated_at', 'updated_by']
@@ -13,7 +13,7 @@ class BusinessAdmin(admin.ModelAdmin):
             'fields': ('name', 'registration_number', 'business_type', 'industry_category', 'email', 'phone', 'website', 'address', 'tax_number')
         }),
         ('Owner Information', {
-            'fields': ('owner_name', 'owner_contact_number', 'owner_email', 'owner_address', 'owner_salary', 'office_rent')
+            'fields': ('owner_name', 'owner_contact_number', 'owner_email', 'owner_address', 'office_rent')
         }),
         ('System Information', {
             'fields': ('created_at', 'created_by', 'updated_at', 'updated_by'),

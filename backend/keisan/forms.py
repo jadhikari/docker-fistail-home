@@ -9,7 +9,7 @@ class BusinessForm(forms.ModelForm):
         fields = [
             'name', 'registration_number', 'business_type', 'industry_category',
             'email', 'phone', 'website', 'address', 'tax_number',
-            'owner_name', 'owner_contact_number', 'owner_email', 'owner_address', 'owner_salary',
+            'owner_name', 'owner_contact_number', 'owner_email', 'owner_address',
             'office_rent'
         ]
         widgets = {
@@ -26,20 +26,34 @@ class BusinessForm(forms.ModelForm):
             'owner_contact_number': forms.TextInput(attrs={'class': 'form-control'}),
             'owner_email': forms.EmailInput(attrs={'class': 'form-control'}),
             'owner_address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'owner_salary': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
             'office_rent': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
         }
 
     def clean(self):
         cleaned_data = super().clean()
-        owner_salary = cleaned_data.get('owner_salary')
         office_rent = cleaned_data.get('office_rent')
-        
-        if owner_salary is not None and owner_salary < 0:
-            raise ValidationError("Owner salary cannot be negative.")
+        name = cleaned_data.get('name')
+        phone = cleaned_data.get('phone')
         
         if office_rent is not None and office_rent < 0:
             raise ValidationError("Office rent cannot be negative.")
+        
+        # Check for duplicate business name + phone combination
+        if name and phone:
+            # Get the current instance if editing
+            instance = getattr(self, 'instance', None)
+            
+            if instance and instance.pk:  # If updating existing business
+                existing_businesses = Business.objects.filter(name=name, phone=phone).exclude(pk=instance.pk)
+            else:  # If creating new business
+                existing_businesses = Business.objects.filter(name=name, phone=phone)
+            
+            if existing_businesses.exists():
+                # Add non-field error for better user experience
+                self.add_error(None, "A business with this name and phone number already exists.")
+                # Also add field-specific errors
+                self.add_error('name', "This business name with the given phone number already exists.")
+                self.add_error('phone', "This phone number with the given business name already exists.")
         
         return cleaned_data
 
@@ -172,7 +186,8 @@ class StaffForm(forms.ModelForm):
                 ('', 'Select employment type'),
                 ('FT', 'Full-Time'),
                 ('PT', 'Part-Time'),
-                ('CT', 'Contract')
+                ('CT', 'Contract'),
+                ('Owner', 'Owner')
             ]
         
         if 'status' in self.fields:

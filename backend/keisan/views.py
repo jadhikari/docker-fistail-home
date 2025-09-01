@@ -46,8 +46,7 @@ def business_list(request):
     
     # Salary statistics
     total_salary = Staff.objects.aggregate(total=Sum('salary'))['total'] or 0
-    total_owner_salary = Business.objects.aggregate(total=Sum('owner_salary'))['total'] or 0
-    total_payroll = total_salary + total_owner_salary
+    total_payroll = total_salary
     
     # Pagination
     paginator = Paginator(businesses, 20)

@@ -47,6 +47,17 @@
                     <form method="post" novalidate>
                         {% csrf_token %}
                         
+                        <!-- Non-field errors -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endif %}
+                        
                         <!-- Business Details Section -->
                         <div class="row mb-4">
                             <div class="col-12">
@@ -137,6 +148,7 @@
                                         {% endfor %}
                                     </div>
                                 {% endif %}
+                                <small class="form-text text-muted">Phone number must be unique when combined with business name</small>
                             </div>
                             
                             <div class="col-md-6 mb-3">
@@ -230,21 +242,6 @@
                                         {% endfor %}
                                     </div>
                                 {% endif %}
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.owner_salary.id_for_label }}" class="form-label">
-                                    Owner Salary <span class="text-danger">*</span>
-                                </label>
-                                {{ form.owner_salary }}
-                                {% if form.owner_salary.errors %}
-                                    <div class="invalid-feedback d-block">
-                                        {% for error in form.owner_salary.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                                <small class="form-text text-muted">Enter the owner's current salary (in Yen)</small>
                             </div>
                             
                             <div class="col-md-6 mb-3">

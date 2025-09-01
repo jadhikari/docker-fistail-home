@@ -34,7 +34,7 @@ class Business(TimeStampedUserModel):
     business_type = models.CharField(max_length=100)
     industry_category = models.CharField(max_length=100, blank=True, null=True)
     email = models.EmailField()
-    phone = models.CharField(max_length=20)
+    phone = models.CharField(max_length=20, help_text="Phone number must be unique when combined with business name")
     website = models.URLField(blank=True, null=True)
     address = models.CharField(max_length=255, blank=True, null=True)
     tax_number = models.CharField(max_length=100, blank=True, null=True)
@@ -44,12 +44,6 @@ class Business(TimeStampedUserModel):
     owner_contact_number = models.CharField(max_length=20, blank=True, null=True)
     owner_email = models.EmailField(blank=True, null=True)
     owner_address = models.CharField(max_length=255, blank=True, null=True)
-    owner_salary = models.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
-        default=0.00,
-        validators=[MinValueValidator(0)]
-    )
     
     # Rent Details
     office_rent = models.DecimalField(
@@ -63,33 +57,23 @@ class Business(TimeStampedUserModel):
     class Meta:
         ordering = ['name']
         verbose_name_plural = "Businesses"
+        unique_together = [['name', 'phone']]
 
     def __str__(self):
         return self.name
 
     def clean(self):
-        if self.owner_salary < 0:
-            raise ValidationError("Owner salary cannot be negative.")
         if self.office_rent < 0:
             raise ValidationError("Office rent cannot be negative.")
-
-    # Update owner salary
-    def update_owner_salary(self, amount, change_type, reason=""):
-        if amount < 0:
-            raise ValidationError("Amount cannot be negative.")
-            
-        previous = self.owner_salary
-        if change_type in ["Increment", "Bonus"]:
-            self.owner_salary += amount
-        elif change_type == "Decrement":
-            if amount > self.owner_salary:
-                raise ValidationError("Cannot decrement more than current salary.")
-            self.owner_salary -= amount
-        else:
-            raise ValidationError("Invalid change type.")
-            
-        self.save()
-        # Salary history functionality removed
+        
+        # Check for duplicate business name + phone combination
+        if self.pk:  # If updating existing business
+            existing_businesses = Business.objects.filter(name=self.name, phone=self.phone).exclude(pk=self.pk)
+        else:  # If creating new business
+            existing_businesses = Business.objects.filter(name=self.name, phone=self.phone)
+        
+        if existing_businesses.exists():
+            raise ValidationError("A business with this name and phone number already exists.")
 
 class MunicipalShop(TimeStampedUserModel):
     business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name="shops")
@@ -142,7 +126,8 @@ class Staff(TimeStampedUserModel):
     employment_type = models.CharField(max_length=50, choices=[
         ("FT", "Full-Time"),
         ("PT", "Part-Time"),
-        ("CT", "Contract")
+        ("CT", "Contract"),
+        ("Owner", "Owner")
     ])
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True, help_text="Leave blank if staff is still active")

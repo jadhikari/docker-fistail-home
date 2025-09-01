@@ -101,7 +101,6 @@
                                         <th class="py-2 text-center">Type</th>
                                         <th class="py-2 text-center">Owner</th>
                                         <th class="py-2 text-center">Contact</th>
-                                        <th class="py-2 text-center">Salary</th>
                                         <th class="py-2 text-center">Office Rent</th>
                                         <th class="py-2 text-center">Created</th>
                                         <th class="py-2 text-center">Actions</th>
@@ -139,9 +138,6 @@
                                                     <br><i class="fas fa-phone me-1"></i><small>{{ business.phone }}</small>
                                                 {% endif %}
                                             </div>
-                                        </td>
-                                        <td class="py-2 text-center">
-                                            <span class="text-success font-weight-bold small">¥{{ business.owner_salary|floatformat:2 }}</span>
                                         </td>
                                         <td class="py-2 text-center">
                                             <span class="text-success font-weight-bold small">¥{{ business.office_rent|floatformat:2 }}</span>
