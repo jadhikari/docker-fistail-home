@@ -25,6 +25,20 @@ urlpatterns = [
     path('staff/<int:staff_id>/dependents/create/', views.dependent_create, name='dependent_create'),
     path('dependents/<int:pk>/edit/', views.dependent_edit, name='dependent_edit'),
     
+    # Transaction URLs
+    path('transactions/<int:pk>/edit/', views.transaction_edit, name='transaction_edit'),
+    path('transactions/<int:pk>/delete/', views.transaction_delete, name='transaction_delete'),
+    
+    # Revenue and Expense URLs
+    path('revenue/create/', views.revenue_create, name='revenue_create'),
+    path('revenue/<int:pk>/edit/', views.revenue_edit, name='revenue_edit'),
+    path('expense/create/', views.expense_create, name='expense_create'),
+    path('expense/<int:pk>/edit/', views.expense_edit, name='expense_edit'),
+    
+    # Financial Summary URLs
+    path('businesses/<int:pk>/financial-summary/', views.business_financial_summary, name='business_financial_summary'),
+    path('shops/<int:pk>/financial-summary/', views.shop_financial_summary, name='shop_financial_summary'),
+    
     # AJAX URLs
     path('ajax/business/<int:business_id>/shops/', views.get_business_shops, name='get_business_shops'),
     path('ajax/business/<int:business_id>/staff/', views.get_staff_by_business, name='get_staff_by_business'),

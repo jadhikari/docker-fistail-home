@@ -1,0 +1,334 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Add Expense - Keisan{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    {% if messages %}
+        <div class="mb-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>{{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0 text-gray-800">
+                        <i class="bi bi-arrow-down-circle me-2 text-danger"></i>{% if transaction %}Edit Expense{% else %}Add Expense{% endif %}
+                    </h1>
+                    <p class="text-muted">
+                        {% if transaction %}
+                            Edit expense transaction for {{ transaction.business.name }}{% if transaction.shop %} - {{ transaction.shop.name }}{% endif %}
+                        {% elif form.shop.value %}
+                            Add expense for {{ form.shop.field.queryset.first.name }} at {{ form.shop.field.queryset.first.business.name }}
+                        {% elif form.business.value %}
+                            Add expense for {{ form.business.field.queryset.first.name }}
+                        {% else %}
+                            Register a new expense transaction
+                        {% endif %}
+                    </p>
+                </div>
+                <a href="{% if transaction %}{% url 'keisan:business_detail' pk=transaction.business.pk %}{% elif form.shop.value %}{% url 'keisan:shop_detail' form.shop.value %}{% elif form.business.value %}{% url 'keisan:business_detail' form.business.value %}{% else %}{% url 'keisan:business_list' %}{% endif %}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Back
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-danger">
+                        <i class="bi bi-arrow-down-circle me-2"></i>Expense Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="expenseForm">
+                        {% csrf_token %}
+                        
+                        <!-- Hidden fields for pre-selected values -->
+                        {% if form.business.value %}
+                            <input type="hidden" name="business" value="{{ form.business.value }}">
+                        {% endif %}
+                        {% if form.shop.value %}
+                            <input type="hidden" name="shop" value="{{ form.shop.value }}">
+                        {% endif %}
+                        <input type="hidden" name="transaction_type" value="Expense">
+                        
+                        <!-- Non-field errors -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in form.non_field_errors %}
+                                    <i class="bi bi-exclamation-triangle me-2"></i>{{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <!-- Business & Shop Display -->
+                            {% if form.business.value or form.shop.value %}
+                            <div class="col-12 mb-4">
+                                <div class="alert alert-info border-0 shadow-sm">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        <div>
+                                            <strong>Expense for:</strong>
+                                            {% if form.shop.value %}
+                                                {% for shop in form.shop.field.queryset %}
+                                                    {% if shop.id == form.shop.value %}
+                                                        <span class="badge bg-primary ms-2">{{ shop.business.name }} - {{ shop.name }}</span>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% elif form.business.value %}
+                                                {% for business in form.business.field.queryset %}
+                                                    {% if business.id == form.business.value %}
+                                                        <span class="badge bg-primary ms-2">{{ business.name }}</span>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Period -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.period.id_for_label }}" class="form-label fw-bold">
+                                    <i class="bi bi-calendar3 me-2"></i>Period <span class="text-danger">*</span>
+                                </label>
+                                {{ form.period }}
+                                {% if form.period.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.period.errors %}
+                                            <i class="bi bi-exclamation-triangle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">
+                                    <i class="bi bi-info-circle me-1"></i>{{ form.period.help_text }}
+                                </small>
+                            </div>
+                            
+                            <!-- Transaction Mode -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.transaction_mode.id_for_label }}" class="form-label fw-bold">
+                                    <i class="bi bi-laptop me-2"></i>Transaction Mode <span class="text-danger">*</span>
+                                </label>
+                                {{ form.transaction_mode }}
+                                {% if form.transaction_mode.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.transaction_mode.errors %}
+                                            <i class="bi bi-exclamation-triangle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">
+                                    <i class="bi bi-info-circle me-1"></i>Select whether this is an online or offline transaction
+                                </small>
+                            </div>
+                            
+                            <!-- Title -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.title.id_for_label }}" class="form-label fw-bold">
+                                    <i class="bi bi-tag me-2"></i>Title <span class="text-danger">*</span>
+                                </label>
+                                {{ form.title }}
+                                {% if form.title.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.title.errors %}
+                                            <i class="bi bi-exclamation-triangle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">
+                                    <i class="bi bi-info-circle me-1"></i>Select a title based on your transaction mode
+                                </small>
+                            </div>
+                            
+                            <!-- Amount -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.amount.id_for_label }}" class="form-label fw-bold">
+                                    <i class="bi bi-currency-yen me-2"></i>Expense Amount <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-danger text-white">
+                                        <i class="bi bi-currency-yen"></i>
+                                    </span>
+                                    {{ form.amount }}
+                                </div>
+                                {% if form.amount.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.amount.errors %}
+                                            <i class="bi bi-exclamation-triangle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">
+                                    <i class="bi bi-info-circle me-1"></i>Enter expense amount in Japanese Yen
+                                </small>
+                            </div>
+                            
+                            <!-- Business & Shop Selection (if not pre-selected) -->
+                            {% if not form.business.value %}
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.business.id_for_label }}" class="form-label fw-bold">
+                                    <i class="bi bi-building me-2"></i>Business <span class="text-danger">*</span>
+                                </label>
+                                {{ form.business }}
+                                {% if form.business.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.business.errors %}
+                                            <i class="bi bi-exclamation-triangle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">
+                                    <i class="bi bi-info-circle me-1"></i>Select the business for this expense
+                                </small>
+                            </div>
+                            {% endif %}
+                            
+                            {% if not form.shop.value and not form.business.value %}
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.shop.id_for_label }}" class="form-label fw-bold">
+                                    <i class="bi bi-shop me-2"></i>Shop (Optional)
+                                </label>
+                                {{ form.shop }}
+                                {% if form.shop.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.shop.errors %}
+                                            <i class="bi bi-exclamation-triangle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">
+                                    <i class="bi bi-info-circle me-1"></i>Leave blank for business-level expense
+                                </small>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Memo -->
+                            <div class="col-12 mb-4">
+                                <label for="{{ form.memo.id_for_label }}" class="form-label fw-bold">
+                                    <i class="bi bi-chat-text me-2"></i>Expense Description
+                                </label>
+                                {{ form.memo }}
+                                {% if form.memo.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.memo.errors %}
+                                            <i class="bi bi-exclamation-triangle me-1"></i>{{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">
+                                    <i class="bi bi-info-circle me-1"></i>Optional description of this expense transaction
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <!-- Form Actions -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                                    <a href="{% if transaction %}{% url 'keisan:business_detail' pk=transaction.business.pk %}{% elif form.shop.value %}{% url 'keisan:shop_detail' form.shop.value %}{% elif form.business.value %}{% url 'keisan:business_detail' form.business.value %}{% else %}{% url 'keisan:business_list' %}{% endif %}" 
+                                       class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrow-left me-2"></i>Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-danger btn-lg">
+                                        <i class="bi bi-check-circle me-2"></i>{% if transaction %}Update Expense{% else %}Add Expense{% endif %}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get form elements
+    const transactionModeSelect = document.getElementById('id_transaction_mode');
+    const titleSelect = document.getElementById('id_title');
+    
+    if (transactionModeSelect && titleSelect) {
+        // Store all title options
+        const allTitleOptions = Array.from(titleSelect.options);
+        
+        // Function to filter titles based on mode
+        function filterTitlesByMode(mode) {
+            // Store the currently selected value
+            const currentValue = titleSelect.value;
+            
+            // Clear current options
+            titleSelect.innerHTML = '';
+            
+            // Add default option
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Select a title';
+            titleSelect.appendChild(defaultOption);
+            
+            // Add filtered options
+            allTitleOptions.forEach(option => {
+                if (option.value && option.value !== '') {
+                    const titleText = option.textContent;
+                    
+                    // Simple filtering based on title name patterns
+                    let shouldShow = false;
+                    if (mode === 'Online') {
+                        shouldShow = titleText.toLowerCase().includes('online');
+                    } else if (mode === 'Offline') {
+                        shouldShow = !titleText.toLowerCase().includes('online');
+                    }
+                    
+                    if (shouldShow) {
+                        const newOption = document.createElement('option');
+                        newOption.value = option.value;
+                        newOption.textContent = titleText;
+                        
+                        // Restore the selected value if it matches
+                        if (option.value === currentValue) {
+                            newOption.selected = true;
+                        }
+                        
+                        titleSelect.appendChild(newOption);
+                    }
+                }
+            });
+        }
+        
+        // Add event listener for transaction mode change
+        transactionModeSelect.addEventListener('change', function() {
+            const mode = this.value;
+            filterTitlesByMode(mode);
+        });
+        
+        // Initial filter if mode is already selected
+        if (transactionModeSelect.value) {
+            filterTitlesByMode(transactionModeSelect.value);
+        }
+    }
+    
+    // Set current month as default if not editing
+    const periodInput = document.getElementById('{{ form.period.id_for_label }}');
+    if (periodInput && !periodInput.value) {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        periodInput.value = `${year}-${month}`;
+    }
+});
+</script>
+{% endblock %}

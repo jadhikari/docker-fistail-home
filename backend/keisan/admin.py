@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Business, MunicipalShop, Staff, Dependent
+from .models import Business, MunicipalShop, Staff, Dependent, Title, Transaction
 
 @admin.register(Business)
 class BusinessAdmin(admin.ModelAdmin):
@@ -81,3 +81,49 @@ class DependentAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+@admin.register(Title)
+class TitleAdmin(admin.ModelAdmin):
+    list_display = ['name', 'category', 'mode', 'is_active', 'created_at']
+    list_filter = ['category', 'mode', 'is_active', 'created_at']
+    search_fields = ['name', 'description']
+    readonly_fields = ['created_at', 'created_by', 'updated_at', 'updated_by']
+    
+    fieldsets = (
+        ('Title Information', {
+            'fields': ('name', 'category', 'mode', 'description', 'is_active')
+        }),
+        ('System Information', {
+            'fields': ('created_at', 'created_by', 'updated_at', 'updated_by'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).order_by('category', 'mode', 'name')
+
+@admin.register(Transaction)
+class TransactionAdmin(admin.ModelAdmin):
+    list_display = ['transaction_type', 'transaction_mode', 'title', 'period_display', 'amount', 'business', 'shop', 'created_at']
+    list_filter = ['transaction_type', 'transaction_mode', 'title', 'year', 'month', 'business', 'shop', 'created_at']
+    search_fields = ['business__name', 'shop__name', 'title__name', 'memo']
+    readonly_fields = ['created_at', 'created_by', 'updated_at', 'updated_by']
+    date_hierarchy = 'created_at'
+    
+    fieldsets = (
+        ('Transaction Details', {
+            'fields': ('transaction_type', 'transaction_mode', 'title', 'year', 'month', 'amount', 'memo')
+        }),
+        ('Business & Shop Association', {
+            'fields': ('business', 'shop'),
+            'description': 'Transaction must be associated with a business. Shop is optional for business-level transactions.'
+        }),
+        ('System Information', {
+            'fields': ('created_at', 'created_by', 'updated_at', 'updated_by'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def period_display(self, obj):
+        return f"{obj.get_month_display()} {obj.year}"
+    period_display.short_description = 'Period'

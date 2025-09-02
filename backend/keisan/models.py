@@ -149,3 +149,145 @@ class Dependent(TimeStampedUserModel):
     def clean(self):
         if self.dob and self.staff_id and self.staff and self.staff.dob and self.dob > self.staff.dob: 
             raise ValidationError("Dependent's date of birth cannot be after staff's date of birth.")
+
+
+# ---------- Title ----------
+class Title(TimeStampedUserModel):
+    """Model to store title options for transactions based on category and mode"""
+    
+    CATEGORY_CHOICES = [
+        ('Revenue', 'Revenue'),
+        ('Expense', 'Expense'),
+    ]
+    
+    MODE_CHOICES = [
+        ('Online', 'Online'),
+        ('Offline', 'Offline'),
+    ]
+    
+    name = models.CharField(max_length=255, help_text="Title name (e.g., 'Sales Revenue', 'Office Rent')")
+    category = models.CharField(max_length=10, choices=CATEGORY_CHOICES, help_text="Revenue or Expense")
+    mode = models.CharField(max_length=10, choices=MODE_CHOICES, help_text="Online or Offline")
+    description = models.TextField(blank=True, null=True, help_text="Optional description of this title")
+    is_active = models.BooleanField(default=True, help_text="Whether this title option is active")
+    
+    class Meta:
+        ordering = ['category', 'mode', 'name']
+        verbose_name_plural = "Titles"
+        unique_together = [['name', 'category', 'mode']]
+    
+    def __str__(self):
+        return f"{self.name} ({self.category} - {self.mode})"
+    
+    def clean(self):
+        if not self.name.strip():
+            raise ValidationError("Title name cannot be empty.")
+        if self.name and len(self.name.strip()) < 2:
+            raise ValidationError("Title name must be at least 2 characters long.")
+
+
+# ---------- Transaction ----------
+class Transaction(TimeStampedUserModel):
+    TRANSACTION_TYPE_CHOICES = [
+        ('Revenue', 'Revenue'),
+        ('Expense', 'Expense'),
+    ]
+    
+    TRANSACTION_MODE_CHOICES = [
+        ('Online', 'Online'),
+        ('Offline', 'Offline'),
+    ]
+    
+    MONTH_CHOICES = [
+        (1, 'January'), (2, 'February'), (3, 'March'), (4, 'April'),
+        (5, 'May'), (6, 'June'), (7, 'July'), (8, 'August'),
+        (9, 'September'), (10, 'October'), (11, 'November'), (12, 'December'),
+    ]
+    
+    # Transaction type and mode
+    transaction_type = models.CharField(max_length=10, choices=TRANSACTION_TYPE_CHOICES)
+    transaction_mode = models.CharField(max_length=10, choices=TRANSACTION_MODE_CHOICES)
+    title = models.ForeignKey(Title, on_delete=models.CASCADE, related_name="transactions", help_text="Transaction title based on category and mode")
+    
+    # Time period (only year and month required)
+    year = models.IntegerField(validators=[MinValueValidator(2000)])
+    month = models.IntegerField(choices=MONTH_CHOICES)
+    
+    # Financial details
+    amount = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0.01)])
+    memo = models.TextField(blank=True, null=True, help_text="Description or notes for this transaction")
+    
+    # Associations - can be business only or business + shop
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name="transactions")
+    shop = models.ForeignKey(MunicipalShop, on_delete=models.CASCADE, null=True, blank=True, related_name="transactions")
+    
+    class Meta:
+        ordering = ['-year', '-month', '-created_at']
+        verbose_name_plural = "Transactions"
+        # Ensure unique transaction per business/shop per month/year (optional constraint)
+        # unique_together = [['business', 'shop', 'year', 'month', 'transaction_type', 'transaction_mode']]
+    
+    def __str__(self):
+        shop_info = f" - {self.shop.name}" if self.shop else ""
+        title_info = f" - {self.title.name}" if self.title else ""
+        return f"{self.transaction_type} ({self.transaction_mode}){title_info} - {self.business.name}{shop_info} - {self.get_month_display()} {self.year} - ¥{self.amount}"
+    
+    def clean(self):
+        # Validate amount
+        if self.amount and self.amount <= 0:
+            raise ValidationError("Amount must be greater than zero.")
+        
+        # Validate year (only if year is provided)
+        if self.year is not None:
+            current_year = timezone.now().year
+            if self.year < 2000 or self.year > current_year + 10:
+                raise ValidationError(f"Year must be between 2000 and {current_year + 10}.")
+        
+        # Validate shop belongs to business
+        if self.shop and self.business and self.shop.business != self.business:
+            raise ValidationError("The selected shop must belong to the specified business.")
+        
+        # Validate that at least business is provided
+        if not self.business:
+            raise ValidationError("Transaction must be associated with a business.")
+        
+        # Validate title matches transaction type and mode
+        if self.title:
+            if self.title.category != self.transaction_type:
+                raise ValidationError(f"Selected title '{self.title.name}' is for {self.title.category} but transaction is {self.transaction_type}.")
+            if self.title.mode != self.transaction_mode:
+                raise ValidationError(f"Selected title '{self.title.name}' is for {self.title.mode} but transaction is {self.transaction_mode}.")
+            if not self.title.is_active:
+                raise ValidationError(f"Selected title '{self.title.name}' is not active.")
+    
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+    
+    @property
+    def is_revenue(self):
+        return self.transaction_type == 'Revenue'
+    
+    @property
+    def is_expense(self):
+        return self.transaction_type == 'Expense'
+    
+    @property
+    def is_online(self):
+        return self.transaction_mode == 'Online'
+    
+    @property
+    def is_offline(self):
+        return self.transaction_mode == 'Offline'
+    
+    @property
+    def scope_display(self):
+        """Return a string describing the scope of this transaction"""
+        if self.shop:
+            return f"{self.shop.name} at {self.business.name}"
+        return self.business.name
+    
+    @property
+    def period_display(self):
+        """Return a formatted string for the time period"""
+        return f"{self.get_month_display()} {self.year}"

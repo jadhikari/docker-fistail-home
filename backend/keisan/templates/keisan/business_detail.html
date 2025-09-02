@@ -290,6 +290,47 @@
         </div>
     </div>
 
+    <!-- Financial Transactions -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="bi bi-cash-coin me-1"></i>Financial Management
+                    </h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <a href="{% url 'keisan:business_financial_summary' pk=business.pk %}" class="btn btn-sm btn-success">
+                            <i class="bi bi-graph-up me-1"></i>Financial Summary
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'keisan:revenue_create' %}?business={{ business.pk }}" class="btn btn-outline-success">
+                                    <i class="bi bi-arrow-up-circle me-2"></i>Add Revenue
+                                </a>
+                                <a href="{% url 'keisan:expense_create' %}?business={{ business.pk }}" class="btn btn-outline-danger">
+                                    <i class="bi bi-arrow-down-circle me-2"></i>Add Expense
+                                </a>
+                                <a href="{% url 'keisan:business_financial_summary' pk=business.pk %}" class="btn btn-outline-primary">
+                                    <i class="bi bi-graph-up me-2"></i>View Financial Summary
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-muted small">
+                                <p><strong>Business-level transactions:</strong> Revenue and expenses that apply to the entire business.</p>
+                                <p><strong>Shop-level transactions:</strong> Revenue and expenses specific to individual shops.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- System Information -->
     <div class="row">
         <div class="col-12">
