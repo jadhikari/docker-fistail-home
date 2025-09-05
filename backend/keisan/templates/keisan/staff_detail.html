@@ -116,7 +116,7 @@
                         </div>
                         <div class="col-sm-6 mb-2">
                             <strong class="small">Current Salary:</strong> 
-                            <span class="text-success font-weight-bold small">${{ staff.salary|floatformat:2 }}</span>
+                            <span class="text-success font-weight-bold small">¥{{ staff.salary|floatformat:2 }}</span>
                         </div>
                         <div class="col-12 mb-2">
                             <strong class="small">Assignment:</strong> 
@@ -202,6 +202,9 @@
                                         <th class="py-2 text-center">Date of Birth</th>
                                         <th class="py-2 text-center">Contact Number</th>
                                         <th class="py-2 text-center">Address</th>
+                                        <th class="py-2 text-center">Zairyucard Number</th>
+                                        <th class="py-2 text-center">Issue Date</th>
+                                        <th class="py-2 text-center">Expiry Date</th>
                                         <th class="py-2 text-center">Actions</th>
                                     </tr>
                                 </thead>
@@ -233,6 +236,27 @@
                                                 <small>{{ dependent.address }}</small>
                                             {% else %}
                                                 <span class="text-muted small">No address</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="py-2 text-center">
+                                            {% if dependent.zairyucard_number %}
+                                                <small>{{ dependent.zairyucard_number }}</small>
+                                            {% else %}
+                                                <span class="text-muted small">Not provided</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="py-2 text-center">
+                                            {% if dependent.zairyucard_issue_date %}
+                                                <small>{{ dependent.zairyucard_issue_date|date:"M d, Y" }}</small>
+                                            {% else %}
+                                                <span class="text-muted small">Not provided</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="py-2 text-center">
+                                            {% if dependent.zairyucard_expiry_date %}
+                                                <small>{{ dependent.zairyucard_expiry_date|date:"M d, Y" }}</small>
+                                            {% else %}
+                                                <span class="text-muted small">Not provided</span>
                                             {% endif %}
                                         </td>
                                         <td class="py-2 text-center">

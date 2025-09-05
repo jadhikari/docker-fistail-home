@@ -37,8 +37,14 @@
         </li>
 
         <li class="nav-item">
-            <a href="{% url 'keisan:dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'keisan' %}active{% endif %}">
+            <a href="{% url 'keisan:dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'keisan' and request.resolver_match.url_name != 'transaction_details' %}active{% endif %}">
                 🏢 <span class="link-text">Keisan</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a href="{% url 'keisan:transaction_details' %}" class="nav-link {% if request.resolver_match.url_name == 'transaction_details' %}active{% endif %}">
+                📊 <span class="link-text">Transaction Details</span>
             </a>
         </li>
 

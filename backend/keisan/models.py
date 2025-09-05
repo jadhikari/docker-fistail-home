@@ -139,6 +139,9 @@ class Dependent(TimeStampedUserModel):
     dob = models.DateField(null=True, blank=True)
     contact_number = models.CharField(max_length=20, blank=True, null=True)
     address = models.CharField(max_length=255, blank=True, null=True)
+    zairyucard_number = models.CharField(max_length=100, blank=True, null=True)
+    zairyucard_issue_date = models.DateField(null=True, blank=True)
+    zairyucard_expiry_date = models.DateField(null=True, blank=True)
 
     class Meta:
         ordering = ["full_name"]

@@ -249,13 +249,16 @@ class StaffForm(forms.ModelForm):
 class DependentForm(forms.ModelForm):
     class Meta:
         model = Dependent
-        fields = ['full_name', 'relationship', 'dob', 'contact_number', 'address']
+        fields = ['full_name', 'relationship', 'dob', 'contact_number', 'address', 'zairyucard_number', 'zairyucard_issue_date', 'zairyucard_expiry_date']
         widgets = {
             'full_name': forms.TextInput(attrs={'class': 'form-control'}),
             'relationship': forms.Select(attrs={'class': 'form-control'}),
             'dob': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'contact_number': forms.TextInput(attrs={'class': 'form-control'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'zairyucard_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'zairyucard_issue_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'zairyucard_expiry_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
         }
 
     def clean(self):
@@ -455,6 +458,34 @@ class TransactionSearchForm(forms.Form):
         required=False,
         empty_label="All Shops",
         widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+
+class TransactionDetailsSearchForm(forms.Form):
+    """Form for searching transaction details with date range"""
+    business = forms.ModelChoiceField(
+        queryset=Business.objects.all().order_by('name'),
+        required=False,
+        empty_label="Select Business",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    from_period = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'type': 'month',
+            'placeholder': 'From Year-Month'
+        }),
+        help_text="Select the starting year and month"
+    )
+    to_period = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'type': 'month',
+            'placeholder': 'To Year-Month'
+        }),
+        help_text="Select the ending year and month"
     )
 
 

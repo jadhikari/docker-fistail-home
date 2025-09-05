@@ -2,22 +2,99 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db import models
 from django.db.models import Q, Count, Sum
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.utils import timezone
-from datetime import date
+from datetime import date, timedelta
+import calendar
+from decimal import Decimal
 from django.core.exceptions import ValidationError
 
 from .models import Business, MunicipalShop, Staff, Dependent, Title, Transaction
 from .forms import (
     BusinessForm, MunicipalShopForm, StaffForm, DependentForm, 
-    BusinessSearchForm,
+    BusinessSearchForm, TransactionDetailsSearchForm,
     RevenueForm, ExpenseForm
 )
 
 
 
+
+
+# Helper functions for prorated calculations
+def calculate_prorated_amount(monthly_amount, start_date, end_date, period_start, period_end):
+    """
+    Calculate prorated amount based on actual usage period within a month.
+    
+    Args:
+        monthly_amount: The full monthly amount (salary or rent)
+        start_date: When the person/facility started (employment start or rent start)
+        end_date: When the person/facility ended (employment end or rent end, None if still active)
+        period_start: Start of the calculation period (search period start)
+        period_end: End of the calculation period (search period end)
+    
+    Returns:
+        Decimal: Prorated amount for the overlap period
+    """
+    if not monthly_amount:
+        return Decimal('0.00')
+    
+    # Convert to Decimal for precise calculations
+    monthly_amount = Decimal(str(monthly_amount))
+    
+    # Determine the actual overlap period
+    overlap_start = max(start_date, period_start)
+    overlap_end = min(end_date or period_end, period_end)
+    
+    if overlap_start > overlap_end:
+        return Decimal('0.00')
+    
+    # Calculate total days in the month
+    month_start = overlap_start.replace(day=1)
+    if overlap_start.month == 12:
+        month_end = overlap_start.replace(year=overlap_start.year + 1, month=1, day=1) - timedelta(days=1)
+    else:
+        month_end = overlap_start.replace(month=overlap_start.month + 1, day=1) - timedelta(days=1)
+    
+    total_days_in_month = month_end.day
+    
+    # Calculate actual working days
+    actual_start = max(overlap_start, month_start)
+    actual_end = min(overlap_end, month_end)
+    
+    if actual_start > actual_end:
+        return Decimal('0.00')
+    
+    # Calculate days worked
+    days_worked = (actual_end - actual_start).days + 1
+    
+    # Calculate prorated amount
+    prorated_amount = (monthly_amount * days_worked) / total_days_in_month
+    
+    return prorated_amount.quantize(Decimal('0.01'))
+
+
+def get_month_range(start_date, end_date):
+    """
+    Get list of months between start_date and end_date (inclusive).
+    
+    Returns:
+        List of tuples (year, month) representing each month in the range
+    """
+    months = []
+    current = start_date.replace(day=1)
+    end = end_date.replace(day=1)
+    
+    while current <= end:
+        months.append((current.year, current.month))
+        if current.month == 12:
+            current = current.replace(year=current.year + 1, month=1)
+        else:
+            current = current.replace(month=current.month + 1)
+    
+    return months
 
 
 # Business Views
@@ -814,3 +891,482 @@ def expense_create(request):
         'transaction_type': 'Expense'
     }
     return render(request, 'keisan/expense_form.html', context)
+
+
+@login_required(login_url='/accounts/login/')
+def transaction_details(request):
+    """Comprehensive transaction details page with search functionality"""
+    form = TransactionDetailsSearchForm(request.GET)
+    context = {
+        'form': form,
+        'show_results': False,
+        'business': None,
+        'business_info': None,
+        'business_revenue': None,
+        'business_expenses': None,
+        'business_staff': None,
+        'shops_data': None,
+    }
+    
+    if form.is_valid():
+        business = form.cleaned_data.get('business')
+        from_period = form.cleaned_data.get('from_period')
+        to_period = form.cleaned_data.get('to_period')
+        
+        # Parse period inputs (format: YYYY-MM)
+        from_year = None
+        from_month = None
+        to_year = None
+        to_month = None
+        
+        if from_period:
+            try:
+                from_year, from_month = from_period.split('-')
+                from_year = int(from_year)
+                from_month = int(from_month)
+            except (ValueError, AttributeError):
+                from_year = None
+                from_month = None
+        
+        if to_period:
+            try:
+                to_year, to_month = to_period.split('-')
+                to_year = int(to_year)
+                to_month = int(to_month)
+            except (ValueError, AttributeError):
+                to_year = None
+                to_month = None
+        
+        if business:
+            context['show_results'] = True
+            context['business'] = business
+            
+            # Business Information
+            context['business_info'] = {
+                'name': business.name,
+                'registration_number': business.registration_number,
+                'business_type': business.business_type,
+                'industry_category': business.industry_category,
+                'email': business.email,
+                'phone': business.phone,
+                'website': business.website,
+                'address': business.address,
+                'tax_number': business.tax_number,
+                'owner_name': business.owner_name,
+                'owner_contact_number': business.owner_contact_number,
+                'owner_email': business.owner_email,
+                'owner_address': business.owner_address,
+                'office_rent': business.office_rent,
+            }
+            
+            # Filter transactions by date range
+            business_transactions = business.transactions.all()
+            if from_year and from_month:
+                # Convert string values to integers
+                try:
+                    from_year_int = int(from_year)
+                    from_month_int = int(from_month)
+                    business_transactions = business_transactions.filter(
+                        models.Q(year__gt=from_year_int) | 
+                        (models.Q(year=from_year_int) & models.Q(month__gte=from_month_int))
+                    )
+                except (ValueError, TypeError):
+                    # If conversion fails, use all transactions
+                    pass
+            
+            if to_year and to_month:
+                # Convert string values to integers
+                try:
+                    to_year_int = int(to_year)
+                    to_month_int = int(to_month)
+                    business_transactions = business_transactions.filter(
+                        models.Q(year__lt=to_year_int) | 
+                        (models.Q(year=to_year_int) & models.Q(month__lte=to_month_int))
+                    )
+                except (ValueError, TypeError):
+                    # If conversion fails, use all transactions
+                    pass
+            
+            # Business Revenue
+            business_revenue = business_transactions.filter(transaction_type='Revenue', shop__isnull=True)
+            context['business_revenue'] = {
+                'transactions': business_revenue.order_by('-year', '-month', '-created_at'),
+                'total_amount': business_revenue.aggregate(total=Sum('amount'))['total'] or 0,
+                'online_total': business_revenue.filter(transaction_mode='Online').aggregate(total=Sum('amount'))['total'] or 0,
+                'offline_total': business_revenue.filter(transaction_mode='Offline').aggregate(total=Sum('amount'))['total'] or 0,
+            }
+            
+            # Business Staff with Dependents (needed for expense calculations)
+            business_staff = business.staff.all().order_by('full_name')
+            staff_data = []
+            
+            for staff in business_staff:
+                # Check if staff was employed during the selected period
+                should_display = True
+                if from_year and from_month and to_year and to_month:
+                    try:
+                        from_year_int = int(from_year)
+                        from_month_int = int(from_month)
+                        to_year_int = int(to_year)
+                        to_month_int = int(to_month)
+                        
+                        search_start_date = date(from_year_int, from_month_int, 1)
+                        search_end_date = date(to_year_int, to_month_int, 1)
+                        
+                        # Staff employment period
+                        staff_start_date = staff.start_date
+                        staff_end_date = staff.end_date or search_end_date
+                        
+                        # Check if staff was employed during the search period
+                        if staff_end_date < search_start_date:
+                            # Staff left before the search period, don't display
+                            should_display = False
+                        elif staff_start_date > search_end_date:
+                            # Staff started after the search period, don't display
+                            should_display = False
+                    except (ValueError, TypeError):
+                        # If conversion fails, display all staff
+                        pass
+                
+                if should_display:
+                    staff_data.append({
+                        'staff': staff,
+                        'dependents': staff.dependents.all(),
+                        'calculated_salary': staff.salary,  # Show monthly salary for display
+                        'start_date': staff.start_date,
+                        'end_date': staff.end_date,
+                        'status': staff.status,
+                    })
+            
+            # Business Expenses
+            business_expenses = business_transactions.filter(transaction_type='Expense', shop__isnull=True)
+            
+            # Calculate total salary expenses for the date range
+            total_salary_expense = 0
+            calculated_salary_expenses = []
+            
+            for staff in staff_data:
+                if from_year and from_month and to_year and to_month:
+                    try:
+                        from_year_int = int(from_year)
+                        from_month_int = int(from_month)
+                        to_year_int = int(to_year)
+                        to_month_int = int(to_month)
+                        
+                        # Calculate overlap between staff employment and search period
+                        search_start_date = date(from_year_int, from_month_int, 1)
+                        search_end_date = date(to_year_int, to_month_int, 1)
+                        
+                        staff_start_date = staff['staff'].start_date
+                        staff_end_date = staff['staff'].end_date or search_end_date
+                        
+                        overlap_start = max(staff_start_date, search_start_date)
+                        overlap_end = min(staff_end_date, search_end_date)
+                        
+                        if overlap_start <= overlap_end:
+                            # Calculate prorated salary for each month in the overlap period
+                            months = get_month_range(overlap_start, overlap_end)
+                            
+                            for year, month in months:
+                                # Calculate prorated amount for this specific month
+                                month_start = date(year, month, 1)
+                                if month == 12:
+                                    month_end = date(year + 1, 1, 1) - timedelta(days=1)
+                                else:
+                                    month_end = date(year, month + 1, 1) - timedelta(days=1)
+                                
+                                prorated_amount = calculate_prorated_amount(
+                                    staff['staff'].salary,
+                                    staff_start_date,
+                                    staff_end_date,
+                                    month_start,
+                                    month_end
+                                )
+                                
+                                if prorated_amount > 0:
+                                    total_salary_expense += prorated_amount
+                                    calculated_salary_expenses.append({
+                                        'year': year,
+                                        'month': month,
+                                        'amount': prorated_amount,
+                                        'title_name': f'Salary - {staff["staff"].full_name}',
+                                        'transaction_mode': 'Offline',
+                                        'memo': f'Prorated salary for {staff["staff"].full_name} ({month_start.strftime("%B %Y")})',
+                                        'is_calculated': True
+                                    })
+                    except (ValueError, TypeError):
+                        pass
+            
+            # Calculate office rent expenses for the date range
+            total_office_rent_expense = 0
+            calculated_rent_expenses = []
+            
+            if from_year and from_month and to_year and to_month:
+                try:
+                    from_year_int = int(from_year)
+                    from_month_int = int(from_month)
+                    to_year_int = int(to_year)
+                    to_month_int = int(to_month)
+                    
+                    period_start = date(from_year_int, from_month_int, 1)
+                    period_end = date(to_year_int, to_month_int, 1)
+                    
+                    # Calculate prorated office rent for each month in the period
+                    months = get_month_range(period_start, period_end)
+                    
+                    for year, month in months:
+                        # Calculate prorated amount for this specific month
+                        month_start = date(year, month, 1)
+                        if month == 12:
+                            month_end = date(year + 1, 1, 1) - timedelta(days=1)
+                        else:
+                            month_end = date(year, month + 1, 1) - timedelta(days=1)
+                        
+                        # For office rent, we assume it's for the full month unless business started/ended
+                        # We need to check if business has start/end dates (this would need to be added to Business model)
+                        # For now, assume full month rent
+                        prorated_amount = business.office_rent
+                        
+                        if prorated_amount > 0:
+                            total_office_rent_expense += prorated_amount
+                            calculated_rent_expenses.append({
+                                'year': year,
+                                'month': month,
+                                'amount': prorated_amount,
+                                'title_name': 'Office Rent',
+                                'transaction_mode': 'Offline',
+                                'memo': f'Office rent ({month_start.strftime("%B %Y")})',
+                                'is_calculated': True
+                            })
+                except (ValueError, TypeError):
+                    pass
+            
+            # Combine actual transactions with calculated expenses
+            all_expenses = list(business_expenses.order_by('-year', '-month', '-created_at'))
+            
+            # Add calculated expenses
+            for expense in calculated_salary_expenses + calculated_rent_expenses:
+                all_expenses.append(expense)
+            
+            # Sort by year, month (handle both Transaction objects and dictionaries)
+            def get_sort_key(item):
+                if hasattr(item, 'year') and hasattr(item, 'month'):
+                    # Transaction object
+                    return (item.year, item.month)
+                elif isinstance(item, dict) and 'year' in item and 'month' in item:
+                    # Dictionary
+                    return (item['year'], item['month'])
+                else:
+                    return (0, 0)
+            
+            all_expenses.sort(key=get_sort_key, reverse=True)
+            
+            context['business_expenses'] = {
+                'transactions': all_expenses,
+                'total_amount': (business_expenses.aggregate(total=Sum('amount'))['total'] or 0) + total_salary_expense + total_office_rent_expense,
+                'online_total': business_expenses.filter(transaction_mode='Online').aggregate(total=Sum('amount'))['total'] or 0,
+                'offline_total': (business_expenses.filter(transaction_mode='Offline').aggregate(total=Sum('amount'))['total'] or 0) + total_salary_expense + total_office_rent_expense,
+                'calculated_salary_total': total_salary_expense,
+                'calculated_rent_total': total_office_rent_expense,
+            }
+            
+            # Set business staff data in context
+            context['business_staff'] = staff_data
+            
+            # Shops Data
+            shops_data = []
+            for shop in business.shops.all():
+                # Shop Information
+                shop_info = {
+                    'name': shop.name,
+                    'permit_id': shop.permit_id,
+                    'shop_type': shop.shop_type,
+                    'address': shop.address,
+                    'shop_rent': shop.shop_rent,
+                }
+                
+                # Shop Revenue
+                shop_revenue = business_transactions.filter(transaction_type='Revenue', shop=shop)
+                shop_revenue_data = {
+                    'transactions': shop_revenue.order_by('-year', '-month', '-created_at'),
+                    'total_amount': shop_revenue.aggregate(total=Sum('amount'))['total'] or 0,
+                    'online_total': shop_revenue.filter(transaction_mode='Online').aggregate(total=Sum('amount'))['total'] or 0,
+                    'offline_total': shop_revenue.filter(transaction_mode='Offline').aggregate(total=Sum('amount'))['total'] or 0,
+                }
+                
+                # Shop Staff with Dependents (needed for expense calculations)
+                shop_staff = shop.staff.all().order_by('full_name')
+                shop_staff_data = []
+                
+                for staff in shop_staff:
+                    # Check if staff was employed during the selected period
+                    should_display = True
+                    if from_year and from_month and to_year and to_month:
+                        try:
+                            from_year_int = int(from_year)
+                            from_month_int = int(from_month)
+                            to_year_int = int(to_year)
+                            to_month_int = int(to_month)
+                            
+                            search_start_date = date(from_year_int, from_month_int, 1)
+                            search_end_date = date(to_year_int, to_month_int, 1)
+                            
+                            # Staff employment period
+                            staff_start_date = staff.start_date
+                            staff_end_date = staff.end_date or search_end_date
+                            
+                            # Check if staff was employed during the search period
+                            if staff_end_date < search_start_date:
+                                # Staff left before the search period, don't display
+                                should_display = False
+                            elif staff_start_date > search_end_date:
+                                # Staff started after the search period, don't display
+                                should_display = False
+                        except (ValueError, TypeError):
+                            # If conversion fails, display all staff
+                            pass
+                    
+                    if should_display:
+                        shop_staff_data.append({
+                            'staff': staff,
+                            'dependents': staff.dependents.all(),
+                            'calculated_salary': staff.salary,  # Show monthly salary for display
+                            'start_date': staff.start_date,
+                            'end_date': staff.end_date,
+                            'status': staff.status,
+                        })
+                
+                # Shop Expenses
+                shop_expenses = business_transactions.filter(transaction_type='Expense', shop=shop)
+                
+                # Calculate total salary expenses for shop staff in the date range
+                shop_total_salary_expense = 0
+                shop_calculated_salary_expenses = []
+                
+                for staff in shop_staff_data:
+                    if from_year and from_month and to_year and to_month:
+                        try:
+                            from_year_int = int(from_year)
+                            from_month_int = int(from_month)
+                            to_year_int = int(to_year)
+                            to_month_int = int(to_month)
+                            
+                            # Calculate overlap between staff employment and search period
+                            search_start_date = date(from_year_int, from_month_int, 1)
+                            search_end_date = date(to_year_int, to_month_int, 1)
+                            
+                            staff_start_date = staff['staff'].start_date
+                            staff_end_date = staff['staff'].end_date or search_end_date
+                            
+                            overlap_start = max(staff_start_date, search_start_date)
+                            overlap_end = min(staff_end_date, search_end_date)
+                            
+                            if overlap_start <= overlap_end:
+                                # Calculate prorated salary for each month in the overlap period
+                                months = get_month_range(overlap_start, overlap_end)
+                                
+                                for year, month in months:
+                                    # Calculate prorated amount for this specific month
+                                    month_start = date(year, month, 1)
+                                    if month == 12:
+                                        month_end = date(year + 1, 1, 1) - timedelta(days=1)
+                                    else:
+                                        month_end = date(year, month + 1, 1) - timedelta(days=1)
+                                    
+                                    prorated_amount = calculate_prorated_amount(
+                                        staff['staff'].salary,
+                                        staff_start_date,
+                                        staff_end_date,
+                                        month_start,
+                                        month_end
+                                    )
+                                    
+                                    if prorated_amount > 0:
+                                        shop_total_salary_expense += prorated_amount
+                                        shop_calculated_salary_expenses.append({
+                                            'year': year,
+                                            'month': month,
+                                            'amount': prorated_amount,
+                                            'title_name': f'Salary - {staff["staff"].full_name}',
+                                            'transaction_mode': 'Offline',
+                                            'memo': f'Prorated salary for {staff["staff"].full_name} ({month_start.strftime("%B %Y")})',
+                                            'is_calculated': True
+                                        })
+                        except (ValueError, TypeError):
+                            pass
+                
+                # Calculate shop rent expenses for the date range
+                shop_total_rent_expense = 0
+                shop_calculated_rent_expenses = []
+                
+                if from_year and from_month and to_year and to_month:
+                    try:
+                        from_year_int = int(from_year)
+                        from_month_int = int(from_month)
+                        to_year_int = int(to_year)
+                        to_month_int = int(to_month)
+                        
+                        period_start = date(from_year_int, from_month_int, 1)
+                        period_end = date(to_year_int, to_month_int, 1)
+                        
+                        # Calculate prorated shop rent for each month in the period
+                        months = get_month_range(period_start, period_end)
+                        
+                        for year, month in months:
+                            # Calculate prorated amount for this specific month
+                            month_start = date(year, month, 1)
+                            if month == 12:
+                                month_end = date(year + 1, 1, 1) - timedelta(days=1)
+                            else:
+                                month_end = date(year, month + 1, 1) - timedelta(days=1)
+                            
+                            # For shop rent, we assume it's for the full month unless shop started/ended
+                            # We need to check if shop has start/end dates (this would need to be added to MunicipalShop model)
+                            # For now, assume full month rent
+                            prorated_amount = shop.shop_rent
+                            
+                            if prorated_amount > 0:
+                                shop_total_rent_expense += prorated_amount
+                                shop_calculated_rent_expenses.append({
+                                    'year': year,
+                                    'month': month,
+                                    'amount': prorated_amount,
+                                    'title_name': 'Shop Rent',
+                                    'transaction_mode': 'Offline',
+                                    'memo': f'Shop rent for {shop.name} ({month_start.strftime("%B %Y")})',
+                                    'is_calculated': True
+                                })
+                    except (ValueError, TypeError):
+                        pass
+                
+                # Combine actual transactions with calculated expenses
+                shop_all_expenses = list(shop_expenses.order_by('-year', '-month', '-created_at'))
+                
+                # Add calculated expenses
+                for expense in shop_calculated_salary_expenses + shop_calculated_rent_expenses:
+                    shop_all_expenses.append(expense)
+                
+                # Sort by year, month (handle both Transaction objects and dictionaries)
+                shop_all_expenses.sort(key=get_sort_key, reverse=True)
+                
+                shop_expenses_data = {
+                    'transactions': shop_all_expenses,
+                    'total_amount': (shop_expenses.aggregate(total=Sum('amount'))['total'] or 0) + shop_total_salary_expense + shop_total_rent_expense,
+                    'online_total': shop_expenses.filter(transaction_mode='Online').aggregate(total=Sum('amount'))['total'] or 0,
+                    'offline_total': (shop_expenses.filter(transaction_mode='Offline').aggregate(total=Sum('amount'))['total'] or 0) + shop_total_salary_expense + shop_total_rent_expense,
+                    'calculated_salary_total': shop_total_salary_expense,
+                    'calculated_rent_total': shop_total_rent_expense,
+                }
+                
+
+                
+                shops_data.append({
+                    'shop_info': shop_info,
+                    'revenue': shop_revenue_data,
+                    'expenses': shop_expenses_data,
+                    'staff': shop_staff_data,
+                })
+            
+            context['shops_data'] = shops_data
+    
+    return render(request, 'keisan/transaction_details.html', context)

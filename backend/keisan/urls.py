@@ -39,6 +39,9 @@ urlpatterns = [
     path('businesses/<int:pk>/financial-summary/', views.business_financial_summary, name='business_financial_summary'),
     path('shops/<int:pk>/financial-summary/', views.shop_financial_summary, name='shop_financial_summary'),
     
+    # Transaction Details URL
+    path('transaction-details/', views.transaction_details, name='transaction_details'),
+    
     # AJAX URLs
     path('ajax/business/<int:business_id>/shops/', views.get_business_shops, name='get_business_shops'),
     path('ajax/business/<int:business_id>/staff/', views.get_staff_by_business, name='get_staff_by_business'),
