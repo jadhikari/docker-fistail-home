@@ -997,7 +997,8 @@ def transaction_details(request):
             }
             
             # Business Staff with Dependents (needed for expense calculations)
-            business_staff = business.staff.all().order_by('full_name')
+            # Only get staff directly assigned to business (not to shops)
+            business_staff = business.staff.filter(shop__isnull=True).order_by('full_name')
             staff_data = []
             
             for staff in business_staff:
