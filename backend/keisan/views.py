@@ -76,6 +76,55 @@ def calculate_prorated_amount(monthly_amount, start_date, end_date, period_start
     return prorated_amount.quantize(Decimal('0.01'))
 
 
+def calculate_salary_sheet_amount(monthly_amount, start_date, end_date, month_start, month_end):
+    """
+    Calculate salary amount for salary sheet display.
+    Shows prorated salary based on actual working days within the month.
+    
+    Args:
+        monthly_amount: The full monthly salary amount
+        start_date: When the staff started employment
+        end_date: When the staff ended employment (None if still active)
+        month_start: Start of the month being calculated
+        month_end: End of the month being calculated
+    
+    Returns:
+        Decimal: Prorated salary amount based on actual working days
+    """
+    if not monthly_amount:
+        return Decimal('0.00')
+    
+    # Convert to Decimal for precise calculations
+    monthly_amount = Decimal(str(monthly_amount))
+    
+    # Check if staff was employed during this month
+    staff_end_date = end_date or month_end
+    
+    # If staff was not employed during this month at all
+    if start_date > month_end or staff_end_date < month_start:
+        return Decimal('0.00')
+    
+    # Calculate the actual working period within this month
+    working_start = max(start_date, month_start)
+    working_end = min(staff_end_date, month_end)
+    
+    # Calculate total days in the month
+    if month_start.month == 12:
+        next_month = month_start.replace(year=month_start.year + 1, month=1, day=1)
+    else:
+        next_month = month_start.replace(month=month_start.month + 1, day=1)
+    
+    total_days_in_month = (next_month - timedelta(days=1)).day
+    
+    # Calculate actual working days
+    working_days = (working_end - working_start).days + 1
+    
+    # Calculate prorated amount
+    prorated_amount = (monthly_amount * working_days) / total_days_in_month
+    
+    return prorated_amount.quantize(Decimal('0.01'))
+
+
 def get_month_range(start_date, end_date):
     """
     Get list of months between start_date and end_date (inclusive).
@@ -153,13 +202,15 @@ def business_detail(request, pk):
     shops = business.shops.all()
     
     # Get status filter for staff
+    # Only show staff assigned directly to business (not to shops)
+    # Staff assigned to both business and shop should only appear under the shop
     staff_status = request.GET.get('staff_status', 'active')
     if staff_status == 'active':
-        staff = business.staff.filter(status='Active')
+        staff = business.staff.filter(shop__isnull=True, status='Active')
     elif staff_status == 'inactive':
-        staff = business.staff.filter(status__in=['Inactive', 'Terminated', 'Resigned'])
+        staff = business.staff.filter(shop__isnull=True, status__in=['Inactive', 'Terminated', 'Resigned'])
     else:
-        staff = business.staff.all()
+        staff = business.staff.filter(shop__isnull=True)
     
     context = {
         'business': business,
@@ -989,8 +1040,104 @@ def transaction_details(request):
             
             # Business Revenue
             business_revenue = business_transactions.filter(transaction_type='Revenue', shop__isnull=True)
+            
+            # Organize revenue by month with detailed categorization
+            monthly_revenue = {}
+            for transaction in business_revenue:
+                month_key = f"{transaction.year}-{transaction.month:02d}"
+                if month_key not in monthly_revenue:
+                    monthly_revenue[month_key] = {
+                        'year': transaction.year,
+                        'month': transaction.month,
+                        'month_name': transaction.get_month_display(),
+                        'transactions': [],
+                        'total_amount': 0,
+                        'online_total': 0,
+                        'offline_total': 0,
+                        'online_by_title': {},
+                        'offline_by_title': {},
+                        'online_transactions_by_title': {},
+                        'offline_transactions_by_title': {},
+                        'rent_amount': 0,
+                    }
+                
+                monthly_revenue[month_key]['transactions'].append(transaction)
+                monthly_revenue[month_key]['total_amount'] += transaction.amount
+                
+                # Categorize by title and group transactions
+                title_name = transaction.title.name
+                if transaction.transaction_mode == 'Online':
+                    monthly_revenue[month_key]['online_total'] += transaction.amount
+                    if title_name not in monthly_revenue[month_key]['online_by_title']:
+                        monthly_revenue[month_key]['online_by_title'][title_name] = 0
+                        monthly_revenue[month_key]['online_transactions_by_title'][title_name] = []
+                    monthly_revenue[month_key]['online_by_title'][title_name] += transaction.amount
+                    monthly_revenue[month_key]['online_transactions_by_title'][title_name].append(transaction)
+                else:
+                    monthly_revenue[month_key]['offline_total'] += transaction.amount
+                    if title_name not in monthly_revenue[month_key]['offline_by_title']:
+                        monthly_revenue[month_key]['offline_by_title'][title_name] = 0
+                        monthly_revenue[month_key]['offline_transactions_by_title'][title_name] = []
+                    monthly_revenue[month_key]['offline_by_title'][title_name] += transaction.amount
+                    monthly_revenue[month_key]['offline_transactions_by_title'][title_name].append(transaction)
+            
+            # Convert dictionaries to lists for template access
+            for month_data in monthly_revenue.values():
+                month_data['online_title_list'] = [
+                    {'title': title, 'amount': amount, 'transactions': month_data['online_transactions_by_title'][title]}
+                    for title, amount in month_data['online_by_title'].items()
+                ]
+                month_data['offline_title_list'] = [
+                    {'title': title, 'amount': amount, 'transactions': month_data['offline_transactions_by_title'][title]}
+                    for title, amount in month_data['offline_by_title'].items()
+                ]
+            
+            # Sort monthly revenue by year and month
+            sorted_monthly_revenue = sorted(monthly_revenue.values(), key=lambda x: (x['year'], x['month']), reverse=True)
+            
+            # Create new table format for business revenue
+            # Get all unique titles from the period
+            all_online_titles = set()
+            all_offline_titles = set()
+            
+            for month_data in monthly_revenue.values():
+                all_online_titles.update(month_data['online_by_title'].keys())
+                all_offline_titles.update(month_data['offline_by_title'].keys())
+            
+            # Sort titles alphabetically
+            sorted_online_titles = sorted(all_online_titles)
+            sorted_offline_titles = sorted(all_offline_titles)
+            
+            # Create table data for new format
+            business_revenue_table_data = []
+            for month_data in sorted_monthly_revenue:
+                row_data = {
+                    'date': f"{month_data['month_name']} {month_data['year']}",
+                    'year': month_data['year'],
+                    'month': month_data['month'],
+                    'online_titles': {},
+                    'offline_titles': {},
+                    'online_total': month_data['online_total'],
+                    'offline_total': month_data['offline_total'],
+                    'grand_total': month_data['total_amount']
+                }
+                
+                # Fill online titles (0 for missing titles)
+                for title in sorted_online_titles:
+                    row_data['online_titles'][title] = month_data['online_by_title'].get(title, 0)
+                
+                # Fill offline titles (0 for missing titles)
+                for title in sorted_offline_titles:
+                    row_data['offline_titles'][title] = month_data['offline_by_title'].get(title, 0)
+                
+                business_revenue_table_data.append(row_data)
+            
             context['business_revenue'] = {
                 'transactions': business_revenue.order_by('-year', '-month', '-created_at'),
+                'monthly_breakdown': sorted_monthly_revenue,
+                'table_data': business_revenue_table_data,
+                'online_titles': sorted_online_titles,
+                'offline_titles': sorted_offline_titles,
                 'total_amount': business_revenue.aggregate(total=Sum('amount'))['total'] or 0,
                 'online_total': business_revenue.filter(transaction_mode='Online').aggregate(total=Sum('amount'))['total'] or 0,
                 'offline_total': business_revenue.filter(transaction_mode='Offline').aggregate(total=Sum('amount'))['total'] or 0,
@@ -1162,17 +1309,223 @@ def transaction_details(request):
             
             all_expenses.sort(key=get_sort_key, reverse=True)
             
+            # Organize expenses by month with detailed categorization
+            monthly_expenses = {}
+            for expense in all_expenses:
+                if hasattr(expense, 'year') and hasattr(expense, 'month'):
+                    # Transaction object
+                    year = expense.year
+                    month = expense.month
+                    month_name = expense.get_month_display()
+                    transaction_mode = expense.transaction_mode
+                    amount = expense.amount
+                    title_name = expense.title.name if hasattr(expense, 'title') else expense.get('title_name', 'Unknown')
+                elif isinstance(expense, dict) and 'year' in expense and 'month' in expense:
+                    # Dictionary
+                    year = expense['year']
+                    month = expense['month']
+                    month_name = date(year, month, 1).strftime('%B')
+                    transaction_mode = expense.get('transaction_mode', 'Offline')
+                    amount = expense['amount']
+                    title_name = expense.get('title_name', 'Unknown')
+                else:
+                    continue
+                
+                month_key = f"{year}-{month:02d}"
+                if month_key not in monthly_expenses:
+                    monthly_expenses[month_key] = {
+                        'year': year,
+                        'month': month,
+                        'month_name': month_name,
+                        'transactions': [],
+                        'total_amount': 0,
+                        'online_total': 0,
+                        'offline_total': 0,
+                        'online_by_title': {},
+                        'offline_by_title': {},
+                        'online_transactions_by_title': {},
+                        'offline_transactions_by_title': {},
+                        'rent_amount': 0,
+                        'salary_amount': 0,
+                    }
+                
+                monthly_expenses[month_key]['transactions'].append(expense)
+                monthly_expenses[month_key]['total_amount'] += amount
+                
+                # Categorize by title and group transactions
+                if transaction_mode == 'Online':
+                    monthly_expenses[month_key]['online_total'] += amount
+                    if title_name not in monthly_expenses[month_key]['online_by_title']:
+                        monthly_expenses[month_key]['online_by_title'][title_name] = 0
+                        monthly_expenses[month_key]['online_transactions_by_title'][title_name] = []
+                    monthly_expenses[month_key]['online_by_title'][title_name] += amount
+                    monthly_expenses[month_key]['online_transactions_by_title'][title_name].append(expense)
+                else:
+                    monthly_expenses[month_key]['offline_total'] += amount
+                    if title_name not in monthly_expenses[month_key]['offline_by_title']:
+                        monthly_expenses[month_key]['offline_by_title'][title_name] = 0
+                        monthly_expenses[month_key]['offline_transactions_by_title'][title_name] = []
+                    monthly_expenses[month_key]['offline_by_title'][title_name] += amount
+                    monthly_expenses[month_key]['offline_transactions_by_title'][title_name].append(expense)
+                
+                # Check if this is rent or salary
+                if 'rent' in title_name.lower():
+                    monthly_expenses[month_key]['rent_amount'] += amount
+                elif 'salary' in title_name.lower():
+                    monthly_expenses[month_key]['salary_amount'] += amount
+            
+            # Convert dictionaries to lists for template access
+            for month_data in monthly_expenses.values():
+                month_data['online_title_list'] = [
+                    {'title': title, 'amount': amount, 'transactions': month_data['online_transactions_by_title'][title]}
+                    for title, amount in month_data['online_by_title'].items()
+                ]
+                month_data['offline_title_list'] = [
+                    {'title': title, 'amount': amount, 'transactions': month_data['offline_transactions_by_title'][title]}
+                    for title, amount in month_data['offline_by_title'].items()
+                ]
+            
+            # Sort monthly expenses by year and month
+            sorted_monthly_expenses = sorted(monthly_expenses.values(), key=lambda x: (x['year'], x['month']), reverse=True)
+            
+            # Create new table format for business expenses
+            # Get all unique titles from the period (excluding salary)
+            all_online_titles = set()
+            all_offline_titles = set()
+            
+            for month_data in monthly_expenses.values():
+                # Filter out salary-related titles from online
+                online_titles = {title for title in month_data['online_by_title'].keys() if 'salary' not in title.lower()}
+                # Filter out salary and any rent from offline
+                offline_titles = {title for title in month_data['offline_by_title'].keys() if 'salary' not in title.lower() and 'rent' not in title.lower()}
+                
+                all_online_titles.update(online_titles)
+                all_offline_titles.update(offline_titles)
+            
+            # Sort titles alphabetically
+            sorted_online_titles = sorted(all_online_titles)
+            sorted_offline_titles = sorted(all_offline_titles)
+            
+            # Create table data for new format
+            business_expenses_table_data = []
+            for month_data in sorted_monthly_expenses:
+                # Calculate offline total excluding salary and any rent (same filter as title collection)
+                filtered_offline_total = sum(
+                    amount for title, amount in month_data['offline_by_title'].items() 
+                    if 'salary' not in title.lower() and 'rent' not in title.lower()
+                )
+                
+                row_data = {
+                    'date': f"{month_data['month_name']} {month_data['year']}",
+                    'year': month_data['year'],
+                    'month': month_data['month'],
+                    'rent_amount': month_data['rent_amount'],
+                    'online_titles': {},
+                    'offline_titles': {},
+                    'online_total': month_data['online_total'],
+                    'offline_total': filtered_offline_total,
+                    'grand_total': month_data['online_total'] + filtered_offline_total + month_data['rent_amount']
+                }
+                
+                # Fill online titles (0 for missing titles, exclude salary)
+                for title in sorted_online_titles:
+                    if 'salary' not in title.lower():
+                        row_data['online_titles'][title] = month_data['online_by_title'].get(title, 0)
+                
+                # Fill offline titles (0 for missing titles, exclude only office rent)
+                for title in sorted_offline_titles:
+                    if 'office rent' not in title.lower():
+                        row_data['offline_titles'][title] = month_data['offline_by_title'].get(title, 0)
+                
+                business_expenses_table_data.append(row_data)
+            
             context['business_expenses'] = {
                 'transactions': all_expenses,
+                'monthly_breakdown': sorted_monthly_expenses,
+                'table_data': business_expenses_table_data,
+                'online_titles': sorted_online_titles,
+                'offline_titles': sorted_offline_titles,
                 'total_amount': (business_expenses.aggregate(total=Sum('amount'))['total'] or 0) + total_salary_expense + total_office_rent_expense,
                 'online_total': business_expenses.filter(transaction_mode='Online').aggregate(total=Sum('amount'))['total'] or 0,
-                'offline_total': (business_expenses.filter(transaction_mode='Offline').aggregate(total=Sum('amount'))['total'] or 0) + total_salary_expense + total_office_rent_expense,
+                'offline_total': business_expenses.filter(transaction_mode='Offline').aggregate(total=Sum('amount'))['total'] or 0,
                 'calculated_salary_total': total_salary_expense,
                 'calculated_rent_total': total_office_rent_expense,
             }
             
             # Set business staff data in context
             context['business_staff'] = staff_data
+            
+            # Create salary sheet data
+            salary_sheet = []
+            months_in_range = []
+            
+            if from_year and from_month and to_year and to_month:
+                try:
+                    from_year_int = int(from_year)
+                    from_month_int = int(from_month)
+                    to_year_int = int(to_year)
+                    to_month_int = int(to_month)
+                    
+                    # Get all months in the range
+                    current_year = from_year_int
+                    current_month = from_month_int
+                    
+                    while (current_year < to_year_int) or (current_year == to_year_int and current_month <= to_month_int):
+                        months_in_range.append((current_year, current_month))
+                        current_month += 1
+                        if current_month > 12:
+                            current_month = 1
+                            current_year += 1
+                    
+                    # Create salary data for each staff member
+                    for staff_info in staff_data:
+                        staff = staff_info['staff']
+                        staff_salary_data = {
+                            'staff': staff,
+                            'employment_type': staff.get_employment_type_display(),
+                            'monthly_salaries': {}
+                        }
+                        
+                        # Calculate salary for each month in range
+                        for year, month in months_in_range:
+                            month_key = f"{year}-{month:02d}"
+                            month_name = date(year, month, 1).strftime('%B')
+                            
+                            # Check if staff was employed during this month
+                            month_start = date(year, month, 1)
+                            if month == 12:
+                                month_end = date(year + 1, 1, 1) - timedelta(days=1)
+                            else:
+                                month_end = date(year, month + 1, 1) - timedelta(days=1)
+                            
+                            staff_start_date = staff.start_date
+                            staff_end_date = staff.end_date or month_end
+                            
+                            # Calculate salary for salary sheet (full salary if employed for the month)
+                            salary_amount = calculate_salary_sheet_amount(
+                                staff.salary,
+                                staff_start_date,
+                                staff_end_date,
+                                month_start,
+                                month_end
+                            )
+                            
+                            staff_salary_data['monthly_salaries'][month_key] = {
+                                'year': year,
+                                'month': month,
+                                'month_name': month_name,
+                                'amount': salary_amount,
+                                'is_active': staff_start_date <= month_end and staff_end_date >= month_start
+                            }
+                        
+                        salary_sheet.append(staff_salary_data)
+                        
+                except (ValueError, TypeError):
+                    # If date conversion fails, create empty salary sheet
+                    salary_sheet = []
+            
+            context['salary_sheet'] = salary_sheet
+            context['months_in_range'] = months_in_range
             
             # Shops Data
             shops_data = []
@@ -1188,11 +1541,107 @@ def transaction_details(request):
                 
                 # Shop Revenue
                 shop_revenue = business_transactions.filter(transaction_type='Revenue', shop=shop)
+                
+                # Create monthly revenue breakdown for shop
+                shop_monthly_revenue = {}
+                for transaction in shop_revenue:
+                    month_key = f"{transaction.year}-{transaction.month:02d}"
+                    if month_key not in shop_monthly_revenue:
+                        shop_monthly_revenue[month_key] = {
+                            'year': transaction.year,
+                            'month': transaction.month,
+                            'month_name': transaction.get_month_display(),
+                            'total_amount': 0,
+                            'online_total': 0,
+                            'offline_total': 0,
+                            'online_by_title': {},
+                            'offline_by_title': {},
+                            'online_transactions_by_title': {},
+                            'offline_transactions_by_title': {},
+                        }
+                    
+                    month_data = shop_monthly_revenue[month_key]
+                    month_data['total_amount'] += transaction.amount
+                    
+                    if transaction.transaction_mode == 'Online':
+                        month_data['online_total'] += transaction.amount
+                        title_name = transaction.title.name
+                        if title_name not in month_data['online_by_title']:
+                            month_data['online_by_title'][title_name] = 0
+                            month_data['online_transactions_by_title'][title_name] = []
+                        month_data['online_by_title'][title_name] += transaction.amount
+                        month_data['online_transactions_by_title'][title_name].append(transaction)
+                    else:
+                        month_data['offline_total'] += transaction.amount
+                        title_name = transaction.title.name
+                        if title_name not in month_data['offline_by_title']:
+                            month_data['offline_by_title'][title_name] = 0
+                            month_data['offline_transactions_by_title'][title_name] = []
+                        month_data['offline_by_title'][title_name] += transaction.amount
+                        month_data['offline_transactions_by_title'][title_name].append(transaction)
+                
+                # Convert dictionaries to lists for template access
+                for month_data in shop_monthly_revenue.values():
+                    month_data['online_title_list'] = [
+                        {'title': title, 'amount': amount, 'transactions': month_data['online_transactions_by_title'][title]}
+                        for title, amount in month_data['online_by_title'].items()
+                    ]
+                    month_data['offline_title_list'] = [
+                        {'title': title, 'amount': amount, 'transactions': month_data['offline_transactions_by_title'][title]}
+                        for title, amount in month_data['offline_by_title'].items()
+                    ]
+                
+                # Create table data for shop revenue (similar to business revenue)
+                all_online_titles = set()
+                all_offline_titles = set()
+                
+                for month_data in shop_monthly_revenue.values():
+                    all_online_titles.update(month_data['online_by_title'].keys())
+                    all_offline_titles.update(month_data['offline_by_title'].keys())
+                
+                # Sort titles alphabetically
+                sorted_online_titles = sorted(all_online_titles)
+                sorted_offline_titles = sorted(all_offline_titles)
+                
+                # Sort monthly revenue by year and month
+                sorted_shop_monthly_revenue = sorted(
+                    shop_monthly_revenue.values(),
+                    key=lambda x: (x['year'], x['month'])
+                )
+                
+                # Create table data for new format
+                shop_revenue_table_data = []
+                for month_data in sorted_shop_monthly_revenue:
+                    row_data = {
+                        'date': f"{month_data['month_name']} {month_data['year']}",
+                        'year': month_data['year'],
+                        'month': month_data['month'],
+                        'online_titles': {},
+                        'offline_titles': {},
+                        'online_total': month_data['online_total'],
+                        'offline_total': month_data['offline_total'],
+                        'grand_total': month_data['total_amount']
+                    }
+                    
+                    # Fill online titles (0 for missing titles)
+                    for title in sorted_online_titles:
+                        row_data['online_titles'][title] = month_data['online_by_title'].get(title, 0)
+                    
+                    # Fill offline titles (0 for missing titles)
+                    for title in sorted_offline_titles:
+                        row_data['offline_titles'][title] = month_data['offline_by_title'].get(title, 0)
+                    
+                    shop_revenue_table_data.append(row_data)
+
                 shop_revenue_data = {
                     'transactions': shop_revenue.order_by('-year', '-month', '-created_at'),
                     'total_amount': shop_revenue.aggregate(total=Sum('amount'))['total'] or 0,
                     'online_total': shop_revenue.filter(transaction_mode='Online').aggregate(total=Sum('amount'))['total'] or 0,
                     'offline_total': shop_revenue.filter(transaction_mode='Offline').aggregate(total=Sum('amount'))['total'] or 0,
+                    'monthly_breakdown': shop_monthly_revenue,
+                    'table_data': shop_revenue_table_data,
+                    'online_titles': sorted_online_titles,
+                    'offline_titles': sorted_offline_titles,
                 }
                 
                 # Shop Staff with Dependents (needed for expense calculations)
@@ -1350,22 +1799,213 @@ def transaction_details(request):
                 # Sort by year, month (handle both Transaction objects and dictionaries)
                 shop_all_expenses.sort(key=get_sort_key, reverse=True)
                 
+                # Create monthly expense breakdown for shop
+                shop_monthly_expenses = {}
+                for expense in shop_all_expenses:
+                    # Handle both Transaction objects and calculated expense dictionaries
+                    if hasattr(expense, 'year') and hasattr(expense, 'month'):
+                        # It's a Transaction object
+                        year = expense.year
+                        month = expense.month
+                        amount = expense.amount
+                        title_name = expense.title.name
+                        transaction_mode = expense.transaction_mode
+                        is_calculated = False
+                    else:
+                        # It's a calculated expense dictionary
+                        year = expense['year']
+                        month = expense['month']
+                        amount = expense['amount']
+                        title_name = expense['title_name']
+                        transaction_mode = expense['transaction_mode']
+                        is_calculated = expense.get('is_calculated', False)
+                    
+                    month_key = f"{year}-{month:02d}"
+                    if month_key not in shop_monthly_expenses:
+                        # Get month name
+                        month_name = date(year, month, 1).strftime('%B')
+                        shop_monthly_expenses[month_key] = {
+                            'year': year,
+                            'month': month,
+                            'month_name': month_name,
+                            'total_amount': 0,
+                            'online_total': 0,
+                            'offline_total': 0,
+                            'rent_amount': 0,
+                            'salary_amount': 0,
+                            'online_by_title': {},
+                            'offline_by_title': {},
+                            'online_transactions_by_title': {},
+                            'offline_transactions_by_title': {},
+                        }
+                    
+                    month_data = shop_monthly_expenses[month_key]
+                    month_data['total_amount'] += amount
+                    
+                    # Track rent and salary amounts
+                    if 'Rent' in title_name:
+                        month_data['rent_amount'] += amount
+                    elif 'Salary' in title_name:
+                        month_data['salary_amount'] += amount
+                    
+                    if transaction_mode == 'Online':
+                        month_data['online_total'] += amount
+                        if title_name not in month_data['online_by_title']:
+                            month_data['online_by_title'][title_name] = 0
+                            month_data['online_transactions_by_title'][title_name] = []
+                        month_data['online_by_title'][title_name] += amount
+                        month_data['online_transactions_by_title'][title_name].append(expense)
+                    else:
+                        month_data['offline_total'] += amount
+                        if title_name not in month_data['offline_by_title']:
+                            month_data['offline_by_title'][title_name] = 0
+                            month_data['offline_transactions_by_title'][title_name] = []
+                        month_data['offline_by_title'][title_name] += amount
+                        month_data['offline_transactions_by_title'][title_name].append(expense)
+                
+                # Convert dictionaries to lists for template access
+                for month_data in shop_monthly_expenses.values():
+                    month_data['online_title_list'] = [
+                        {'title': title, 'amount': amount, 'transactions': month_data['online_transactions_by_title'][title]}
+                        for title, amount in month_data['online_by_title'].items()
+                    ]
+                    month_data['offline_title_list'] = [
+                        {'title': title, 'amount': amount, 'transactions': month_data['offline_transactions_by_title'][title]}
+                        for title, amount in month_data['offline_by_title'].items()
+                    ]
+                
+                # Create table data for shop expenses (similar to business expenses)
+                all_online_titles = set()
+                all_offline_titles = set()
+                
+                for month_data in shop_monthly_expenses.values():
+                    # Filter out salary-related titles from online
+                    online_titles = {title for title in month_data['online_by_title'].keys() if 'salary' not in title.lower()}
+                    # Filter out salary and shop rent from offline
+                    offline_titles = {title for title in month_data['offline_by_title'].keys() if 'salary' not in title.lower() and 'shop rent' not in title.lower()}
+                    
+                    all_online_titles.update(online_titles)
+                    all_offline_titles.update(offline_titles)
+                
+                # Sort titles alphabetically
+                sorted_online_titles = sorted(all_online_titles)
+                sorted_offline_titles = sorted(all_offline_titles)
+                
+                # Sort monthly expenses by year and month
+                sorted_shop_monthly_expenses = sorted(
+                    shop_monthly_expenses.values(),
+                    key=lambda x: (x['year'], x['month'])
+                )
+                
+                # Create table data for new format
+                shop_expenses_table_data = []
+                for month_data in sorted_shop_monthly_expenses:
+                    # Calculate offline total excluding salary and shop rent (same filter as title collection)
+                    filtered_offline_total = sum(
+                        amount for title, amount in month_data['offline_by_title'].items() 
+                        if 'salary' not in title.lower() and 'shop rent' not in title.lower()
+                    )
+                    
+                    row_data = {
+                        'date': f"{month_data['month_name']} {month_data['year']}",
+                        'year': month_data['year'],
+                        'month': month_data['month'],
+                        'rent_amount': month_data['rent_amount'],
+                        'online_titles': {},
+                        'offline_titles': {},
+                        'online_total': month_data['online_total'],
+                        'offline_total': filtered_offline_total,
+                        'grand_total': month_data['online_total'] + filtered_offline_total + month_data['rent_amount']
+                    }
+                    
+                    # Fill online titles (0 for missing titles, exclude salary)
+                    for title in sorted_online_titles:
+                        if 'salary' not in title.lower():
+                            row_data['online_titles'][title] = month_data['online_by_title'].get(title, 0)
+                    
+                    # Fill offline titles (0 for missing titles, exclude only shop rent and salary)
+                    for title in sorted_offline_titles:
+                        if ('shop rent' not in title.lower() and 
+                            'salary' not in title.lower()):
+                            row_data['offline_titles'][title] = month_data['offline_by_title'].get(title, 0)
+                    
+                    shop_expenses_table_data.append(row_data)
+
                 shop_expenses_data = {
                     'transactions': shop_all_expenses,
                     'total_amount': (shop_expenses.aggregate(total=Sum('amount'))['total'] or 0) + shop_total_salary_expense + shop_total_rent_expense,
                     'online_total': shop_expenses.filter(transaction_mode='Online').aggregate(total=Sum('amount'))['total'] or 0,
-                    'offline_total': (shop_expenses.filter(transaction_mode='Offline').aggregate(total=Sum('amount'))['total'] or 0) + shop_total_salary_expense + shop_total_rent_expense,
+                    'offline_total': shop_expenses.filter(transaction_mode='Offline').aggregate(total=Sum('amount'))['total'] or 0,
                     'calculated_salary_total': shop_total_salary_expense,
                     'calculated_rent_total': shop_total_rent_expense,
+                    'monthly_breakdown': shop_monthly_expenses,
+                    'table_data': shop_expenses_table_data,
+                    'online_titles': sorted_online_titles,
+                    'offline_titles': sorted_offline_titles,
                 }
                 
-
+                # Create shop salary sheet data
+                shop_salary_sheet = []
+                if from_year and from_month and to_year and to_month:
+                    try:
+                        from_year_int = int(from_year)
+                        from_month_int = int(from_month)
+                        to_year_int = int(to_year)
+                        to_month_int = int(to_month)
+                        
+                        # Create salary data for each shop staff member
+                        for staff_info in shop_staff_data:
+                            staff = staff_info['staff']
+                            staff_salary_data = {
+                                'staff': staff,
+                                'employment_type': staff.get_employment_type_display(),
+                                'monthly_salaries': {}
+                            }
+                            
+                            # Calculate salary for each month in range
+                            for year, month in months_in_range:
+                                month_key = f"{year}-{month:02d}"
+                                month_name = date(year, month, 1).strftime('%B')
+                                
+                                # Check if staff was employed during this month
+                                month_start = date(year, month, 1)
+                                if month == 12:
+                                    month_end = date(year + 1, 1, 1) - timedelta(days=1)
+                                else:
+                                    month_end = date(year, month + 1, 1) - timedelta(days=1)
+                                
+                                staff_start_date = staff.start_date
+                                staff_end_date = staff.end_date or month_end
+                                
+                                # Calculate salary for salary sheet (full salary if employed for the month)
+                                salary_amount = calculate_salary_sheet_amount(
+                                    staff.salary,
+                                    staff_start_date,
+                                    staff_end_date,
+                                    month_start,
+                                    month_end
+                                )
+                                
+                                staff_salary_data['monthly_salaries'][month_key] = {
+                                    'year': year,
+                                    'month': month,
+                                    'month_name': month_name,
+                                    'amount': salary_amount,
+                                    'is_active': staff_start_date <= month_end and staff_end_date >= month_start
+                                }
+                            
+                            shop_salary_sheet.append(staff_salary_data)
+                            
+                    except (ValueError, TypeError):
+                        # If date conversion fails, create empty salary sheet
+                        shop_salary_sheet = []
                 
                 shops_data.append({
                     'shop_info': shop_info,
                     'revenue': shop_revenue_data,
                     'expenses': shop_expenses_data,
                     'staff': shop_staff_data,
+                    'salary_sheet': shop_salary_sheet,
                 })
             
             context['shops_data'] = shops_data

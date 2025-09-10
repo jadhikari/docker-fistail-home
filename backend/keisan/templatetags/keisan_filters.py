@@ -9,3 +9,11 @@ def subtract(value, arg):
         return float(value) - float(arg)
     except (ValueError, TypeError):
         return 0
+
+@register.filter
+def lookup(dictionary, key):
+    """Look up a key in a dictionary."""
+    try:
+        return dictionary.get(key, 0)
+    except (AttributeError, TypeError):
+        return 0
