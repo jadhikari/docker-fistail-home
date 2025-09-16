@@ -4,20 +4,45 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import models
 from django.db.models import Q, Count, Sum
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 from datetime import date, timedelta
 import calendar
 from decimal import Decimal
 from django.core.exceptions import ValidationError
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.utils import get_column_letter
 
 from .models import Business, MunicipalShop, Staff, Dependent, Title, Transaction
 from .forms import (
     BusinessForm, MunicipalShopForm, StaffForm, DependentForm, 
     BusinessSearchForm, TransactionDetailsSearchForm,
-    RevenueForm, ExpenseForm
+    RevenueForm, ExpenseForm, TitleForm
 )
+def _has_full_keisan_permissions(user):
+    """Return True if user is superuser or has all keisan transaction CRUD + view perms."""
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    required_perms = [
+        # Business
+        'keisan.view_business', 'keisan.add_business', 'keisan.change_business', 'keisan.delete_business',
+        # MunicipalShop
+        'keisan.view_municipalshop', 'keisan.add_municipalshop', 'keisan.change_municipalshop', 'keisan.delete_municipalshop',
+        # Staff
+        'keisan.view_staff', 'keisan.add_staff', 'keisan.change_staff', 'keisan.delete_staff',
+        # Dependent
+        'keisan.view_dependent', 'keisan.add_dependent', 'keisan.change_dependent', 'keisan.delete_dependent',
+        # Title
+        'keisan.view_title', 'keisan.add_title', 'keisan.change_title', 'keisan.delete_title',
+        # Transaction
+        'keisan.view_transaction', 'keisan.add_transaction', 'keisan.change_transaction', 'keisan.delete_transaction',
+    ]
+    return user.has_perms(required_perms)
+
 
 
 
@@ -150,6 +175,10 @@ def get_month_range(start_date, end_date):
 @login_required(login_url='/accounts/login/')
 def business_list(request):
     """List all businesses with search and filtering - Main Dashboard"""
+    # Gate access to keisan dashboard
+    if not _has_full_keisan_permissions(request.user):
+        messages.error(request, 'You do not have permission to access Keisan.')
+        return redirect('hostel:dashboard')
     form = BusinessSearchForm(request.GET)
     businesses = Business.objects.all()
     
@@ -180,6 +209,12 @@ def business_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
+    # Title management (for modal)
+    titles = Title.objects.all().order_by('category', 'mode', 'name')
+    title_form = TitleForm()
+    # Permissions for keisan management: superuser or has keisan permissions
+    can_manage_keisan = _has_full_keisan_permissions(request.user)
+
     context = {
         'page_obj': page_obj,
         'form': form,
@@ -190,9 +225,81 @@ def business_list(request):
         'total_staff': total_staff,
         'total_dependents': total_dependents,
         'total_payroll': total_payroll,
+        # Titles
+        'titles': titles,
+        'title_form': title_form,
+        'can_manage_keisan': can_manage_keisan,
     }
     
     return render(request, 'keisan/business_list.html', context)
+
+
+@login_required(login_url='/accounts/login/')
+@require_POST
+def title_create(request):
+    if not _has_full_keisan_permissions(request.user):
+        messages.error(request, 'You do not have permission to add titles.')
+        return redirect('keisan:dashboard')
+    form = TitleForm(request.POST)
+    if form.is_valid():
+        title = form.save(commit=False)
+        title.created_by = request.user
+        title.updated_by = request.user
+        try:
+            title.full_clean()
+            title.save()
+            messages.success(request, 'Title created successfully.')
+        except ValidationError as e:
+            messages.error(request, '; '.join(sum(e.message_dict.values(), [])))
+    else:
+        # Collect form errors
+        errors = []
+        for field, field_errors in form.errors.items():
+            for err in field_errors:
+                errors.append(f"{field}: {err}")
+        messages.error(request, ' '.join(errors) or 'Please correct the errors in the form.')
+    return redirect('keisan:dashboard')
+
+
+@login_required(login_url='/accounts/login/')
+@require_POST
+def title_update(request, pk):
+    if not _has_full_keisan_permissions(request.user):
+        messages.error(request, 'You do not have permission to update titles.')
+        return redirect('keisan:dashboard')
+    title = get_object_or_404(Title, pk=pk)
+    form = TitleForm(request.POST, instance=title)
+    if form.is_valid():
+        title = form.save(commit=False)
+        title.updated_by = request.user
+        try:
+            title.full_clean()
+            title.save()
+            messages.success(request, 'Title updated successfully.')
+        except ValidationError as e:
+            messages.error(request, '; '.join(sum(e.message_dict.values(), [])))
+    else:
+        errors = []
+        for field, field_errors in form.errors.items():
+            for err in field_errors:
+                errors.append(f"{field}: {err}")
+        messages.error(request, ' '.join(errors) or 'Please correct the errors in the form.')
+    return redirect('keisan:dashboard')
+
+
+@login_required(login_url='/accounts/login/')
+@require_POST
+def title_delete(request, pk):
+    if not _has_full_keisan_permissions(request.user):
+        messages.error(request, 'You do not have permission to delete titles.')
+        return redirect('keisan:dashboard')
+    title = get_object_or_404(Title, pk=pk)
+    try:
+        title.delete()
+        messages.success(request, 'Title deleted successfully.')
+    except Exception as e:
+        messages.error(request, f'Could not delete title: {e}')
+    return redirect('keisan:dashboard')
 
 
 @login_required(login_url='/accounts/login/')
@@ -947,6 +1054,9 @@ def expense_create(request):
 @login_required(login_url='/accounts/login/')
 def transaction_details(request):
     """Comprehensive transaction details page with search functionality"""
+    if not _has_full_keisan_permissions(request.user):
+        messages.error(request, 'You do not have permission to access Keisan transactions.')
+        return redirect('hostel:dashboard')
     form = TransactionDetailsSearchForm(request.GET)
     context = {
         'form': form,
@@ -958,6 +1068,10 @@ def transaction_details(request):
         'business_staff': None,
         'shops_data': None,
     }
+    
+    # Check if Excel export is requested
+    if request.GET.get('format') == 'excel':
+        return export_transaction_details_excel(request)
     
     if form.is_valid():
         business = form.cleaned_data.get('business')
@@ -2011,3 +2125,739 @@ def transaction_details(request):
             context['shops_data'] = shops_data
     
     return render(request, 'keisan/transaction_details.html', context)
+
+
+def export_transaction_details_excel(request):
+    """Export transaction details to Excel format matching HTML layout"""
+    form = TransactionDetailsSearchForm(request.GET)
+    
+    if not form.is_valid():
+        return HttpResponse("Invalid form data", status=400)
+    
+    business = form.cleaned_data.get('business')
+    from_period = form.cleaned_data.get('from_period')
+    to_period = form.cleaned_data.get('to_period')
+    
+    if not business:
+        return HttpResponse("No business selected", status=400)
+    
+    # Parse period for filtering
+    from_year = None
+    from_month = None
+    to_year = None
+    to_month = None
+    
+    if from_period:
+        try:
+            from_year, from_month = from_period.split('-')
+            from_year = int(from_year)
+            from_month = int(from_month)
+        except (ValueError, AttributeError):
+            pass
+    
+    if to_period:
+        try:
+            to_year, to_month = to_period.split('-')
+            to_year = int(to_year)
+            to_month = int(to_month)
+        except (ValueError, AttributeError):
+            pass
+    
+    # Filter transactions by date range (same logic as main view)
+    business_transactions = business.transactions.all()
+    if from_year and from_month:
+        business_transactions = business_transactions.filter(
+            models.Q(year__gt=from_year) | 
+            (models.Q(year=from_year) & models.Q(month__gte=from_month))
+        )
+    
+    if to_year and to_month:
+        business_transactions = business_transactions.filter(
+            models.Q(year__lt=to_year) | 
+            (models.Q(year=to_year) & models.Q(month__lte=to_month))
+        )
+    
+    # Create workbook and worksheet
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = f"Transaction Details - {business.name}"
+    
+    # Define styles
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    center_alignment = Alignment(horizontal='center', vertical='center')
+    
+    row = 1
+    
+    # Title
+    ws.merge_cells(f'A{row}:H{row}')
+    ws[f'A{row}'] = f"Transaction Details Report - {business.name}"
+    ws[f'A{row}'].font = Font(bold=True, size=16)
+    ws[f'A{row}'].alignment = center_alignment
+    row += 2
+    
+    # Period information
+    if from_period and to_period:
+        ws[f'A{row}'] = f"Period: {from_period} to {to_period}"
+        ws[f'A{row}'].font = Font(bold=True)
+        row += 2
+    
+    # Business Information
+    ws[f'A{row}'] = "Business Information"
+    ws[f'A{row}'].font = Font(bold=True, size=14)
+    row += 1
+    
+    business_info = {
+        'Name': business.name,
+        'Registration Number': business.registration_number,
+        'Business Type': business.business_type,
+        'Industry Category': business.industry_category or 'N/A',
+        'Email': business.email,
+        'Phone': business.phone,
+        'Website': business.website or 'N/A',
+        'Address': business.address or 'N/A',
+        'Tax Number': business.tax_number or 'N/A',
+        'Owner Name': business.owner_name,
+        'Owner Contact': business.owner_contact_number or 'N/A',
+        'Owner Email': business.owner_email or 'N/A',
+        'Owner Address': business.owner_address or 'N/A',
+        'Office Rent': f"¥{business.office_rent:.2f}",
+    }
+    
+    for key, value in business_info.items():
+        ws[f'A{row}'] = key
+        ws[f'B{row}'] = value
+        row += 1
+    
+    row += 2
+    
+    # Staff Salary Sheet (matching HTML format)
+    business_staff = business.staff.filter(shop__isnull=True).order_by('full_name')
+    if business_staff.exists():
+        ws[f'A{row}'] = "Staff Salary Sheet"
+        ws[f'A{row}'].font = Font(bold=True, size=14)
+        row += 1
+        
+        # Create months range for salary sheet
+        months_in_range = []
+        if from_year and from_month and to_year and to_month:
+            current_year = from_year
+            current_month = from_month
+            while (current_year < to_year) or (current_year == to_year and current_month <= to_month):
+                months_in_range.append((current_year, current_month))
+                current_month += 1
+                if current_month > 12:
+                    current_month = 1
+                    current_year += 1
+        
+        # Salary sheet headers
+        headers = ['Staff Name', 'Employment Type']
+        for year, month in months_in_range:
+            month_name = calendar.month_name[month][:3]  # Jan, Feb, etc.
+            headers.append(f"{month_name} {year}")
+        headers.append('Total')
+        
+        # Write headers
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=row, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = center_alignment
+            cell.border = border
+        row += 1
+        
+        # Staff data
+        for staff in business_staff:
+            ws[f'A{row}'] = staff.full_name
+            ws[f'B{row}'] = staff.get_employment_type_display()
+            
+            # Add monthly salary data
+            col = 3
+            for year, month in months_in_range:
+                # Check if staff was active during this month
+                staff_start_date = staff.start_date
+                staff_end_date = staff.end_date or date.today()
+                
+                month_start = date(year, month, 1)
+                if month == 12:
+                    month_end = date(year + 1, 1, 1) - timedelta(days=1)
+                else:
+                    month_end = date(year, month + 1, 1) - timedelta(days=1)
+                
+                if staff_start_date <= month_end and staff_end_date >= month_start:
+                    ws.cell(row=row, column=col, value=f"¥{staff.salary:.2f}")
+                else:
+                    ws.cell(row=row, column=col, value="-")
+                col += 1
+            
+            # Total salary
+            ws.cell(row=row, column=col, value=f"¥{staff.salary:.2f}")
+            
+            # Add borders
+            for col_num in range(1, len(headers) + 1):
+                ws.cell(row=row, column=col_num).border = border
+            row += 1
+    
+    row += 2
+    
+    # Business Revenue - Monthly Breakdown (matching HTML format)
+    business_revenue = business_transactions.filter(transaction_type='Revenue', shop__isnull=True)
+    
+    if business_revenue.exists():
+        ws[f'A{row}'] = "Business Revenue - Monthly Breakdown"
+        ws[f'A{row}'].font = Font(bold=True, size=14)
+        row += 1
+        
+        # Revenue summary cards
+        total_revenue = business_revenue.aggregate(total=Sum('amount'))['total'] or 0
+        online_total = business_revenue.filter(transaction_mode='Online').aggregate(total=Sum('amount'))['total'] or 0
+        offline_total = business_revenue.filter(transaction_mode='Offline').aggregate(total=Sum('amount'))['total'] or 0
+        
+        ws[f'A{row}'] = "Total Revenue:"
+        ws[f'B{row}'] = f"¥{total_revenue:.2f}"
+        ws[f'A{row}'].font = Font(bold=True)
+        row += 1
+        
+        ws[f'A{row}'] = "Online Revenue:"
+        ws[f'B{row}'] = f"¥{online_total:.2f}"
+        row += 1
+        
+        ws[f'A{row}'] = "Offline Revenue:"
+        ws[f'B{row}'] = f"¥{offline_total:.2f}"
+        row += 1
+        
+        ws[f'A{row}'] = "Transactions Count:"
+        ws[f'B{row}'] = business_revenue.count()
+        row += 2
+        
+        # Create detailed revenue table (matching HTML table structure)
+        # Get all unique titles from the period
+        all_online_titles = set()
+        all_offline_titles = set()
+        
+        monthly_revenue = {}
+        for transaction in business_revenue:
+            month_key = f"{transaction.year}-{transaction.month:02d}"
+            if month_key not in monthly_revenue:
+                monthly_revenue[month_key] = {
+                    'year': transaction.year,
+                    'month': transaction.month,
+                    'month_name': transaction.get_month_display(),
+                    'online_by_title': {},
+                    'offline_by_title': {},
+                    'online_total': 0,
+                    'offline_total': 0,
+                }
+            
+            title_name = transaction.title.name
+            if transaction.transaction_mode == 'Online':
+                monthly_revenue[month_key]['online_total'] += transaction.amount
+                if title_name not in monthly_revenue[month_key]['online_by_title']:
+                    monthly_revenue[month_key]['online_by_title'][title_name] = 0
+                monthly_revenue[month_key]['online_by_title'][title_name] += transaction.amount
+                all_online_titles.add(title_name)
+            else:
+                monthly_revenue[month_key]['offline_total'] += transaction.amount
+                if title_name not in monthly_revenue[month_key]['offline_by_title']:
+                    monthly_revenue[month_key]['offline_by_title'][title_name] = 0
+                monthly_revenue[month_key]['offline_by_title'][title_name] += transaction.amount
+                all_offline_titles.add(title_name)
+        
+        # Sort titles alphabetically
+        sorted_online_titles = sorted(all_online_titles)
+        sorted_offline_titles = sorted(all_offline_titles)
+        
+        # Create table headers (matching HTML structure)
+        ws[f'A{row}'] = "Date"
+        col = 2
+        
+        # Online headers
+        for title in sorted_online_titles:
+            ws.cell(row=row, column=col, value=title)
+            col += 1
+        ws.cell(row=row, column=col, value="Total(A)")
+        col += 1
+        
+        # Offline headers
+        for title in sorted_offline_titles:
+            ws.cell(row=row, column=col, value=title)
+            col += 1
+        ws.cell(row=row, column=col, value="Total(B)")
+        col += 1
+        ws.cell(row=row, column=col, value="A+B")
+        
+        # Style headers
+        for col_num in range(1, col + 1):
+            cell = ws.cell(row=row, column=col_num)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = center_alignment
+            cell.border = border
+        row += 1
+        
+        # Add data rows
+        for month_data in sorted(monthly_revenue.values(), key=lambda x: (x['year'], x['month']), reverse=True):
+            ws[f'A{row}'] = f"{month_data['month_name']} {month_data['year']}"
+            col = 2
+            
+            # Online data
+            for title in sorted_online_titles:
+                amount = month_data['online_by_title'].get(title, 0)
+                ws.cell(row=row, column=col, value=f"¥{amount:.2f}")
+                col += 1
+            ws.cell(row=row, column=col, value=f"¥{month_data['online_total']:.2f}")
+            col += 1
+            
+            # Offline data
+            for title in sorted_offline_titles:
+                amount = month_data['offline_by_title'].get(title, 0)
+                ws.cell(row=row, column=col, value=f"¥{amount:.2f}")
+                col += 1
+            ws.cell(row=row, column=col, value=f"¥{month_data['offline_total']:.2f}")
+            col += 1
+            
+            # Grand total
+            grand_total = month_data['online_total'] + month_data['offline_total']
+            ws.cell(row=row, column=col, value=f"¥{grand_total:.2f}")
+            
+            # Add borders
+            for col_num in range(1, col + 1):
+                ws.cell(row=row, column=col_num).border = border
+            row += 1
+    
+    row += 2
+    
+    # Business Expenses - Monthly Breakdown (matching HTML format)
+    business_expenses = business_transactions.filter(transaction_type='Expense', shop__isnull=True)
+    
+    if business_expenses.exists():
+        ws[f'A{row}'] = "Business Expenses - Monthly Breakdown"
+        ws[f'A{row}'].font = Font(bold=True, size=14)
+        row += 1
+        
+        # Expense summary cards
+        total_expenses = business_expenses.aggregate(total=Sum('amount'))['total'] or 0
+        online_expenses = business_expenses.filter(transaction_mode='Online').aggregate(total=Sum('amount'))['total'] or 0
+        offline_expenses = business_expenses.filter(transaction_mode='Offline').aggregate(total=Sum('amount'))['total'] or 0
+        
+        ws[f'A{row}'] = "Total Expenses:"
+        ws[f'B{row}'] = f"¥{total_expenses:.2f}"
+        ws[f'A{row}'].font = Font(bold=True)
+        row += 1
+        
+        ws[f'A{row}'] = "Online Expenses:"
+        ws[f'B{row}'] = f"¥{online_expenses:.2f}"
+        row += 1
+        
+        ws[f'A{row}'] = "Offline Expenses:"
+        ws[f'B{row}'] = f"¥{offline_expenses:.2f}"
+        row += 1
+        
+        ws[f'A{row}'] = "Transactions Count:"
+        ws[f'B{row}'] = business_expenses.count()
+        row += 2
+        
+        # Create detailed expense table (matching HTML structure)
+        # Get all unique titles from the period
+        all_online_titles = set()
+        all_offline_titles = set()
+        
+        monthly_expenses = {}
+        for transaction in business_expenses:
+            month_key = f"{transaction.year}-{transaction.month:02d}"
+            if month_key not in monthly_expenses:
+                monthly_expenses[month_key] = {
+                    'year': transaction.year,
+                    'month': transaction.month,
+                    'month_name': transaction.get_month_display(),
+                    'online_by_title': {},
+                    'offline_by_title': {},
+                    'online_total': 0,
+                    'offline_total': 0,
+                    'rent_amount': business.office_rent,  # Add rent for each month
+                }
+            
+            title_name = transaction.title.name
+            if transaction.transaction_mode == 'Online':
+                monthly_expenses[month_key]['online_total'] += transaction.amount
+                if title_name not in monthly_expenses[month_key]['online_by_title']:
+                    monthly_expenses[month_key]['online_by_title'][title_name] = 0
+                monthly_expenses[month_key]['online_by_title'][title_name] += transaction.amount
+                all_online_titles.add(title_name)
+            else:
+                monthly_expenses[month_key]['offline_total'] += transaction.amount
+                if title_name not in monthly_expenses[month_key]['offline_by_title']:
+                    monthly_expenses[month_key]['offline_by_title'][title_name] = 0
+                monthly_expenses[month_key]['offline_by_title'][title_name] += transaction.amount
+                all_offline_titles.add(title_name)
+        
+        # Sort titles alphabetically
+        sorted_online_titles = sorted(all_online_titles)
+        sorted_offline_titles = sorted(all_offline_titles)
+        
+        # Create table headers (matching HTML structure)
+        ws[f'A{row}'] = "Date"
+        col = 2
+        
+        # Online headers
+        for title in sorted_online_titles:
+            ws.cell(row=row, column=col, value=title)
+            col += 1
+        ws.cell(row=row, column=col, value="Total(A)")
+        col += 1
+        
+        # Offline headers
+        for title in sorted_offline_titles:
+            ws.cell(row=row, column=col, value=title)
+            col += 1
+        ws.cell(row=row, column=col, value="Total(B)")
+        col += 1
+        ws.cell(row=row, column=col, value="Rent")
+        col += 1
+        ws.cell(row=row, column=col, value="A+B+Rent")
+        
+        # Style headers
+        for col_num in range(1, col + 1):
+            cell = ws.cell(row=row, column=col_num)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = center_alignment
+            cell.border = border
+        row += 1
+        
+        # Add data rows
+        for month_data in sorted(monthly_expenses.values(), key=lambda x: (x['year'], x['month']), reverse=True):
+            ws[f'A{row}'] = f"{month_data['month_name']} {month_data['year']}"
+            col = 2
+            
+            # Online data
+            for title in sorted_online_titles:
+                amount = month_data['online_by_title'].get(title, 0)
+                ws.cell(row=row, column=col, value=f"¥{amount:.2f}")
+                col += 1
+            ws.cell(row=row, column=col, value=f"¥{month_data['online_total']:.2f}")
+            col += 1
+            
+            # Offline data
+            for title in sorted_offline_titles:
+                amount = month_data['offline_by_title'].get(title, 0)
+                ws.cell(row=row, column=col, value=f"¥{amount:.2f}")
+                col += 1
+            ws.cell(row=row, column=col, value=f"¥{month_data['offline_total']:.2f}")
+            col += 1
+            
+            # Rent
+            ws.cell(row=row, column=col, value=f"¥{month_data['rent_amount']:.2f}")
+            col += 1
+            
+            # Grand total
+            grand_total = month_data['online_total'] + month_data['offline_total'] + month_data['rent_amount']
+            ws.cell(row=row, column=col, value=f"¥{grand_total:.2f}")
+            
+            # Add borders
+            for col_num in range(1, col + 1):
+                ws.cell(row=row, column=col_num).border = border
+            row += 1
+    
+    row += 2
+    
+    # Shops Section (matching HTML format)
+    shops = business.shops.all()
+    if shops.exists():
+        for shop in shops:
+            ws[f'A{row}'] = f"Shop: {shop.name}"
+            ws[f'A{row}'].font = Font(bold=True, size=14)
+            row += 1
+            
+            # Shop Information
+            shop_info = {
+                'Name': shop.name,
+                'Permit ID': shop.permit_id,
+                'Shop Type': shop.shop_type,
+                'Address': shop.address or 'N/A',
+                'Shop Rent': f"¥{shop.shop_rent:.2f}",
+            }
+            
+            for key, value in shop_info.items():
+                ws[f'A{row}'] = key
+                ws[f'B{row}'] = value
+                row += 1
+            
+            row += 1
+            
+            # Shop Revenue
+            shop_revenue = business_transactions.filter(transaction_type='Revenue', shop=shop)
+            if shop_revenue.exists():
+                ws[f'A{row}'] = "Shop Revenue - Detailed Breakdown"
+                ws[f'A{row}'].font = Font(bold=True, size=12)
+                row += 1
+                
+                # Revenue summary
+                total_revenue = shop_revenue.aggregate(total=Sum('amount'))['total'] or 0
+                online_total = shop_revenue.filter(transaction_mode='Online').aggregate(total=Sum('amount'))['total'] or 0
+                offline_total = shop_revenue.filter(transaction_mode='Offline').aggregate(total=Sum('amount'))['total'] or 0
+                
+                ws[f'A{row}'] = "Total Revenue:"
+                ws[f'B{row}'] = f"¥{total_revenue:.2f}"
+                ws[f'A{row}'].font = Font(bold=True)
+                row += 1
+                
+                ws[f'A{row}'] = "Online Revenue:"
+                ws[f'B{row}'] = f"¥{online_total:.2f}"
+                row += 1
+                
+                ws[f'A{row}'] = "Offline Revenue:"
+                ws[f'B{row}'] = f"¥{offline_total:.2f}"
+                row += 2
+                
+                # Create detailed revenue table for shop
+                all_online_titles = set()
+                all_offline_titles = set()
+                
+                monthly_revenue = {}
+                for transaction in shop_revenue:
+                    month_key = f"{transaction.year}-{transaction.month:02d}"
+                    if month_key not in monthly_revenue:
+                        monthly_revenue[month_key] = {
+                            'year': transaction.year,
+                            'month': transaction.month,
+                            'month_name': transaction.get_month_display(),
+                            'online_by_title': {},
+                            'offline_by_title': {},
+                            'online_total': 0,
+                            'offline_total': 0,
+                        }
+                    
+                    title_name = transaction.title.name
+                    if transaction.transaction_mode == 'Online':
+                        monthly_revenue[month_key]['online_total'] += transaction.amount
+                        if title_name not in monthly_revenue[month_key]['online_by_title']:
+                            monthly_revenue[month_key]['online_by_title'][title_name] = 0
+                        monthly_revenue[month_key]['online_by_title'][title_name] += transaction.amount
+                        all_online_titles.add(title_name)
+                    else:
+                        monthly_revenue[month_key]['offline_total'] += transaction.amount
+                        if title_name not in monthly_revenue[month_key]['offline_by_title']:
+                            monthly_revenue[month_key]['offline_by_title'][title_name] = 0
+                        monthly_revenue[month_key]['offline_by_title'][title_name] += transaction.amount
+                        all_offline_titles.add(title_name)
+                
+                # Sort titles alphabetically
+                sorted_online_titles = sorted(all_online_titles)
+                sorted_offline_titles = sorted(all_offline_titles)
+                
+                # Create table headers
+                ws[f'A{row}'] = "Date"
+                col = 2
+                
+                # Online headers
+                for title in sorted_online_titles:
+                    ws.cell(row=row, column=col, value=title)
+                    col += 1
+                ws.cell(row=row, column=col, value="Total(A)")
+                col += 1
+                
+                # Offline headers
+                for title in sorted_offline_titles:
+                    ws.cell(row=row, column=col, value=title)
+                    col += 1
+                ws.cell(row=row, column=col, value="Total(B)")
+                col += 1
+                ws.cell(row=row, column=col, value="A+B")
+                
+                # Style headers
+                for col_num in range(1, col + 1):
+                    cell = ws.cell(row=row, column=col_num)
+                    cell.font = header_font
+                    cell.fill = header_fill
+                    cell.alignment = center_alignment
+                    cell.border = border
+                row += 1
+                
+                # Add data rows
+                for month_data in sorted(monthly_revenue.values(), key=lambda x: (x['year'], x['month']), reverse=True):
+                    ws[f'A{row}'] = f"{month_data['month_name']} {month_data['year']}"
+                    col = 2
+                    
+                    # Online data
+                    for title in sorted_online_titles:
+                        amount = month_data['online_by_title'].get(title, 0)
+                        ws.cell(row=row, column=col, value=f"¥{amount:.2f}")
+                        col += 1
+                    ws.cell(row=row, column=col, value=f"¥{month_data['online_total']:.2f}")
+                    col += 1
+                    
+                    # Offline data
+                    for title in sorted_offline_titles:
+                        amount = month_data['offline_by_title'].get(title, 0)
+                        ws.cell(row=row, column=col, value=f"¥{amount:.2f}")
+                        col += 1
+                    ws.cell(row=row, column=col, value=f"¥{month_data['offline_total']:.2f}")
+                    col += 1
+                    
+                    # Grand total
+                    grand_total = month_data['online_total'] + month_data['offline_total']
+                    ws.cell(row=row, column=col, value=f"¥{grand_total:.2f}")
+                    
+                    # Add borders
+                    for col_num in range(1, col + 1):
+                        ws.cell(row=row, column=col_num).border = border
+                    row += 1
+            
+            row += 2
+            
+            # Shop Expenses
+            shop_expenses = business_transactions.filter(transaction_type='Expense', shop=shop)
+            if shop_expenses.exists():
+                ws[f'A{row}'] = "Shop Expenses - Detailed Breakdown"
+                ws[f'A{row}'].font = Font(bold=True, size=12)
+                row += 1
+                
+                # Expense summary
+                total_expenses = shop_expenses.aggregate(total=Sum('amount'))['total'] or 0
+                online_expenses = shop_expenses.filter(transaction_mode='Online').aggregate(total=Sum('amount'))['total'] or 0
+                offline_expenses = shop_expenses.filter(transaction_mode='Offline').aggregate(total=Sum('amount'))['total'] or 0
+                
+                ws[f'A{row}'] = "Total Expenses:"
+                ws[f'B{row}'] = f"¥{total_expenses:.2f}"
+                ws[f'A{row}'].font = Font(bold=True)
+                row += 1
+                
+                ws[f'A{row}'] = "Online Expenses:"
+                ws[f'B{row}'] = f"¥{online_expenses:.2f}"
+                row += 1
+                
+                ws[f'A{row}'] = "Offline Expenses:"
+                ws[f'B{row}'] = f"¥{offline_expenses:.2f}"
+                row += 2
+                
+                # Create detailed expense table for shop (similar to revenue)
+                all_online_titles = set()
+                all_offline_titles = set()
+                
+                monthly_expenses = {}
+                for transaction in shop_expenses:
+                    month_key = f"{transaction.year}-{transaction.month:02d}"
+                    if month_key not in monthly_expenses:
+                        monthly_expenses[month_key] = {
+                            'year': transaction.year,
+                            'month': transaction.month,
+                            'month_name': transaction.get_month_display(),
+                            'online_by_title': {},
+                            'offline_by_title': {},
+                            'online_total': 0,
+                            'offline_total': 0,
+                            'rent_amount': shop.shop_rent,
+                        }
+                    
+                    title_name = transaction.title.name
+                    if transaction.transaction_mode == 'Online':
+                        monthly_expenses[month_key]['online_total'] += transaction.amount
+                        if title_name not in monthly_expenses[month_key]['online_by_title']:
+                            monthly_expenses[month_key]['online_by_title'][title_name] = 0
+                        monthly_expenses[month_key]['online_by_title'][title_name] += transaction.amount
+                        all_online_titles.add(title_name)
+                    else:
+                        monthly_expenses[month_key]['offline_total'] += transaction.amount
+                        if title_name not in monthly_expenses[month_key]['offline_by_title']:
+                            monthly_expenses[month_key]['offline_by_title'][title_name] = 0
+                        monthly_expenses[month_key]['offline_by_title'][title_name] += transaction.amount
+                        all_offline_titles.add(title_name)
+                
+                # Sort titles alphabetically
+                sorted_online_titles = sorted(all_online_titles)
+                sorted_offline_titles = sorted(all_offline_titles)
+                
+                # Create table headers
+                ws[f'A{row}'] = "Date"
+                col = 2
+                
+                # Online headers
+                for title in sorted_online_titles:
+                    ws.cell(row=row, column=col, value=title)
+                    col += 1
+                ws.cell(row=row, column=col, value="Total(A)")
+                col += 1
+                
+                # Offline headers
+                for title in sorted_offline_titles:
+                    ws.cell(row=row, column=col, value=title)
+                    col += 1
+                ws.cell(row=row, column=col, value="Total(B)")
+                col += 1
+                ws.cell(row=row, column=col, value="Rent")
+                col += 1
+                ws.cell(row=row, column=col, value="A+B+Rent")
+                
+                # Style headers
+                for col_num in range(1, col + 1):
+                    cell = ws.cell(row=row, column=col_num)
+                    cell.font = header_font
+                    cell.fill = header_fill
+                    cell.alignment = center_alignment
+                    cell.border = border
+                row += 1
+                
+                # Add data rows
+                for month_data in sorted(monthly_expenses.values(), key=lambda x: (x['year'], x['month']), reverse=True):
+                    ws[f'A{row}'] = f"{month_data['month_name']} {month_data['year']}"
+                    col = 2
+                    
+                    # Online data
+                    for title in sorted_online_titles:
+                        amount = month_data['online_by_title'].get(title, 0)
+                        ws.cell(row=row, column=col, value=f"¥{amount:.2f}")
+                        col += 1
+                    ws.cell(row=row, column=col, value=f"¥{month_data['online_total']:.2f}")
+                    col += 1
+                    
+                    # Offline data
+                    for title in sorted_offline_titles:
+                        amount = month_data['offline_by_title'].get(title, 0)
+                        ws.cell(row=row, column=col, value=f"¥{amount:.2f}")
+                        col += 1
+                    ws.cell(row=row, column=col, value=f"¥{month_data['offline_total']:.2f}")
+                    col += 1
+                    
+                    # Rent
+                    ws.cell(row=row, column=col, value=f"¥{month_data['rent_amount']:.2f}")
+                    col += 1
+                    
+                    # Grand total
+                    grand_total = month_data['online_total'] + month_data['offline_total'] + month_data['rent_amount']
+                    ws.cell(row=row, column=col, value=f"¥{grand_total:.2f}")
+                    
+                    # Add borders
+                    for col_num in range(1, col + 1):
+                        ws.cell(row=row, column=col_num).border = border
+                    row += 1
+            
+            row += 2
+    
+    # Auto-adjust column widths
+    for column in ws.columns:
+        max_length = 0
+        column_letter = get_column_letter(column[0].column)
+        for cell in column:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(str(cell.value))
+            except:
+                pass
+        adjusted_width = min(max_length + 2, 50)
+        ws.column_dimensions[column_letter].width = adjusted_width
+    
+    # Create response
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="transaction_details_{business.name}_{from_period}_{to_period}.xlsx"'
+    
+    wb.save(response)
+    return response

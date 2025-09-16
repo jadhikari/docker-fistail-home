@@ -36,17 +36,19 @@
             </a>
         </li>
 
-        <li class="nav-item">
-            <a href="{% url 'keisan:dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'keisan' and request.resolver_match.url_name != 'transaction_details' %}active{% endif %}">
-                🏢 <span class="link-text">Keisan</span>
-            </a>
-        </li>
+        {% if user.is_superuser or perms.keisan.view_business and perms.keisan.add_business and perms.keisan.change_business and perms.keisan.delete_business and perms.keisan.view_municipalshop and perms.keisan.add_municipalshop and perms.keisan.change_municipalshop and perms.keisan.delete_municipalshop and perms.keisan.view_staff and perms.keisan.add_staff and perms.keisan.change_staff and perms.keisan.delete_staff and perms.keisan.view_dependent and perms.keisan.add_dependent and perms.keisan.change_dependent and perms.keisan.delete_dependent and perms.keisan.view_title and perms.keisan.add_title and perms.keisan.change_title and perms.keisan.delete_title and perms.keisan.view_transaction and perms.keisan.add_transaction and perms.keisan.change_transaction and perms.keisan.delete_transaction %}
+            <li class="nav-item">
+                <a href="{% url 'keisan:dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'keisan' and request.resolver_match.url_name != 'transaction_details' %}active{% endif %}">
+                    🏢 <span class="link-text">Keisan</span>
+                </a>
+            </li>
 
-        <li class="nav-item">
-            <a href="{% url 'keisan:transaction_details' %}" class="nav-link {% if request.resolver_match.url_name == 'transaction_details' %}active{% endif %}">
-                📊 <span class="link-text">Transaction</span>
-            </a>
-        </li>
+            <li class="nav-item">
+                <a href="{% url 'keisan:transaction_details' %}" class="nav-link {% if request.resolver_match.url_name == 'transaction_details' %}active{% endif %}">
+                    📊 <span class="link-text">Transaction</span>
+                </a>
+            </li>
+        {% endif %}
 
         <li class="nav-item">
             <a href="{% url 'targets:contracts' %}" class="nav-link {% if request.resolver_match.app_name == 'targets' and request.resolver_match.url_name == 'contracts' %}active{% endif %}">

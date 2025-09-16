@@ -294,9 +294,16 @@
                             </div>
                             <div class="col-md-2">
                                 <label class="form-label">&nbsp;</label>
-                                <button type="submit" class="btn btn-primary w-100">
-                                    <i class="fas fa-search"></i> Search
-                                </button>
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-search"></i> Search
+                                    </button>
+                                    {% if show_results and business %}
+                                    <button type="button" class="btn btn-success" onclick="downloadExcel()">
+                                        <i class="fas fa-download"></i> Download Excel
+                                    </button>
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                     </form>
@@ -1003,6 +1010,24 @@ function resetForm() {
     
     // Redirect to the same page without query parameters to clear results
     window.location.href = window.location.pathname;
+}
+
+function downloadExcel() {
+    // Get current URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const businessId = urlParams.get('business');
+    const fromPeriod = urlParams.get('from_period');
+    const toPeriod = urlParams.get('to_period');
+    
+    // Create download URL with excel parameter
+    const downloadUrl = new URL(window.location.pathname, window.location.origin);
+    downloadUrl.searchParams.set('business', businessId);
+    downloadUrl.searchParams.set('from_period', fromPeriod);
+    downloadUrl.searchParams.set('to_period', toPeriod);
+    downloadUrl.searchParams.set('format', 'excel');
+    
+    // Trigger download
+    window.location.href = downloadUrl.toString();
 }
 </script>
 {% endblock %}

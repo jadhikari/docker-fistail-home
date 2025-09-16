@@ -489,6 +489,27 @@ class TransactionDetailsSearchForm(forms.Form):
     )
 
 
+class TitleForm(forms.ModelForm):
+    class Meta:
+        model = Title
+        fields = [
+            'name', 'category', 'mode', 'description'
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Sales Revenue, Office Rent'}),
+            'category': forms.Select(attrs={'class': 'form-control'}),
+            'mode': forms.Select(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 1, 'placeholder': 'Optional description'})
+        }
+
+    def clean_name(self):
+        name = self.cleaned_data.get('name', '')
+        if name is not None and not name.strip():
+            raise ValidationError("Title name cannot be empty.")
+        if name and len(name.strip()) < 2:
+            raise ValidationError("Title name must be at least 2 characters long.")
+        return name.strip() if name else name
+
 class RevenueForm(forms.ModelForm):
     """Form specifically for revenue transactions"""
     period = forms.CharField(

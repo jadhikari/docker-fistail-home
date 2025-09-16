@@ -42,6 +42,11 @@ urlpatterns = [
     # Transaction Details URL
     path('transaction-details/', views.transaction_details, name='transaction_details'),
     
+    # Title management (modal CRUD)
+    path('titles/create/', views.title_create, name='title_create'),
+    path('titles/<int:pk>/update/', views.title_update, name='title_update'),
+    path('titles/<int:pk>/delete/', views.title_delete, name='title_delete'),
+    
     # AJAX URLs
     path('ajax/business/<int:business_id>/shops/', views.get_business_shops, name='get_business_shops'),
     path('ajax/business/<int:business_id>/staff/', views.get_staff_by_business, name='get_staff_by_business'),
