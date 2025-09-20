@@ -631,3 +631,42 @@ docker-compose -f docker-compose.prod.yml restart nginx
 ```
 
 ---
+
+
+
+## 🔁 Step 5: Easy way to DB backup in server.
+a) comment out these 2 command.
+         python manage.py makemigrations &&
+        python manage.py migrate &&
+b) Remove all the image and volume of the Docker includeing the docker.
+
+         First, stop and remove all running containers (otherwise images/volumes may stay locked):
+
+         docker ps -aq | xargs docker stop
+         docker ps -aq | xargs docker rm
+
+         2. Remove all Docker images
+
+         This deletes all images from your system:
+
+         docker images -aq | xargs docker rmi -f
+
+         3. Remove all volumes (DB storage too)
+
+         This clears all volumes, including persistent database data:
+
+         docker volume ls -q | xargs docker volume rm -f
+
+         4. (Optional) Remove unused networks
+
+         To clean up any dangling networks:
+
+         docker network prune -f
+c) Run the Docker server 
+d) copy and put the backup filein the project and reun below command to copy the file in the container 
+      docker cp db.sql fishtail-postgres-dev:/db.sql
+e) and then 
+      docker exec -it fishtail-postgres-dev psql \
+         -U user \
+         -d db_name \
+         -f /db.sql
