@@ -15,6 +15,43 @@
         </div>
     {% endif %}
 
+    <!-- Utility Payment Notification -->
+    {% if utility_status.all_paid %}
+        <div class="alert alert-success fade show mb-3" role="alert" 
+            style="background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; 
+            border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 6px 12px; line-height: 1.2;"">
+            <i class="bi bi-check-circle me-2"></i>
+            <strong>🎉 All utility bills are paid!</strong>
+        </div>
+    {% else %}
+    <div class="alert alert-warning fade show mb-3" role="alert" 
+        style="background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404;
+            border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            padding: 6px 12px; line-height: 1.2;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <div>
+                        <strong>⚠️ {{ utility_status.total_unpaid_hostels }} hostels have unpaid utility bills</strong>
+                    </div>
+                </div>
+                <button class="btn btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#utilityDetails" aria-expanded="false" aria-controls="utilityDetails" style="background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; border-radius: 15px; transition: all 0.3s ease; cursor: pointer;" onmouseover="this.style.backgroundColor='#f5c6cb'; this.style.transform='scale(1.05)'" onmouseout="this.style.backgroundColor='#f8d7da'; this.style.transform='scale(1)'">
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+            </div>
+            <div class="collapse mt-3" id="utilityDetails">
+                <div class="border-top pt-1" style="border-color: #f5c6cb !important;">
+                    {% for hostel_info in utility_status.unpaid_hostels %}
+                        <div class="mb-1 p-1" style="background-color: rgba(248, 215, 218, 0.3); border-radius: 8px; transition: all 0.2s ease;" onmouseover="this.style.backgroundColor='rgba(248, 215, 218, 0.5)'" onmouseout="this.style.backgroundColor='rgba(248, 215, 218, 0.3)'">
+                            <strong style="color: #721c24;">🏠 {{ hostel_info.hostel.name }}:</strong>
+                            <span style="color: #721c24;"> {{ hostel_info.formatted_bills }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
     <!-- Header Section -->
     <div class="row mb-4">
         <div class="col-12">

@@ -5,6 +5,167 @@ from .models import Hostel, Unit, Bed, BedAssignmentHistory
 from customer.models import Customer
 from .forms import HostelForm, UnitForm, BedForm, BedAssignmentForm, EditReleasedDateForm
 from django.contrib import messages
+from finance.models import UtilityExpense
+from datetime import datetime
+
+def get_utility_payment_status():
+    """
+    Check utility bill payment status for all hostels for the previous 2 months only.
+    Returns a dictionary with payment status information.
+    """
+    current_date = datetime.now().date()
+    current_year = current_date.year
+    current_month = current_date.month
+    
+    # Calculate previous 2 months (not current month)
+    # Previous month
+    prev_month = current_month - 1 if current_month > 1 else 12
+    prev_month_year = current_year if current_month > 1 else current_year - 1
+    
+    # Month before previous month
+    prev_prev_month = prev_month - 1 if prev_month > 1 else 12
+    prev_prev_month_year = prev_month_year if prev_month > 1 else prev_month_year - 1
+    
+    # Get all hostels
+    hostels = Hostel.objects.all()
+    
+    # Utility types that come monthly
+    monthly_utilities = ['INTERNET', 'ELECTRICITY', 'GAS']
+    
+    unpaid_hostels = []
+    all_paid = True
+    
+    for hostel in hostels:
+        hostel_unpaid = {
+            'hostel': hostel,
+            'unpaid_bills': []
+        }
+        
+        # Check monthly utilities for previous 2 months only
+        for utility in monthly_utilities:
+            for month_info in [
+                {'month': prev_month, 'year': prev_month_year, 'label': f'{prev_month_year}/{prev_month} {utility.lower()}'},
+                {'month': prev_prev_month, 'year': prev_prev_month_year, 'label': f'{prev_prev_month_year}/{prev_prev_month} {utility.lower()}'}
+            ]:
+                # Check if this utility bill is paid for this month
+                paid = UtilityExpense.objects.filter(
+                    hostel=hostel,
+                    expense_type=utility,
+                    billing_year=month_info['year'],
+                    billing_month=month_info['month']
+                ).exists()
+                
+                if not paid:
+                    hostel_unpaid['unpaid_bills'].append(month_info['label'])
+        
+        # Check water utility with special 2-month billing logic
+        # Water bills come every 2 months:
+        # Jan+Feb bills come in Feb (month 2)
+        # Mar+Apr bills come in Apr (month 4)
+        # May+Jun bills come in Jun (month 6)
+        # Jul+Aug bills come in Aug (month 8)
+        # Sep+Oct bills come in Oct (month 10)
+        # Nov+Dec bills come in Dec (month 12)
+        
+        def get_water_billing_month(check_month, check_year):
+            """Get the month when water bill should be paid for the given month"""
+            # Water bills are paid in even months (Feb, Apr, Jun, Aug, Oct, Dec)
+            if check_month <= 2:
+                return 2  # Jan+Feb bills come in Feb
+            elif check_month <= 4:
+                return 4  # Mar+Apr bills come in Apr
+            elif check_month <= 6:
+                return 6  # May+Jun bills come in Jun
+            elif check_month <= 8:
+                return 8  # Jul+Aug bills come in Aug
+            elif check_month <= 10:
+                return 10  # Sep+Oct bills come in Oct
+            else:
+                return 12  # Nov+Dec bills come in Dec
+        
+        def get_water_billing_period(check_month, check_year):
+            """Get the billing period description for water"""
+            if check_month <= 2:
+                return f"{check_year}/1-2 water"  # Jan-Feb period
+            elif check_month <= 4:
+                return f"{check_year}/3-4 water"  # Mar-Apr period
+            elif check_month <= 6:
+                return f"{check_year}/5-6 water"  # May-Jun period
+            elif check_month <= 8:
+                return f"{check_year}/7-8 water"  # Jul-Aug period
+            elif check_month <= 10:
+                return f"{check_year}/9-10 water"  # Sep-Oct period
+            else:
+                return f"{check_year}/11-12 water"  # Nov-Dec period
+        
+        # Check water for previous 2 months (avoid duplicates)
+        water_billing_periods = set()  # Track unique billing periods
+        
+        for month_info in [
+            {'month': prev_month, 'year': prev_month_year},
+            {'month': prev_prev_month, 'year': prev_prev_month_year}
+        ]:
+            billing_month = get_water_billing_month(month_info['month'], month_info['year'])
+            billing_period = get_water_billing_period(month_info['month'], month_info['year'])
+            
+            # Only check each billing period once
+            if billing_period not in water_billing_periods:
+                water_billing_periods.add(billing_period)
+                
+                water_paid = UtilityExpense.objects.filter(
+                    hostel=hostel,
+                    expense_type='WATER',
+                    billing_year=month_info['year'],
+                    billing_month=billing_month
+                ).exists()
+                
+                if not water_paid:
+                    hostel_unpaid['unpaid_bills'].append(billing_period)
+        
+        # If there are unpaid bills, add to unpaid_hostels
+        if hostel_unpaid['unpaid_bills']:
+            # Format bills for better display
+            hostel_unpaid['formatted_bills'] = format_unpaid_bills(hostel_unpaid['unpaid_bills'])
+            unpaid_hostels.append(hostel_unpaid)
+            all_paid = False
+    
+    return {
+        'unpaid_hostels': unpaid_hostels,
+        'total_unpaid_hostels': len(unpaid_hostels),
+        'all_paid': all_paid
+    }
+
+def format_unpaid_bills(bills):
+    """
+    Format unpaid bills into a more meaningful single-line display.
+    Example: ['2025/8 internet', '2025/7 internet', '2025/7 electricity'] 
+    becomes: '2025/7, 2025/8 internet, 2025/7 electricity'
+    """
+    # Group bills by type
+    bill_groups = {}
+    for bill in bills:
+        parts = bill.split(' ')
+        if len(parts) >= 2:
+            period = parts[0]  # e.g., '2025/8' or '2025/7-8'
+            bill_type = ' '.join(parts[1:])  # e.g., 'internet' or 'electricity'
+            
+            if bill_type not in bill_groups:
+                bill_groups[bill_type] = []
+            bill_groups[bill_type].append(period)
+    
+    # Format each bill type
+    formatted_parts = []
+    for bill_type, periods in bill_groups.items():
+        # Sort periods and remove duplicates
+        unique_periods = sorted(set(periods))
+        if len(unique_periods) == 1:
+            formatted_parts.append(f"{unique_periods[0]} {bill_type}")
+        else:
+            # Group consecutive periods if possible
+            formatted_periods = ", ".join(unique_periods)
+            formatted_parts.append(f"{formatted_periods} {bill_type}")
+    
+    return ", ".join(formatted_parts)
 
 @login_required(login_url='/accounts/login/')
 def dashboard(request):
@@ -13,7 +174,16 @@ def dashboard(request):
         hostels = Hostel.objects.filter(name__icontains=query).order_by('id')
     else:
         hostels = Hostel.objects.all().order_by('id')
-    return render(request, 'hostel/dashboard.html', {'hostels': hostels, 'query': query})
+    
+    # Get utility payment status
+    utility_status = get_utility_payment_status()
+    
+    context = {
+        'hostels': hostels, 
+        'query': query,
+        'utility_status': utility_status
+    }
+    return render(request, 'hostel/dashboard.html', context)
 
 @login_required(login_url='/accounts/login/')
 def hostel_detail(request, pk):
