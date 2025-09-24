@@ -3,418 +3,76 @@
 {% block title %}Login - Fishtail System{% endblock %}
 
 {% block content %}
-<div class="login-container">
-    <div class="login-wrapper">
-        <div class="login-card">
-            <div class="login-header">
-                <div class="logo-container">
-                    <i class="bi bi-building"></i>
+<div class="container py-5">
+    <div class="row justify-content-center align-items-center" style="min-height: 80vh; ">
+        <div class="col-12 col-sm-10 col-md-8 col-lg-5 col-xl-4" style="margin-left:-11%">
+            <div class="card shadow-lg border-0 rounded-4">
+                <div class="card-body p-4 p-lg-5">
+                    <div class="text-center mb-4">
+                        <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-gradient text-white rounded-circle mb-3"
+                             style="width: 72px; height: 72px;">
+                            <i class="bi bi-building fs-3"></i>
+                        </div>
+                        <h1 class="h3 fw-bold mb-1">Welcome Back</h1>
+                        <p class="text-muted mb-0">Sign in to your Fishtail account</p>
+                    </div>
+
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label for="id_username" class="form-label">Email Address</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-body-secondary"><i class="bi bi-envelope"></i></span>
+                                <input type="email"
+                                       name="username"
+                                       class="form-control"
+                                       id="id_username"
+                                       placeholder="you@fishtail.jp"
+                                       required
+                                       autocomplete="email">
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="id_password" class="form-label">Password</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-body-secondary"><i class="bi bi-lock"></i></span>
+                                <input type="password"
+                                       name="password"
+                                       class="form-control"
+                                       id="id_password"
+                                       placeholder="••••••••"
+                                       required
+                                       autocomplete="current-password">
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 mb-4">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-box-arrow-in-right me-2"></i>
+                                Sign In
+                            </button>
+                        </div>
+
+                        <div class="text-center text-muted small">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Only <strong>@fishtail.jp</strong> email addresses are allowed
+                        </div>
+                    </form>
                 </div>
-                <h2 class="login-title">Welcome Back</h2>
-                <p class="login-subtitle">Sign in to your Fishtail account</p>
             </div>
-
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-
-            <form method="post" novalidate class="login-form">
-                {% csrf_token %}
-
-                <div class="form-group">
-                    <label for="id_username" class="form-label">
-                        <i class="bi bi-envelope me-2"></i>Email Address
-                    </label>
-                    <div class="input-group">
-                        <span class="input-group-text">
-                            <i class="bi bi-envelope"></i>
-                        </span>
-                        <input type="email" 
-                               name="username" 
-                               class="form-control" 
-                               id="id_username" 
-                               placeholder="you@fishtail.jp" 
-                               required 
-                               autocomplete="email">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="id_password" class="form-label">
-                        <i class="bi bi-lock me-2"></i>Password
-                    </label>
-                    <div class="input-group">
-                        <span class="input-group-text">
-                            <i class="bi bi-lock"></i>
-                        </span>
-                        <input type="password" 
-                               name="password" 
-                               class="form-control" 
-                               id="id_password" 
-                               placeholder="••••••••" 
-                               required 
-                               autocomplete="current-password">
-                    </div>
-                </div>
-
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-login">
-                        <i class="bi bi-box-arrow-in-right me-2"></i>
-                        Sign In
-                    </button>
-                </div>
-
-                <div class="login-footer">
-                    <div class="email-restriction">
-                        <i class="bi bi-info-circle me-2"></i>
-                        <small>Only <strong>@fishtail.jp</strong> email addresses are allowed</small>
-                    </div>
-                </div>
-            </form>
         </div>
     </div>
 </div>
-
-<style>
-.login-container {
-    min-height: 90vh;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    padding: 20px;
-    position: relative;
-    z-index: 1;
-}
-
-
-
-.login-wrapper {
-    width: 100%;
-    max-width: 420px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    margin-left: 30%;
-}
-
-.login-card {
-    background: white;
-    border-radius: 20px;
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
-    padding: 2.5rem;
-    border: 1px solid #e2e8f0;
-    width: 100%;
-    position: relative;
-    z-index: 1001;
-}
-
-.login-header {
-    text-align: center;
-    margin-bottom: 2rem;
-}
-
-.logo-container {
-    width: 80px;
-    height: 80px;
-    background: linear-gradient(135deg, rgb(148, 212, 247), rgb(71, 167, 248));
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 1.5rem;
-    box-shadow: 0 10px 20px rgba(148, 212, 247, 0.3);
-}
-
-.logo-container i {
-    font-size: 2rem;
-    color: white;
-}
-
-.login-title {
-    color: #2d3748;
-    font-size: 1.75rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-    letter-spacing: -0.025em;
-}
-
-.login-subtitle {
-    color: #718096;
-    font-size: 1rem;
-    margin: 0;
-}
-
-.form-group {
-    margin-bottom: 1.5rem;
-}
-
-.form-label {
-    color: #4a5568;
-    font-weight: 600;
-    font-size: 0.875rem;
-    margin-bottom: 0.5rem;
-    display: block;
-}
-
-.input-group {
-    position: relative;
-}
-
-.input-group-text {
-    background: #f7fafc;
-    border: 2px solid #e2e8f0;
-    border-right: none;
-    color: #718096;
-    padding: 0.75rem 1rem;
-    border-radius: 12px 0 0 12px;
-    transition: all 0.3s ease;
-}
-
-.form-control {
-    border: 2px solid #e2e8f0;
-    border-left: none;
-    border-radius: 0 12px 12px 0;
-    padding: 0.75rem 1rem;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-    background: #f7fafc;
-}
-
-.form-control:focus {
-    outline: none;
-    border-color: rgb(148, 212, 247);
-    box-shadow: 0 0 0 3px rgba(148, 212, 247, 0.1);
-    background: white;
-}
-
-.form-control:focus + .input-group-text {
-    border-color: rgb(148, 212, 247);
-    background: white;
-}
-
-.form-control:focus ~ .input-group-text {
-    border-color: rgb(148, 212, 247);
-    background: white;
-}
-
-.btn-login {
-    width: 100%;
-    background: linear-gradient(135deg, rgb(148, 212, 247), rgb(71, 167, 248));
-    border: none;
-    color: white;
-    padding: 0.875rem 1.5rem;
-    font-size: 1rem;
-    font-weight: 600;
-    border-radius: 12px;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(148, 212, 247, 0.3);
-}
-
-.btn-login:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(148, 212, 247, 0.4);
-    background: linear-gradient(135deg, rgb(71, 167, 248), rgb(148, 212, 247));
-}
-
-.btn-login:active {
-    transform: translateY(0);
-}
-
-.form-actions {
-    margin: 2rem 0 1.5rem;
-}
-
-.login-footer {
-    text-align: center;
-    padding-top: 1rem;
-    border-top: 1px solid #e2e8f0;
-}
-
-.email-restriction {
-    color: #718096;
-    font-size: 0.875rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-}
-
-.alert {
-    border-radius: 12px;
-    border: none;
-    margin-bottom: 1.5rem;
-    padding: 1rem 1.25rem;
-}
-
-.alert-success {
-    background: #f0fff4;
-    color: #22543d;
-    border-left: 4px solid #48bb78;
-}
-
-.alert-error, .alert-danger {
-    background: #fed7d7;
-    color: #742a2a;
-    border-left: 4px solid #f56565;
-}
-
-.alert-warning {
-    background: #fef5e7;
-    color: #744210;
-    border-left: 4px solid #ed8936;
-}
-
-.alert-info {
-    background: #ebf8ff;
-    color: #2a4365;
-    border-left: 4px solid #4299e1;
-}
-
-/* Additional background fixes */
-body {
-    margin: 0;
-    padding: 0;
-    min-height: 100vh;
-    overflow-x: hidden;
-}
-
-
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .login-container {
-        padding: 15px;
-    }
-    
-    .login-card {
-        padding: 2rem 1.5rem;
-        border-radius: 16px;
-    }
-    
-    .logo-container {
-        width: 70px;
-        height: 70px;
-    }
-    
-    .logo-container i {
-        font-size: 1.75rem;
-    }
-    
-    .login-title {
-        font-size: 1.5rem;
-    }
-    
-    .login-subtitle {
-        font-size: 0.9rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .login-wrapper {
-        max-width: 100%;
-    }
-    
-    .login-card {
-        padding: 1.5rem 1rem;
-        border-radius: 12px;
-    }
-    
-    .logo-container {
-        width: 60px;
-        height: 60px;
-        margin-bottom: 1rem;
-    }
-    
-    .logo-container i {
-        font-size: 1.5rem;
-    }
-    
-    .login-title {
-        font-size: 1.25rem;
-    }
-    
-    .form-control, .input-group-text {
-        padding: 0.625rem 0.875rem;
-        font-size: 0.9rem;
-    }
-    
-    .btn-login {
-        padding: 0.75rem 1.25rem;
-        font-size: 0.9rem;
-    }
-}
-
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-    .login-card {
-        background: rgba(26, 32, 44, 0.95);
-        border-color: rgba(255, 255, 255, 0.1);
-    }
-    
-    .login-title {
-        color: #f7fafc;
-    }
-    
-    .login-subtitle {
-        color: #a0aec0;
-    }
-    
-    .form-label {
-        color: #e2e8f0;
-    }
-    
-    .form-control, .input-group-text {
-        background: #2d3748;
-        border-color: #4a5568;
-        color: #e2e8f0;
-    }
-    
-    .form-control:focus {
-        background: #1a202c;
-        border-color: #667eea;
-    }
-    
-    .form-control:focus + .input-group-text {
-        background: #1a202c;
-        border-color: #667eea;
-    }
-    
-    .email-restriction {
-        color: #a0aec0;
-    }
-}
-
-/* Animation for form elements */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.login-card {
-    animation: fadeInUp 0.6s ease-out;
-}
-
-.form-group {
-    animation: fadeInUp 0.6s ease-out;
-    animation-fill-mode: both;
-}
-
-.form-group:nth-child(1) { animation-delay: 0.1s; }
-.form-group:nth-child(2) { animation-delay: 0.2s; }
-.form-actions { animation-delay: 0.3s; }
-.login-footer { animation-delay: 0.4s; }
-</style>
 {% endblock %}

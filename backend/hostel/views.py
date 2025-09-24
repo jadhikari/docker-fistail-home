@@ -1,6 +1,7 @@
 from django.shortcuts import get_object_or_404, render,redirect
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from .models import Hostel, Unit, Bed, BedAssignmentHistory
 from customer.models import Customer
 from .forms import HostelForm, UnitForm, BedForm, BedAssignmentForm, EditReleasedDateForm
@@ -58,69 +59,41 @@ def get_utility_payment_status():
                 if not paid:
                     hostel_unpaid['unpaid_bills'].append(month_info['label'])
         
-        # Check water utility with special 2-month billing logic
-        # Water bills come every 2 months:
-        # Jan+Feb bills come in Feb (month 2)
-        # Mar+Apr bills come in Apr (month 4)
-        # May+Jun bills come in Jun (month 6)
-        # Jul+Aug bills come in Aug (month 8)
-        # Sep+Oct bills come in Oct (month 10)
-        # Nov+Dec bills come in Dec (month 12)
-        
-        def get_water_billing_month(check_month, check_year):
-            """Get the month when water bill should be paid for the given month"""
-            # Water bills are paid in even months (Feb, Apr, Jun, Aug, Oct, Dec)
-            if check_month <= 2:
-                return 2  # Jan+Feb bills come in Feb
-            elif check_month <= 4:
-                return 4  # Mar+Apr bills come in Apr
-            elif check_month <= 6:
-                return 6  # May+Jun bills come in Jun
-            elif check_month <= 8:
-                return 8  # Jul+Aug bills come in Aug
-            elif check_month <= 10:
-                return 10  # Sep+Oct bills come in Oct
+        # Check water utility: ensure at least one payment recorded in the current month or the last 2 months
+        def previous_month(year, month):
+            next_month = month - 1
+            if next_month == 0:
+                return year - 1, 12
+            return year, next_month
+
+        recent_water_months = [(current_year, current_month)]
+        year_cursor, month_cursor = current_year, current_month
+        for _ in range(2):  # add the previous two months
+            year_cursor, month_cursor = previous_month(year_cursor, month_cursor)
+            recent_water_months.append((year_cursor, month_cursor))
+
+        water_filters = Q()
+        for year, month in recent_water_months:
+            water_filters |= Q(billing_year=year, billing_month=month)
+
+        water_paid = UtilityExpense.objects.filter(
+            hostel=hostel,
+            expense_type='WATER'
+        ).filter(water_filters).exists()
+
+        if not water_paid and recent_water_months:
+            oldest_year, oldest_month = recent_water_months[-1]
+            newest_year, newest_month = recent_water_months[0]
+
+            def format_period(year, month):
+                return f"{year}/{month:02d}"
+
+            if oldest_year == newest_year:
+                period_label = f"{oldest_year}/{oldest_month:02d}-{newest_month:02d}"
             else:
-                return 12  # Nov+Dec bills come in Dec
-        
-        def get_water_billing_period(check_month, check_year):
-            """Get the billing period description for water"""
-            if check_month <= 2:
-                return f"{check_year}/1-2 water"  # Jan-Feb period
-            elif check_month <= 4:
-                return f"{check_year}/3-4 water"  # Mar-Apr period
-            elif check_month <= 6:
-                return f"{check_year}/5-6 water"  # May-Jun period
-            elif check_month <= 8:
-                return f"{check_year}/7-8 water"  # Jul-Aug period
-            elif check_month <= 10:
-                return f"{check_year}/9-10 water"  # Sep-Oct period
-            else:
-                return f"{check_year}/11-12 water"  # Nov-Dec period
-        
-        # Check water for previous 2 months (avoid duplicates)
-        water_billing_periods = set()  # Track unique billing periods
-        
-        for month_info in [
-            {'month': prev_month, 'year': prev_month_year},
-            {'month': prev_prev_month, 'year': prev_prev_month_year}
-        ]:
-            billing_month = get_water_billing_month(month_info['month'], month_info['year'])
-            billing_period = get_water_billing_period(month_info['month'], month_info['year'])
-            
-            # Only check each billing period once
-            if billing_period not in water_billing_periods:
-                water_billing_periods.add(billing_period)
-                
-                water_paid = UtilityExpense.objects.filter(
-                    hostel=hostel,
-                    expense_type='WATER',
-                    billing_year=month_info['year'],
-                    billing_month=billing_month
-                ).exists()
-                
-                if not water_paid:
-                    hostel_unpaid['unpaid_bills'].append(billing_period)
+                period_label = f"{format_period(oldest_year, oldest_month)}-{format_period(newest_year, newest_month)}"
+
+            hostel_unpaid['unpaid_bills'].append(f"{period_label} water")
         
         # If there are unpaid bills, add to unpaid_hostels
         if hostel_unpaid['unpaid_bills']:
