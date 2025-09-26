@@ -10,7 +10,6 @@ urlpatterns = [
     path('assign/', views.assign_target, name='assign'),
     path('edit/<int:target_id>/', views.edit_target, name='edit'),
     path('delete/<int:target_id>/', views.delete_target, name='delete'),
-    path('statistics/', views.target_statistics, name='statistics'),
     path('contracts/', views.contracts_list, name='contracts'),
     path('contracts/export/', views.export_contracts_excel, name='export_contracts_excel'),
 

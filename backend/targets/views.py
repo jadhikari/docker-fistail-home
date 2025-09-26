@@ -605,8 +605,10 @@ def achievement_details(request, year, month):
     ]
     month_name = month_names[month - 1]
     
-    # Calculate total achievement amount
-    total_amount = sum(achievement.total_amount for achievement in achievements)
+    # Calculate fee totals for the selected period
+    total_agent_fee = sum((achievement.agent_fee for achievement in achievements), Decimal('0'))
+    total_ad_fee = sum((achievement.ad_fee for achievement in achievements), Decimal('0'))
+    total_amount = total_agent_fee + total_ad_fee
     
     context = {
         'user': user,
@@ -614,6 +616,8 @@ def achievement_details(request, year, month):
         'year': year,
         'month': month,
         'month_name': month_name,
+        'total_agent_fee': total_agent_fee,
+        'total_ad_fee': total_ad_fee,
         'total_amount': total_amount,
     }
     
@@ -657,8 +661,8 @@ def create_rental_contract(request):
                 rental_contract.created_by = request.user
                 rental_contract.updated_by = request.user
                 rental_contract.target_to = current_target  # Set the target automatically
-                print(f"Target set to: {current_target}")
-                print(f"Rental contract data: {rental_contract.__dict__}")
+                #print(f"Target set to: {current_target}")
+                #print(f"Rental contract data: {rental_contract.__dict__}")
                 
                 # Save without calling full_clean to avoid validation issues
                 rental_contract.save(force_insert=True)
@@ -704,116 +708,6 @@ def create_rental_contract(request):
     return render(request, 'targets/rental_contract_form.html', context)
 
 
-@login_required
-@user_passes_test(is_superuser)
-def target_statistics(request):
-    """Statistics dashboard for super users"""
-    
-    today = timezone.now().date()
-    current_month = today.month
-    current_year = today.year
-    
-    # Overall statistics (exclude superusers from user count)
-    total_users = User.objects.filter(is_active=True, is_superuser=False).count()
-    total_targets = Target.objects.count()
-    active_targets = Target.objects.filter(status='active').count()
-    completed_targets = Target.objects.filter(status='completed').count()
-    overdue_targets = Target.objects.filter(status='overdue').count()
-    cancelled_targets = Target.objects.filter(status='cancelled').count()
-    
-    # Calculate completion rate
-    completion_rate = 0
-    if total_targets > 0:
-        completion_rate = (completed_targets / total_targets) * 100
-    
-    # Current month statistics
-    current_month_targets = Target.objects.filter(
-        target_month=current_month,
-        target_year=current_year
-    )
-    current_month_total = current_month_targets.count()
-    current_month_completed = current_month_targets.filter(status='completed').count()
-    current_month_active = current_month_targets.filter(status='active').count()
-    current_month_overdue = current_month_targets.filter(status='overdue').count()
-    
-    # Monthly performance (last 12 months)
-    monthly_stats = Target.objects.values(
-        'target_year', 'target_month'
-    ).annotate(
-        total_targets=Count('id'),
-        completed_targets=Count('id', filter=Q(status='completed')),
-        active_targets=Count('id', filter=Q(status='active')),
-        overdue_targets=Count('id', filter=Q(status='overdue')),
-        avg_target_amount=Avg('target_amount'),
-        total_target_amount=Sum('target_amount')
-    ).order_by('-target_year', '-target_month')[:12]
-    
-    # Calculate monthly completion rates
-    for stat in monthly_stats:
-        if stat['total_targets'] > 0:
-            stat['completion_rate'] = (stat['completed_targets'] / stat['total_targets']) * 100
-        else:
-            stat['completion_rate'] = 0
-    
-    # Top performers (users with most completed targets)
-    user_stats = Target.objects.values(
-        'user__first_name', 'user__email'
-    ).annotate(
-        total_targets=Count('id'),
-        completed_targets=Count('id', filter=Q(status='completed')),
-        active_targets=Count('id', filter=Q(status='active')),
-        overdue_targets=Count('id', filter=Q(status='overdue')),
-        avg_target_amount=Avg('target_amount'),
-        total_target_amount=Sum('target_amount')
-    ).order_by('-completed_targets', '-total_targets')[:10]
-    
-    # Calculate user completion rates
-    for stat in user_stats:
-        if stat['total_targets'] > 0:
-            stat['completion_rate'] = (stat['completed_targets'] / stat['total_targets']) * 100
-        else:
-            stat['completion_rate'] = 0
-    
-    # Yearly summary
-    yearly_stats = Target.objects.values('target_year').annotate(
-        total_targets=Count('id'),
-        completed_targets=Count('id', filter=Q(status='completed')),
-        total_amount=Sum('target_amount'),
-        avg_amount=Avg('target_amount')
-    ).order_by('-target_year')
-    
-    for stat in yearly_stats:
-        if stat['total_targets'] > 0:
-            stat['completion_rate'] = (stat['completed_targets'] / stat['total_targets']) * 100
-        else:
-            stat['completion_rate'] = 0
-    
-    context = {
-        'total_users': total_users,
-        'total_targets': total_targets,
-        'active_targets': active_targets,
-        'completed_targets': completed_targets,
-        'overdue_targets': overdue_targets,
-        'cancelled_targets': cancelled_targets,
-        'completion_rate': completion_rate,
-        'current_month_total': current_month_total,
-        'current_month_completed': current_month_completed,
-        'current_month_active': current_month_active,
-        'current_month_overdue': current_month_overdue,
-        'monthly_stats': monthly_stats,
-        'user_stats': user_stats,
-        'yearly_stats': yearly_stats,
-        'current_month': current_month,
-        'current_year': current_year,
-    }
-    
-    return render(request, 'targets/statistics.html', context)
-
-
-
-
-
-
 def target_achievements(request, target_id):
     """View target achievements for a specific target"""
     
@@ -824,10 +718,16 @@ def target_achievements(request, target_id):
         target_to=target
     ).order_by('-created_at')
     
-    # Calculate progress for this specific target
-    progress_amount = target_achievements.aggregate(
-        total_achieved=Sum('agent_fee') + Sum('ad_fee')
-    )['total_achieved'] or 0
+    # Calculate progress and fee totals for this specific target
+    aggregates = target_achievements.aggregate(
+        total_agent_fee=Sum('agent_fee'),
+        total_ad_fee=Sum('ad_fee')
+    )
+
+    total_agent_fee = aggregates['total_agent_fee'] or Decimal('0')
+    total_ad_fee = aggregates['total_ad_fee'] or Decimal('0')
+    total_amount = total_agent_fee + total_ad_fee
+    progress_amount = total_amount
     
     if progress_amount > 0:
         progress_amount = float(progress_amount)
@@ -857,6 +757,9 @@ def target_achievements(request, target_id):
         'progress_percentage': round(progress_percentage, 1),
         'years': years,
         'months': months,
+        'total_agent_fee': total_agent_fee,
+        'total_ad_fee': total_ad_fee,
+        'total_amount': total_amount,
     }
     
     return render(request, 'targets/target_achievements.html', context)
@@ -1059,5 +962,3 @@ def contracts_list(request):
     }
     
     return render(request, 'targets/contracts_list.html', context)
-
-

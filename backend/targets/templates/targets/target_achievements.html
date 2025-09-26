@@ -148,6 +148,15 @@
                                         </tr>
                                     {% endfor %}
                                 </tbody>
+                                <tfoot>
+                                    <tr class="table-light">
+                                        <th colspan="2" class="text-center">Totals</th>
+                                        <td><strong>¥{{ total_agent_fee|floatformat:0 }}</strong></td>
+                                        <td><strong>¥{{ total_ad_fee|floatformat:0 }}</strong></td>
+                                        <td><strong>¥{{ total_amount|floatformat:0 }}</strong></td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
                     </div>

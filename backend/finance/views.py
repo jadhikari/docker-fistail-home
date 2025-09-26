@@ -432,9 +432,9 @@ def expenses(request):
     combined_expenses = []
     
     # Add hostel expenses
-    print(f"DEBUG: Found {hostel_expenses.count()} hostel expenses")
+    #print(f"DEBUG: Found {hostel_expenses.count()} hostel expenses")
     for expense in hostel_expenses:
-        print(f"DEBUG: Processing hostel expense ID {expense.id}")
+        #print(f"DEBUG: Processing hostel expense ID {expense.id}")
         combined_expenses.append({
             'id': expense.id,
             'type': 'hostel',
@@ -455,9 +455,9 @@ def expenses(request):
         })
     
     # Add utility expenses
-    print(f"DEBUG: Found {utility_expenses.count()} utility expenses")
+    #print(f"DEBUG: Found {utility_expenses.count()} utility expenses")
     for expense in utility_expenses:
-        print(f"DEBUG: Processing utility expense ID {expense.id}")
+        #print(f"DEBUG: Processing utility expense ID {expense.id}")
         # Create a date object for sorting (first day of billing month)
         billing_date = date(expense.billing_year, expense.billing_month, 1) if expense.billing_year and expense.billing_month else None
         
@@ -482,7 +482,30 @@ def expenses(request):
 
     # Sort by date (newest first)
     combined_expenses.sort(key=lambda x: x['date'] if x['date'] else date.min, reverse=True)
-    print(f"DEBUG: Total combined expenses: {len(combined_expenses)}")
+    #print(f"DEBUG: Total combined expenses: {len(combined_expenses)}")
+
+    # Calculate totals
+    total_amount = sum([
+        expense['amount'] if expense['amount'] is not None else Decimal('0')
+        for expense in combined_expenses
+    ], Decimal('0'))
+
+    # Paginate combined expenses
+    page_number = request.GET.get('page')
+    paginator = Paginator(combined_expenses, 25)
+    page_obj = paginator.get_page(page_number)
+    expenses_page = page_obj.object_list
+
+    page_total_amount = sum([
+        expense['amount'] if expense['amount'] is not None else Decimal('0')
+        for expense in expenses_page
+    ], Decimal('0'))
+
+    # Preserve current filters in pagination links
+    query_params = request.GET.copy()
+    if 'page' in query_params:
+        query_params.pop('page')
+    query_string = query_params.urlencode()
 
     # Export to Excel
     if export == 'excel':
@@ -524,15 +547,21 @@ def expenses(request):
     # Get all hostels for the filter dropdown
     from hostel.models import Hostel
     all_hostels = Hostel.objects.all().order_by('name')
-    print(combined_expenses)
+    #print(combined_expenses)
     return render(request, 'finance/expenses_dashboard.html', {
-        'expenses': combined_expenses,
+        'expenses': expenses_page,
         'from_date': from_date,
         'to_date': to_date,
         'status': status,
         'expense_type': expense_type,
         'hostel_filter': hostel_filter,
-        'all_hostels': all_hostels
+        'all_hostels': all_hostels,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'total_records': paginator.count,
+        'total_amount': total_amount,
+        'page_total_amount': page_total_amount,
+        'query_string': query_string,
     })
 
 @login_required(login_url='/accounts/login/')

@@ -104,7 +104,7 @@
     <div class="card">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
             <h6 class="mb-0"><i class="bi bi-table me-2"></i>Expenses List</h6>
-            <span class="badge bg-primary small">{{ expenses|length }} expenses found</span>
+            <span class="badge bg-primary small">{{ total_records }} expenses found</span>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -112,17 +112,16 @@
                     <thead class="custom-thead">
                         <tr>
                             <th class="text-center small">Type</th>
-                            <th class="small">ID</th>
-                            <th class="small">Date</th>
-                            <th class="small">Hostel</th>
-                            <th class="small">Purchased By</th>
-                            <th class="small">Memo</th>
-                            <th class="text-center small">Bill</th>
-                            <th class="text-end small">Amount</th>
+                            <th class="text-center small">ID</th>
+                            <th class="text-center small">Date</th>
+                            <th class="text-center small">Hostel</th>
+                            <th class="text-center small">Purchased By</th>
+                            <th class="text-center small">Memo</th>
+                            <th class="text-center small">Amount</th>
                             <th class="text-center small">Status</th>
-                            <th class="small">Approved By</th>
-                            <th class="small">Created By</th>
-                            <th class="small">Created At</th>
+                            <th class="text-center small">Approved By</th>
+                            <th class="text-center small">Created By</th>
+                            <th class="text-center small">Created At</th>
                             <th class="text-center small">Actions</th>
                         </tr>
                     </thead>
@@ -169,16 +168,7 @@
                                     {{ expense.memo|default:"-" }}
                                 </span>
                             </td>
-                            <td class="text-center">
-                                {% if expense.bill_url %}
-                                    <a href="{{ expense.bill_url }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View Bill">
-                                        <i class="bi bi-file-earmark-pdf"></i>
-                                    </a>
-                                {% else %}
-                                    <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-end fw-bold text-success">¥{{ expense.amount }}</td>
+                            <td class="text-end fw-bold text-success">¥{{ expense.amount|floatformat:0 }}</td>
                             <td class="text-center">
                                 {% if expense.status == 'approved' %}
                                     <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Approved</span>
@@ -211,7 +201,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="13" class="text-center py-3">
+                            <td colspan="12" class="text-center py-3">
                                 <div class="text-muted small">
                                     <i class="bi bi-inbox h3"></i>
                                     <p class="mt-2 mb-0">No expenses found matching your criteria.</p>
@@ -220,9 +210,67 @@
                         </tr>
                         {% endfor %}
                     </tbody>
+                    {% if expenses %}
+                    <tfoot>
+                        <tr class="table-light">
+                            <th colspan="6" class="text-end small">Page Total</th>
+                            <th class="text-end">
+                                <span class="fw-bold text-success">¥{{ page_total_amount|floatformat:0 }}</span>
+                            </th>
+                            <th colspan="5"></th>
+                        </tr>
+                    </tfoot>
+                    {% endif %}
                 </table>
             </div>
         </div>
+        {% if expenses %}
+        <div class="card-footer bg-light">
+            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+                {% if page_obj.paginator.num_pages > 1 %}
+                <nav aria-label="Expenses pagination">
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+                            {% if page_obj.has_previous %}
+                            <a class="page-link" href="?{% if query_string %}{{ query_string }}&{% endif %}page=1" tabindex="-1">First</a>
+                            {% else %}
+                            <span class="page-link">First</span>
+                            {% endif %}
+                        </li>
+                        <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+                            {% if page_obj.has_previous %}
+                            <a class="page-link" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}" tabindex="-1">Prev</a>
+                            {% else %}
+                            <span class="page-link">Prev</span>
+                            {% endif %}
+                        </li>
+                        <li class="page-item disabled">
+                            <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                        </li>
+                        <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+                            {% if page_obj.has_next %}
+                            <a class="page-link" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>
+                            {% else %}
+                            <span class="page-link">Next</span>
+                            {% endif %}
+                        </li>
+                        <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+                            {% if page_obj.has_next %}
+                            <a class="page-link" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.paginator.num_pages }}">Last</a>
+                            {% else %}
+                            <span class="page-link">Last</span>
+                            {% endif %}
+                        </li>
+                    </ul>
+                </nav>
+                {% endif %}
+                <div class="text-muted small ms-md-auto text-md-end">
+                    <div><span class="fw-semibold">Page Total:</span> ¥{{ page_total_amount|floatformat:0 }}</div>
+                    <div><span class="fw-semibold">Overall Total:</span> ¥{{ total_amount|floatformat:0 }}</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 
