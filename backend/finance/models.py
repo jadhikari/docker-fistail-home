@@ -28,6 +28,7 @@ class TimeStampedUserModel(models.Model):
         blank=True
     )
 
+
     class Meta:
         abstract = True
 
@@ -124,13 +125,9 @@ class HostelExpense(TimeStampedUserModel):
     hostel = models.ForeignKey(Hostel, on_delete=models.CASCADE, blank=True, null=True)
     purchased_date = models.DateField()
     purchased_by = models.CharField(max_length=255)
-    bill_url = models.TextField(null=True, blank=True)
     memo = models.TextField()
     approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-    amount_before_tax = models.DecimalField(max_digits=10, decimal_places=2)
-    amount_tax = models.DecimalField(max_digits=10, decimal_places=2)
-    amount_total = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
-
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     transaction_code = models.CharField(max_length=6, unique=True, editable=False)
 
@@ -139,7 +136,6 @@ class HostelExpense(TimeStampedUserModel):
             self.transaction_code = self.generate_unique_code()
         if not self.status:
             self.status = 'pending'
-        self.amount_total = (self.amount_before_tax or Decimal("0.00")) + (self.amount_tax or Decimal("0.00")) # type: ignore   
         super().save(*args, **kwargs)
 
     def generate_unique_code(self):
@@ -179,7 +175,6 @@ class UtilityExpense(TimeStampedUserModel):
     paid_by = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True, help_text='User who recorded or paid the expense.')
     approved_by = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_utility_expenses', help_text='User who approved the expense.')
     approval_status = models.CharField(max_length=10, choices=ApprovalStatus.choices, default=ApprovalStatus.PENDING, help_text='Approval status of the expense.')
-    receipt = models.FileField(upload_to='utility_receipts/', null=True, blank=True, help_text='Upload of the bill or receipt.')
 
     class Meta:
         ordering = ['-billing_year', '-billing_month']

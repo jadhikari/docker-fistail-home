@@ -118,28 +118,17 @@
 
                 <!-- Billing Information -->
                 <div class="row g-3 mb-4">
-                    <div class="col-md-6">
-                        <label for="{{ form.billing_year.id_for_label }}" class="form-label fw-semibold small">
-                            Billing Year <span class="text-danger">*</span>
+                    <div class="col-md-6 col-lg-4">
+                        <label for="{{ form.billing_date.id_for_label }}" class="form-label fw-semibold small">
+                            Billing Date <span class="text-danger">*</span>
                         </label>
+                        {{ form.billing_date }}
                         {{ form.billing_year }}
-                        {% if form.billing_year.errors %}
-                            <div class="text-danger small mt-1">
-                                <i class="bi bi-exclamation-circle me-1"></i>
-                                {{ form.billing_year.errors }}
-                            </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <label for="{{ form.billing_month.id_for_label }}" class="form-label fw-semibold small">
-                            Billing Month <span class="text-danger">*</span>
-                        </label>
                         {{ form.billing_month }}
-                        {% if form.billing_month.errors %}
+                        {% if form.billing_date.errors %}
                             <div class="text-danger small mt-1">
                                 <i class="bi bi-exclamation-circle me-1"></i>
-                                {{ form.billing_month.errors }}
+                                {{ form.billing_date.errors }}
                             </div>
                         {% endif %}
                     </div>
@@ -201,21 +190,6 @@
                     </div>
                 </div>
 
-                <div class="row g-3 mb-4">
-                    <div class="col-md-6">
-                        <label for="{{ form.receipt.id_for_label }}" class="form-label fw-semibold small">Receipt</label>
-                        {{ form.receipt }}
-                        {% if form.receipt.errors %}
-                            <div class="text-danger small mt-1">
-                                <i class="bi bi-exclamation-circle me-1"></i>
-                                {{ form.receipt.errors }}
-                            </div>
-                        {% endif %}
-                        {% if form.receipt.help_text %}
-                            <div class="form-text">{{ form.receipt.help_text }}</div>
-                        {% endif %}
-                    </div>
-                </div>
 
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-primary btn-sm">

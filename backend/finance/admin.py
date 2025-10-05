@@ -32,9 +32,7 @@ class HostelExpenseAdmin(admin.ModelAdmin):
         'purchased_date',
         'purchased_by',
         'get_approved_by_name',  # ✅ Add this line
-        'amount_before_tax',
-        'amount_tax',
-        'amount_total',
+        'amount',
         'status',
         'created_by',
         'created_at',
@@ -44,7 +42,7 @@ class HostelExpenseAdmin(admin.ModelAdmin):
     list_filter = ('hostel', 'purchased_date', 'status')
     search_fields = ('purchased_by', 'memo', 'status', 'transaction_code')
 
-    readonly_fields = ('amount_total', 'created_by', 'created_at', 'updated_by', 'updated_at')
+    readonly_fields = ('created_by', 'created_at', 'updated_by', 'updated_at')
 
     def get_hostel_name(self, obj):
         return obj.hostel.name if obj.hostel else "ALL"
@@ -104,9 +102,6 @@ class UtilityExpenseAdmin(admin.ModelAdmin):
         }),
         ('Approval', {
             'fields': ('paid_by', 'approval_status', 'approved_by')
-        }),
-        ('Documentation', {
-            'fields': ('receipt',)
         }),
 
     )

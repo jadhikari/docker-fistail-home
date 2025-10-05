@@ -22,8 +22,8 @@
                 <div>
                     <h4 class="mb-1"><i class="bi bi-cash-coin text-primary me-2"></i>All Expenses</h4>
                     <p class="text-muted mb-0 small">
-                        {% if not request.GET.from_date and not request.GET.to_date and not request.GET.status and not request.GET.hostel and not request.GET.expense_type %}
-                            Showing current month's expenses
+                        {% if display_month %}
+                            Showing expenses for {{ display_month }}
                         {% else %}
                             Manage and track all hostel and utility expenses
                         {% endif %}
@@ -49,12 +49,8 @@
         <div class="card-body">
             <form method="get" class="row g-3">
                 <div class="col-md-2">
-                    <label for="fromDate" class="form-label fw-semibold small">From Date</label>
-                    <input type="date" id="fromDate" name="from_date" value="{{ from_date }}" class="form-control form-control-sm">
-                </div>
-                <div class="col-md-2">
-                    <label for="toDate" class="form-label fw-semibold small">To Date</label>
-                    <input type="date" id="toDate" name="to_date" value="{{ to_date }}" class="form-control form-control-sm">
+                    <label for="yearMonth" class="form-label fw-semibold small">Year & Month</label>
+                    <input type="month" id="yearMonth" name="year_month" value="{{ year_month }}" class="form-control form-control-sm">
                 </div>
                 <div class="col-md-2">
                     <label for="statusFilter" class="form-label fw-semibold small">Status</label>
@@ -91,7 +87,7 @@
                         <a href="{% url 'finance:expenses' %}" class="btn btn-outline-secondary btn-sm">
                             <i class="bi bi-arrow-clockwise me-1"></i>Reset
                         </a>
-                        <a href="?{% if from_date %}from_date={{ from_date }}&{% endif %}{% if to_date %}to_date={{ to_date }}&{% endif %}{% if status %}status={{ status }}&{% endif %}{% if expense_type %}expense_type={{ expense_type }}&{% endif %}{% if hostel_filter %}hostel={{ hostel_filter }}&{% endif %}export=excel" class="btn btn-outline-success btn-sm">
+                        <a href="?{% if year_month %}year_month={{ year_month }}&{% endif %}{% if status %}status={{ status }}&{% endif %}{% if expense_type %}expense_type={{ expense_type }}&{% endif %}{% if hostel_filter %}hostel={{ hostel_filter }}&{% endif %}export=excel" class="btn btn-outline-success btn-sm">
                             <i class="bi bi-file-earmark-excel me-1"></i>
                         </a>
                     </div>
@@ -149,7 +145,7 @@
                                     </span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td class="text-center">
                                 {% if request.user.is_superuser %}
                                     {% if expense.type == 'hostel' %}
                                         <a href="{% url 'finance:hostel_expense_detail' expense.id %}" class="text-decoration-none fw-semibold">{{ expense.transaction_code }}</a>
@@ -160,15 +156,15 @@
                                     <span class="fw-semibold">{{ expense.transaction_code }}</span>
                                 {% endif %}
                             </td>
-                            <td>{{ expense.date_display }}</td>
-                            <td>{{ expense.hostel }}</td>
-                            <td>{{ expense.purchased_by }}</td>
-                            <td>
+                            <td class="text-center">{{ expense.date_display }}</td>
+                            <td class="text-center">{{ expense.hostel }}</td>
+                            <td class="text-center">{{ expense.purchased_by }}</td>
+                            <td class="text-center">
                                 <span class="text-truncate d-inline-block" style="max-width: 120px;" title="{{ expense.memo }}">
                                     {{ expense.memo|default:"-" }}
                                 </span>
-                            </td>
-                            <td class="text-end fw-bold text-success">¥{{ expense.amount|floatformat:0 }}</td>
+                            </td class="text-center">
+                            <td class="text-center fw-bold text-success">¥{{ expense.amount|floatformat:0 }}</td>
                             <td class="text-center">
                                 {% if expense.status == 'approved' %}
                                     <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Approved</span>
@@ -178,9 +174,9 @@
                                     <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>Pending</span>
                                 {% endif %}
                             </td>
-                            <td>{{ expense.approved_by|default:"-" }}</td>
-                            <td>{{ expense.created_by|default:"-" }}</td>
-                            <td>{{ expense.created_at|date:"M d, Y H:i"|default:"-" }}</td>
+                            <td class="text-center">{{ expense.approved_by|default:"-" }}</td>
+                            <td class="text-center">{{ expense.created_by|default:"-" }}</td>
+                            <td class="text-center">{{ expense.created_at|date:"M d, Y H:i"|default:"-" }}</td>
                             <td class="text-center">
                                 {% if expense.status != 'approved' %}
                                     {% if expense.type == 'hostel' %}

@@ -54,45 +54,54 @@
 
                 <div class="row g-3">
                     {% for field in form %}
-                        <div class="{% if field.name == 'memo' %}col-12{% elif field.name in 'bill_url amount_before_tax amount_tax' %}col-md-6{% else %}col-md-4{% endif %}">
-                            <label for="{{ field.id_for_label }}" class="form-label fw-semibold small">
-                                {{ field.label }}
-                                {% if field.field.required %}
-                                    <span class="text-danger">*</span>
+                        {% if field.name != 'memo' %}
+                            <div class="{% if field.name == 'amount' %}col-md-6{% else %}col-md-4{% endif %}">
+                                <label for="{{ field.id_for_label }}" class="form-label fw-semibold small">
+                                    {{ field.label }}
+                                    {% if field.field.required %}
+                                        <span class="text-danger">*</span>
+                                    {% endif %}
+                                </label>
+                                {{ field }}
+                                {% if field.help_text %}
+                                    <div class="form-text">{{ field.help_text }}</div>
                                 {% endif %}
-                            </label>
-                            {{ field }}
-                            {% if field.help_text %}
-                                <div class="form-text">{{ field.help_text }}</div>
-                            {% endif %}
-                            {% if field.errors %}
-                                <div class="text-danger small mt-1">
-                                    <i class="bi bi-exclamation-circle me-1"></i>
-                                    {{ field.errors|striptags }}
-                                </div>
-                            {% endif %}
-                        </div>
+                                {% if field.errors %}
+                                    <div class="text-danger small mt-1">
+                                        <i class="bi bi-exclamation-circle me-1"></i>
+                                        {{ field.errors|striptags }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
                     {% endfor %}
                 </div>
 
-                <!-- Total Amount Display -->
-                <div class="row mt-3">
-                    <div class="col-md-6">
-                        <div class="card bg-light">
-                            <div class="card-body">
-                                <h6 class="card-title mb-2 small"><i class="bi bi-calculator me-2"></i>Total Amount</h6>
-                                <div class="input-group">
-                                    <span class="input-group-text">¥</span>
-                                    <input type="text" id="amount_total" class="form-control fw-bold text-success" readonly>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <div id="taxWarning" class="alert alert-warning mt-3" style="display: none;">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    Tax amount must be less than amount before tax.
+                <!-- Memo Field -->
+                <div class="row mt-3">
+                    <div class="col-12">
+                        {% for field in form %}
+                            {% if field.name == 'memo' %}
+                                <label for="{{ field.id_for_label }}" class="form-label fw-semibold small">
+                                    {{ field.label }}
+                                    {% if field.field.required %}
+                                        <span class="text-danger">*</span>
+                                    {% endif %}
+                                </label>
+                                {{ field }}
+                                {% if field.help_text %}
+                                    <div class="form-text">{{ field.help_text }}</div>
+                                {% endif %}
+                                {% if field.errors %}
+                                    <div class="text-danger small mt-1">
+                                        <i class="bi bi-exclamation-circle me-1"></i>
+                                        {{ field.errors|striptags }}
+                                    </div>
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                    </div>
                 </div>
 
                 <div class="mt-4 d-flex gap-2">
@@ -118,39 +127,5 @@
         });
     }, 5000);
 
-    // Total calculation
-    document.addEventListener('DOMContentLoaded', function () {
-        const beforeTax = document.getElementById("id_amount_before_tax");
-        const tax = document.getElementById("id_amount_tax");
-        const total = document.getElementById("amount_total");
-        const warning = document.getElementById("taxWarning");
-
-        function updateTotal() {
-            const before = parseFloat(beforeTax.value) || 0;
-            const taxVal = parseFloat(tax.value) || 0;
-
-            if (before <= 0) {
-                total.value = '';
-                warning.style.display = "none";
-                return;
-            }
-
-            if (taxVal >= before) {
-                warning.style.display = "block";
-                total.value = '';
-            } else {
-                warning.style.display = "none";
-                const totalVal = before + taxVal;
-                total.value = totalVal.toFixed(2);
-            }
-        }
-
-        // Attach events
-        [beforeTax, tax].forEach(input => {
-            input.addEventListener("input", updateTotal);
-        });
-
-        updateTotal();  // Trigger once on load
-    });
 </script>
 {% endblock %}

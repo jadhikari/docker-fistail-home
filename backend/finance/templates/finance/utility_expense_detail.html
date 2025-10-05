@@ -97,18 +97,6 @@
                                     <th class="text-muted">Description</th>
                                     <td>{{ expense.description|default:"-" }}</td>
                                 </tr>
-                                <tr>
-                                    <th class="text-muted">Receipt</th>
-                                    <td>
-                                        {% if expense.receipt %}
-                                            <a href="{{ expense.receipt.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                                <i class="bi bi-file-earmark-pdf me-1"></i>View Receipt
-                                            </a>
-                                        {% else %}
-                                            <span class="text-muted">N/A</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
                             </tbody>
                         </table>
                     </div>
