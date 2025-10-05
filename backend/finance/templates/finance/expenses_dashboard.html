@@ -109,7 +109,7 @@
                         <tr>
                             <th class="text-center small">Type</th>
                             <th class="text-center small">ID</th>
-                            <th class="text-center small">Date</th>
+                            <th class="text-center small">Purchased/Paid Date</th>
                             <th class="text-center small">Hostel</th>
                             <th class="text-center small">Purchased By</th>
                             <th class="text-center small">Memo</th>
@@ -156,7 +156,7 @@
                                     <span class="fw-semibold">{{ expense.transaction_code }}</span>
                                 {% endif %}
                             </td>
-                            <td class="text-center">{{ expense.date_display }}</td>
+                            <td class="text-center">{{ expense.date_display|safe }}</td>
                             <td class="text-center">{{ expense.hostel }}</td>
                             <td class="text-center">{{ expense.purchased_by }}</td>
                             <td class="text-center">

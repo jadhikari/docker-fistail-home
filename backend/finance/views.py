@@ -460,7 +460,7 @@ def expenses(request):
             'type': expense.expense_type,
             'transaction_code': f"UTIL-{expense.id:06d}",
             'date': billing_date,  # For sorting
-            'date_display': expense.paid_date.strftime('%b %d, %Y') if expense.paid_date else 'N/A',
+            'date_display': f"{expense.paid_date.strftime('%b %d, %Y') if expense.paid_date else 'N/A'}<br><small class='text-muted mb-0'>(Bill of {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][expense.billing_month-1]} {expense.billing_year})</small>" if expense.paid_date and expense.billing_year and expense.billing_month else (expense.paid_date.strftime('%b %d, %Y') if expense.paid_date else 'N/A'),
             'hostel': expense.hostel.name,
             'purchased_by': expense.paid_by.first_name if expense.paid_by else "N/A",
             'memo': expense.description,
