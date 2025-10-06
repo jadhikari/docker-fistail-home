@@ -8,8 +8,10 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.utils import timezone
 from django.db.models import Q
 import openpyxl #type: ignore
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.core.paginator import Paginator
+from django.views.decorators.csrf import csrf_exempt
+import json
 
 from .finance_helpers.rent_defaulters import get_rent_defaulters
 from datetime import date, datetime
@@ -72,7 +74,6 @@ def revenues(request):
     name = request.GET.get('name')
     year = request.GET.get('year')
     month = request.GET.get('month')
-    title = request.GET.get('title')
     hostel = request.GET.get('hostel')
 
     today = timezone.now()
@@ -82,10 +83,7 @@ def revenues(request):
     query = Q()
 
     if name:
-        query &= Q(customer__name__icontains=name) | Q(title__icontains=name)
-
-    if title:
-        query &= Q(title=title)
+        query &= Q(customer__name__icontains=name)
 
     if hostel:
         query &= Q(customer__bed_assignment__unit__hostel__name__icontains=hostel)
@@ -102,21 +100,21 @@ def revenues(request):
         selected_month = default_month
     query &= Q(month=selected_month)
 
-    revenues = HostelRevenue.objects.select_related('customer').filter(query).order_by('-id')
+    # Get all revenues with the base query
+    all_revenues = HostelRevenue.objects.select_related('customer').filter(query).order_by('-id')
+    
+    # Separate registration and rent records
+    registration_revenues = all_revenues.filter(title='registration_fee')
+    rent_revenues = all_revenues.filter(title='rent')
 
     # ✅ Only allow download if there are results
     if request.GET.get('download') == 'excel':
-        if revenues.exists():
-            return export_revenues_to_excel(revenues)
+        if all_revenues.exists():
+            return export_revenues_to_excel(all_revenues)
         else:
             messages.warning(request, "No data available to export.")
 
-    # Pagination
-    page_number = request.GET.get('page', 1)
-    paginator = Paginator(revenues, 25)  # Show 25 records per page
-    page_obj = paginator.get_page(page_number)
-
-    if request.GET and not any([name, year, month, title, hostel]):
+    if request.GET and not any([name, year, month, hostel]):
         messages.warning(request, "No filter parameters provided.")
 
     year_choices = HostelRevenue.objects.values_list('year', flat=True).distinct().order_by('-year')
@@ -126,16 +124,14 @@ def revenues(request):
     all_hostels = Hostel.objects.all().order_by('name')
 
     return render(request, 'finance/revenues_dashboard.html', {
-        'revenues': page_obj,
-        'page_obj': page_obj,
+        'registration_revenues': registration_revenues,
+        'rent_revenues': rent_revenues,
         'name': name,
         'selected_year': selected_year,
         'selected_month': selected_month,
-        'selected_title': title,
         'selected_hostel': hostel,
         'year_choices': year_choices,
         'month_choices': [(i, i) for i in range(1, 13)],
-        'title_choices': HostelRevenue.REVENUE_TYPE_CHOICES,
         'all_hostels': all_hostels,
     })
 
@@ -144,6 +140,32 @@ def revenue_detail(request, pk):
     revenue = get_object_or_404(HostelRevenue, pk=pk)
     return render(request, 'finance/revenue_detail.html', {'revenue': revenue})
 
+
+def get_previous_prepaid_amount(customer, year, month):
+    """
+    Get the prepaid amount from the previous month's rent payment.
+    Returns the prepaid amount if the previous month had a prepaid payment.
+    """
+    # Calculate previous month
+    prev_month = month - 1
+    prev_year = year
+    if prev_month <= 0:
+        prev_month = 12
+        prev_year = year - 1
+    
+    try:
+        prev_revenue = HostelRevenue.objects.get(
+            title='rent',
+            customer=customer,
+            year=prev_year,
+            month=prev_month
+        )
+        # Return prepaid amount if it exists and payment type is prepaid
+        if prev_revenue.payment_type == 'prepaid' and prev_revenue.prepaid_amount:
+            return prev_revenue.prepaid_amount
+        return Decimal('0')
+    except HostelRevenue.DoesNotExist:
+        return Decimal('0')
 
 @login_required(login_url='/accounts/login/')
 def monthly_rent(request, customer_id):
@@ -178,8 +200,24 @@ def monthly_rent(request, customer_id):
             internet_fee = Decimal(request.POST.get("internet", "0"))
             utilities_fee = Decimal(request.POST.get("utilities", "0"))
             rent_discount_percent = Decimal(request.POST.get("rent_discount_percent", "0"))
-        except InvalidOperation:
-            messages.error(request, "Invalid numeric values in the form.")
+            payment_type = request.POST.get("payment_type", "")
+            
+            # Handle collected_amount - it might be empty or contain invalid values
+            collected_amount_str = request.POST.get("collected_amount", "").strip()
+            if collected_amount_str and collected_amount_str != "" and collected_amount_str != "NaN":
+                collected_amount = Decimal(collected_amount_str)
+            else:
+                collected_amount = Decimal("0")
+            
+            # Handle prepaid_amount - it might be empty for normal payments
+            prepaid_amount_str = request.POST.get("prepaid_amount", "").strip()
+            if prepaid_amount_str and prepaid_amount_str != "" and prepaid_amount_str != "NaN":
+                prepaid_amount = Decimal(prepaid_amount_str)
+            else:
+                prepaid_amount = Decimal("0")
+                
+        except InvalidOperation as e:
+            messages.error(request, f"Invalid numeric values in the form. Please check all amount fields. Error: {str(e)}")
             return redirect(request.path)
 
         rent_after_discount = base_rent * (Decimal(1) - rent_discount_percent / Decimal(100))
@@ -189,6 +227,106 @@ def monthly_rent(request, customer_id):
 
         if rent_discount_percent > 0 and not memo:
             messages.error(request, "Memo is required when a discount is applied.")
+            return redirect(request.path)
+
+        # Get outstanding prepaid balance and postpaid amounts for validation
+        previous_prepaid = Decimal('0')
+        previous_postpaid = Decimal('0')
+        
+        # Get all prepaid payments for this customer
+        prepaid_payments = HostelRevenue.objects.filter(
+            title='rent',
+            customer=customer_details.customer,
+            payment_type='prepaid',
+            prepaid_amount__gt=0
+        ).order_by('year', 'month')
+        
+        # Calculate total prepaid amounts
+        total_prepaid = Decimal('0')
+        for payment in prepaid_payments:
+            total_prepaid += payment.prepaid_amount
+        
+        # Get all postpaid payments for this customer
+        postpaid_payments = HostelRevenue.objects.filter(
+            title='rent',
+            customer=customer_details.customer,
+            payment_type='postpaid',
+            prepaid_amount__gt=0
+        ).order_by('year', 'month')
+        
+        # Calculate total postpaid amounts (shortfalls that need to be paid)
+        total_postpaid = Decimal('0')
+        for payment in postpaid_payments:
+            total_postpaid += payment.prepaid_amount
+        
+        # Get all rent payments for this customer
+        rent_payments = HostelRevenue.objects.filter(
+            title='rent',
+            customer=customer_details.customer
+        ).order_by('year', 'month')
+        
+        # Calculate total prepaid amounts consumed
+        total_consumed = Decimal('0')
+        for payment in rent_payments:
+            if payment.total_amount and payment.collected_amount:
+                # If collected amount is less than total amount, it means prepaid was used
+                if payment.collected_amount < payment.total_amount:
+                    total_consumed += (payment.total_amount - payment.collected_amount)
+        
+        # Calculate outstanding balances
+        previous_prepaid = max(total_prepaid - total_consumed, Decimal('0'))
+        previous_postpaid = total_postpaid  # Postpaid amounts are always outstanding until paid
+        
+        # Check if customer had postpaid payment in previous month (to restrict postpaid in current month)
+        prev_month = month - 1
+        prev_year = year
+        if prev_month <= 0:
+            prev_month = 12
+            prev_year = year - 1
+        
+        had_postpaid_last_month = False
+        try:
+            prev_revenue = HostelRevenue.objects.get(
+                title='rent',
+                customer=customer_details.customer,
+                year=prev_year,
+                month=prev_month
+            )
+            if prev_revenue.payment_type == 'postpaid':
+                had_postpaid_last_month = True
+        except HostelRevenue.DoesNotExist:
+            had_postpaid_last_month = False
+        
+        # Adjust total_amount for previous prepaid and add previous postpaid
+        adjusted_total = total_amount - previous_prepaid + previous_postpaid
+        
+        # Restrict postpaid payment if customer had postpaid in previous month
+        if had_postpaid_last_month and payment_type == 'postpaid':
+            messages.error(request, "Customer cannot make postpaid payment this month as they had postpaid payment last month. Please pay the full amount including the previous postpaid amount.")
+            return redirect(request.path)
+        
+        # Validate prepaid/postpaid logic
+        if payment_type == 'prepaid':
+            if collected_amount < adjusted_total:
+                messages.error(request, f"For prepaid payment, collected amount must be greater than or equal to adjusted total rent amount (¥{adjusted_total}).")
+                return redirect(request.path)
+            expected_prepaid = collected_amount - adjusted_total
+            if abs(prepaid_amount - expected_prepaid) > Decimal("0.01"):
+                messages.error(request, f"Prepaid amount should be {expected_prepaid} (excess of collected amount over adjusted total rent).")
+                return redirect(request.path)
+        elif payment_type == 'postpaid':
+            if collected_amount >= adjusted_total:
+                messages.error(request, f"For postpaid payment, collected amount must be less than adjusted total rent amount (¥{adjusted_total}).")
+                return redirect(request.path)
+            expected_postpaid = adjusted_total - collected_amount
+            if abs(prepaid_amount - expected_postpaid) > Decimal("0.01"):
+                messages.error(request, f"Postpaid amount should be {expected_postpaid} (shortfall of adjusted total rent over collected amount).")
+                return redirect(request.path)
+        elif payment_type == '' and collected_amount == 0:
+            # Normal payment - set collected_amount to adjusted_total (after prepaid deduction)
+            collected_amount = adjusted_total
+        elif payment_type == '' and collected_amount != adjusted_total:
+            messages.error(request, f"For normal payment, collected amount must equal amount to collect (¥{adjusted_total}).")
             return redirect(request.path)
 
         revenue, created = HostelRevenue.objects.get_or_create(
@@ -203,6 +341,9 @@ def monthly_rent(request, customer_id):
                 "internet": internet_fee,
                 "utilities": utilities_fee,
                 "total_amount": total_amount,
+                "payment_type": payment_type,
+                "collected_amount": collected_amount,
+                "prepaid_amount": prepaid_amount if payment_type else None,
                 "memo": memo,
                 "created_by": request.user,
                 "updated_by": request.user,
@@ -222,10 +363,140 @@ def monthly_rent(request, customer_id):
     # Check user privileges for editing fees
     can_edit_fees = request.user.has_perm('finance.change_hostelrevenue') or request.user.is_superuser
 
+    # Check if there's an outstanding prepaid balance and postpaid amounts for this customer
+    previous_prepaid = Decimal('0')
+    previous_postpaid = Decimal('0')
+    
+    # Get all prepaid payments for this customer
+    prepaid_payments = HostelRevenue.objects.filter(
+        title='rent',
+        customer=customer_details.customer,
+        payment_type='prepaid',
+        prepaid_amount__gt=0
+    ).order_by('year', 'month')
+    
+    # Calculate total prepaid amounts
+    total_prepaid = Decimal('0')
+    for payment in prepaid_payments:
+        total_prepaid += payment.prepaid_amount
+    
+    # Get all postpaid payments for this customer
+    postpaid_payments = HostelRevenue.objects.filter(
+        title='rent',
+        customer=customer_details.customer,
+        payment_type='postpaid',
+        prepaid_amount__gt=0
+    ).order_by('year', 'month')
+    
+    # Calculate total postpaid amounts (shortfalls that need to be paid)
+    total_postpaid = Decimal('0')
+    for payment in postpaid_payments:
+        total_postpaid += payment.prepaid_amount
+    
+    # Get all rent payments for this customer
+    rent_payments = HostelRevenue.objects.filter(
+        title='rent',
+        customer=customer_details.customer
+    ).order_by('year', 'month')
+    
+    # Calculate total prepaid amounts consumed
+    total_consumed = Decimal('0')
+    for payment in rent_payments:
+        if payment.total_amount and payment.collected_amount:
+            # If collected amount is less than total amount, it means prepaid was used
+            if payment.collected_amount < payment.total_amount:
+                total_consumed += (payment.total_amount - payment.collected_amount)
+    
+    # Calculate outstanding balances
+    previous_prepaid = max(total_prepaid - total_consumed, Decimal('0'))
+    previous_postpaid = total_postpaid  # Postpaid amounts are always outstanding until paid
+    
+    # Check if customer had postpaid payment in previous month (to restrict postpaid in current month)
+    today = timezone.now()
+    current_year = today.year
+    current_month = today.month
+    
+    prev_month = current_month - 1
+    prev_year = current_year
+    if prev_month <= 0:
+        prev_month = 12
+        prev_year = current_year - 1
+    
+    had_postpaid_last_month = False
+    try:
+        prev_revenue = HostelRevenue.objects.get(
+            title='rent',
+            customer=customer_details.customer,
+            year=prev_year,
+            month=prev_month
+        )
+        if prev_revenue.payment_type == 'postpaid':
+            had_postpaid_last_month = True
+    except HostelRevenue.DoesNotExist:
+        had_postpaid_last_month = False
+
+    # Add debug information
+    if previous_prepaid > 0:
+        messages.info(request, f"Outstanding prepaid balance: ¥{previous_prepaid}")
+    if previous_postpaid > 0:
+        messages.warning(request, f"Outstanding postpaid amount: ¥{previous_postpaid} (added to this month's rent)")
+    if had_postpaid_last_month:
+        messages.error(request, "Customer had postpaid payment last month. Postpaid payments are not allowed this month.")
+    
     return render(request, 'finance/monthly_rent.html', {
         'customer_details': customer_details,
-        'can_edit_fees': can_edit_fees
+        'can_edit_fees': can_edit_fees,
+        'previous_prepaid_amount': previous_prepaid,
+        'previous_postpaid_amount': previous_postpaid,
+        'had_postpaid_last_month': had_postpaid_last_month
     })
+
+
+@login_required(login_url='/accounts/login/')
+def get_prepaid_amount_for_month(request, customer_id):
+    """AJAX endpoint to get prepaid amount for a specific month"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            year = int(data.get('year'))
+            month = int(data.get('month'))
+            
+            # Calculate previous month
+            prev_month = month - 1
+            prev_year = year
+            if prev_month <= 0:
+                prev_month = 12
+                prev_year = year - 1
+            
+            # Get customer
+            customer = get_object_or_404(Bed.objects.select_related('customer'), customer=customer_id).customer
+            
+            # Get previous prepaid amount
+            previous_prepaid = Decimal('0')
+            try:
+                prev_revenue = HostelRevenue.objects.get(
+                    title='rent',
+                    customer=customer,
+                    year=prev_year,
+                    month=prev_month
+                )
+                if prev_revenue.payment_type == 'prepaid' and prev_revenue.prepaid_amount:
+                    previous_prepaid = prev_revenue.prepaid_amount
+            except HostelRevenue.DoesNotExist:
+                previous_prepaid = Decimal('0')
+            
+            return JsonResponse({
+                'success': True,
+                'previous_prepaid': float(previous_prepaid),
+                'previous_month': f"{prev_year}-{prev_month:02d}"
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            })
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
 
 
 @login_required(login_url='/accounts/login/')

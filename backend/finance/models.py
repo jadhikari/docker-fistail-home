@@ -45,6 +45,12 @@ class HostelRevenue(TimeStampedUserModel):
         ('registration_fee', 'Registration Fee'),
         ('rent', 'Rent'),
     ]
+    
+    PAYMENT_TYPE_CHOICES = [
+        ('', 'Normal Payment'),
+        ('prepaid', 'Prepaid Payment'),
+        ('postpaid', 'Postpaid Payment'),
+    ]
 
     title = models.CharField(max_length=20, choices=REVENUE_TYPE_CHOICES)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
@@ -66,6 +72,13 @@ class HostelRevenue(TimeStampedUserModel):
     rent = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     rent_discount_percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     rent_after_discount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    
+    # Prepaid/Postpaid fields for rent
+    payment_type = models.CharField(max_length=10, choices=PAYMENT_TYPE_CHOICES, default='', blank=True)
+    prepaid_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, 
+                                       help_text="Amount paid in advance (for prepaid) or amount carried forward (for postpaid)")
+    collected_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
+                                         help_text="Actual amount collected from customer")
 
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
@@ -86,6 +99,33 @@ class HostelRevenue(TimeStampedUserModel):
         elif self.title == 'rent':
             if self.internet is None or self.utilities is None or self.rent is None:
                 raise ValidationError('Internet, Utilities, and Rent are required for Rent.')
+            
+            # Validate prepaid/postpaid logic for rent
+            if self.payment_type and self.collected_amount and self.prepaid_amount:
+                rent_total = (self.rent_after_discount or self.rent or Decimal("0")) + (self.internet or Decimal("0")) + (self.utilities or Decimal("0"))
+                
+                if self.payment_type == 'prepaid':
+                    # For prepaid: collected_amount should be >= total_amount
+                    if self.collected_amount < rent_total:
+                        raise ValidationError('For prepaid payment, collected amount must be greater than or equal to total rent amount.')
+                    # prepaid_amount should be the excess amount
+                    expected_prepaid = self.collected_amount - rent_total
+                    if abs(self.prepaid_amount - expected_prepaid) > Decimal("0.01"):  # Allow small rounding differences
+                        raise ValidationError(f'Prepaid amount should be {expected_prepaid} (excess of collected amount over total rent).')
+                        
+                elif self.payment_type == 'postpaid':
+                    # For postpaid: collected_amount should be < total_amount
+                    if self.collected_amount >= rent_total:
+                        raise ValidationError('For postpaid payment, collected amount must be less than total rent amount.')
+                    # prepaid_amount should be the shortfall amount
+                    expected_postpaid = rent_total - self.collected_amount
+                    if abs(self.prepaid_amount - expected_postpaid) > Decimal("0.01"):  # Allow small rounding differences
+                        raise ValidationError(f'Postpaid amount should be {expected_postpaid} (shortfall of total rent over collected amount).')
+                        
+            elif self.payment_type and not self.collected_amount:
+                raise ValidationError('Collected amount is required when payment type is specified.')
+            elif self.payment_type and not self.prepaid_amount:
+                raise ValidationError('Prepaid/Postpaid amount is required when payment type is specified.')
 
     def save(self, *args, **kwargs):
         if self.deposit and self.deposit_discount_percent is not None:
@@ -103,9 +143,28 @@ class HostelRevenue(TimeStampedUserModel):
         registration_total = (self.deposit_after_discount or Decimal("0")) + (self.initial_fee_after_discount or Decimal("0")) # type: ignore
 
         if self.title == 'rent':
+            # For rent, total_amount is the calculated rent amount
+            # collected_amount is the actual amount paid by customer
             self.total_amount = rent_total
+            
+            # Handle prepaid/postpaid logic
+            if self.payment_type == 'prepaid' and self.collected_amount and self.prepaid_amount:
+                # For prepaid: collected_amount should be >= total_amount
+                # prepaid_amount is the excess amount paid in advance
+                pass  # Validation handled in clean method
+            elif self.payment_type == 'postpaid' and self.collected_amount and self.prepaid_amount:
+                # For postpaid: collected_amount should be < total_amount
+                # prepaid_amount is the shortfall amount carried forward
+                pass  # Validation handled in clean method
+            elif not self.payment_type:
+                # Normal payment: collected_amount should equal total_amount
+                if not self.collected_amount:
+                    self.collected_amount = self.total_amount
+                    
         elif self.title == 'registration_fee':
             self.total_amount = registration_total
+            if not self.collected_amount:
+                self.collected_amount = self.total_amount
         else:
             self.total_amount = Decimal("0")
 

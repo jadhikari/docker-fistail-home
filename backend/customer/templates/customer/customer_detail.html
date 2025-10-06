@@ -201,6 +201,7 @@
                             <th>Internet(¥)</th>
                             <th>Utilities(¥)</th>
                             <th>Rent(¥)</th>
+                            <th>Collected(¥)</th>
                             <th>Meno</th>
                             <th>Created At</th>
                         </tr>
@@ -214,6 +215,18 @@
                                 <td>{{ rent.internet }}</td>
                                 <td>{{ rent.utilities }}</td>
                                 <td>{{ rent.rent_after_discount }}</td>
+                                <td>
+                                    {% if rent.collected_amount %}
+                                        <span class="fw-bold text-success">¥{{ rent.collected_amount }}</span>
+                                        {% if rent.payment_type == 'prepaid' %}
+                                            <small class="text-info d-block">+¥{{ rent.prepaid_amount }} prepaid</small>
+                                        {% elif rent.payment_type == 'postpaid' %}
+                                            <small class="text-warning d-block">-¥{{ rent.prepaid_amount }} postpaid</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">¥{{ rent.total_amount }}</span>
+                                    {% endif %}
+                                </td>
                                 <td>
                                     {{ rent.memo|slice:":20" }}{% if rent.memo|length > 20 %} ... {% endif %}
                                 </td>

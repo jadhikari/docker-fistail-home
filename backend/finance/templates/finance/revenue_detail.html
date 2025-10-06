@@ -91,8 +91,42 @@
                                 {% elif revenue.title == 'rent' %}
                                 <tr>
                                     <th class="text-muted">Payment Type</th>
-                                    <td><span class="badge bg-warning text-dark">Recurring Payment</span></td>
+                                    <td>
+                                        {% if revenue.payment_type == 'prepaid' %}
+                                            <span class="badge bg-info">Prepaid Payment</span>
+                                        {% elif revenue.payment_type == 'postpaid' %}
+                                            <span class="badge bg-warning">Postpaid Payment</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Normal Payment</span>
+                                        {% endif %}
+                                    </td>
                                 </tr>
+                                {% if revenue.collected_amount %}
+                                <tr>
+                                    <th class="text-muted">Amount Collected</th>
+                                    <td class="fw-semibold h5 text-primary">¥{{ revenue.collected_amount }}</td>
+                                </tr>
+                                {% if revenue.collected_amount != revenue.total_amount %}
+                                <tr>
+                                    <th class="text-muted">Total Amount</th>
+                                    <td class="fw-semibold text-muted">¥{{ revenue.total_amount }}</td>
+                                </tr>
+                                {% endif %}
+                                {% endif %}
+                                {% if revenue.prepaid_amount and revenue.payment_type %}
+                                <tr>
+                                    <th class="text-muted">
+                                        {% if revenue.payment_type == 'prepaid' %}Prepaid Amount{% else %}Postpaid Amount{% endif %}
+                                    </th>
+                                    <td class="fw-semibold">
+                                        {% if revenue.payment_type == 'prepaid' %}
+                                            <span class="text-info">+¥{{ revenue.prepaid_amount }}</span>
+                                        {% elif revenue.payment_type == 'postpaid' %}
+                                            <span class="text-warning">-¥{{ revenue.prepaid_amount }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endif %}
                                 {% endif %}
                             </tbody>
                         </table>
@@ -102,6 +136,35 @@
                     <div class="card bg-light">
                         <div class="card-body">
                             <h6 class="card-title mb-3 small"><i class="bi bi-calculator me-2"></i>Amount Details</h6>
+                            
+                            <!-- Payment Summary for Rent -->
+                            {% if revenue.title == 'rent' and revenue.collected_amount %}
+                            <div class="alert alert-primary mb-3">
+                                <h6 class="alert-heading mb-2">Payment Summary</h6>
+                                <div class="row g-2">
+                                    <div class="col-12">
+                                        <small class="text-muted">Amount Actually Collected:</small>
+                                        <div class="h4 fw-bold text-primary mb-0">¥{{ revenue.collected_amount }}</div>
+                                    </div>
+                                    {% if revenue.collected_amount != revenue.total_amount %}
+                                    <div class="col-6">
+                                        <small class="text-muted">Total Rent:</small>
+                                        <div class="fw-semibold">¥{{ revenue.total_amount }}</div>
+                                    </div>
+                                    {% if revenue.prepaid_amount and revenue.payment_type %}
+                                    <div class="col-6">
+                                        <small class="text-muted">
+                                            {% if revenue.payment_type == 'prepaid' %}Prepaid{% else %}Postpaid{% endif %}:
+                                        </small>
+                                        <div class="fw-semibold {% if revenue.payment_type == 'prepaid' %}text-info{% else %}text-warning{% endif %}">
+                                            {% if revenue.payment_type == 'prepaid' %}+{% else %}-{% endif %}¥{{ revenue.prepaid_amount }}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
                             {% if revenue.title == 'registration_fee' %}
                                 <div class="row g-2">
                                     <div class="col-6">

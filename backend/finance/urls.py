@@ -15,5 +15,6 @@ urlpatterns = [
     path('utility-expenses/<int:pk>/', views.utility_expense_detail, name='utility_expense_detail'),
     path('registration/<int:customer_id>/', views.registration_fee, name='registration_fee'),
     path('rent/<int:customer_id>/', views.monthly_rent, name='monthly_rent'), 
+    path('rent/<int:customer_id>/get-prepaid/', views.get_prepaid_amount_for_month, name='get_prepaid_amount'),
     path('notification/', views.notification, name='notification'),  
 ]

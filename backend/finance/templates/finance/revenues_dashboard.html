@@ -49,16 +49,6 @@
                         value="{{ selected_year }}-{{ selected_month|stringformat:'02d' }}">
                 </div>
 
-                <!-- Title dropdown -->
-                <div class="col-md-2">
-                    <label for="title" class="form-label fw-semibold small">Revenue Type</label>
-                    <select id="title" name="title" class="form-select form-select-sm">
-                        <option value="">All Types</option>
-                        {% for val, label in title_choices %}
-                            <option value="{{ val }}" {% if selected_title == val %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
 
                 <!-- Hostel dropdown -->
                 <div class="col-md-2">
@@ -76,7 +66,7 @@
                 <input type="hidden" name="month" id="month_input" value="{{ selected_month }}">
 
                 <!-- Action buttons -->
-                <div class="col-md-3">
+                <div class="col-md-5">
                     <label class="form-label fw-semibold small">&nbsp;</label>
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary btn-sm">
@@ -94,11 +84,11 @@
         </div>
     </div>
 
-    <!-- Results Section -->
-    <div class="card">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-            <h6 class="mb-0"><i class="bi bi-table me-2"></i>Revenue Records</h6>
-            <span class="badge bg-primary small">{{ page_obj.paginator.count }} records found</span>
+    <!-- Registration Fee Records Section -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-dark d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="bi bi-person-plus me-2"></i>Registration Fee Records</h6>
+            <span class="badge bg-dark small">{{ registration_revenues|length }} records found</span>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -106,7 +96,6 @@
                     <thead class="custom-thead">
                         <tr>
                             <th class="small">Customer</th>
-                            <th class="text-center small">Type</th>
                             <th class="text-center small">Year-Month</th>
                             <th class="text-end small">Initial Fee</th>
                             <th class="text-center small">I.F. Discount</th>
@@ -114,29 +103,17 @@
                             <th class="text-end small">Deposit</th>
                             <th class="text-center small">Dep. Discount</th>
                             <th class="text-end small">Dep. After Discount</th>
-                            <th class="text-end small">Internet</th>
-                            <th class="text-end small">Utilities</th>
-                            <th class="text-end small">Rent</th>
-                            <th class="text-center small">Rent Discount</th>
-                            <th class="text-end small">Rent After Discount</th>
                             <th class="text-end fw-bold small">Total</th>
                             <th class="text-center small">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for revenue in revenues %}
+                        {% for revenue in registration_revenues %}
                             <tr>
                                 <td>
                                     <a href="{% url 'customer:customer_detail' revenue.customer.id %}" class="text-decoration-none fw-semibold">
                                         {{ revenue.customer.name }}
                                     </a>
-                                </td>
-                                <td class="text-center">
-                                    {% if revenue.title == 'registration_fee' %}
-                                        <span class="badge bg-info text-dark"><i class="bi bi-person-plus me-1"></i>Registration</span>
-                                    {% else %}
-                                        <span class="badge bg-success"><i class="bi bi-house-door me-1"></i>Rent</span>
-                                    {% endif %}
                                 </td>
                                 <td class="text-center">{{ revenue.year }}-{{ revenue.month|stringformat:'02d' }}</td>
 
@@ -148,12 +125,6 @@
                                 <td class="text-center">{{ revenue.deposit_discount_percent|default:"-" }}</td>
                                 <td class="text-end">{{ revenue.deposit_after_discount|default:"-" }}</td>
 
-                                <td class="text-end">{{ revenue.internet|default:"-" }}</td>
-                                <td class="text-end">{{ revenue.utilities|default:"-" }}</td>
-                                <td class="text-end">{{ revenue.rent|default:"-" }}</td>
-                                <td class="text-center">{{ revenue.rent_discount_percent|default:"-" }}</td>
-                                <td class="text-end">{{ revenue.rent_after_discount|default:"-" }}</td>
-
                                 <td class="text-end fw-bold text-success">¥{{ revenue.total_amount|default:"-" }}</td>
                                 <td class="text-center">
                                     <a href="{% url 'finance:revenue_detail' revenue.pk %}" class="btn btn-sm btn-outline-primary" title="View Details">
@@ -163,10 +134,10 @@
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="16" class="text-center py-3">
+                                <td colspan="10" class="text-center py-3">
                                     <div class="text-muted small">
                                         <i class="bi bi-inbox h3"></i>
-                                        <p class="mt-2 mb-0">No revenue records found matching your criteria.</p>
+                                        <p class="mt-2 mb-0">No registration fee records found matching your criteria.</p>
                                     </div>
                                 </td>
                             </tr>
@@ -174,59 +145,111 @@
                     </tbody>
                 </table>
             </div>
-            
-            <!-- Pagination -->
-            {% if page_obj.paginator.num_pages > 1 %}
-            <div class="card-footer bg-light">
-                <nav aria-label="Revenue records pagination">
-                    <ul class="pagination pagination-sm justify-content-center mb-0">
-                        {% if page_obj.has_previous %}
-                            <li class="page-item">
-                                <a class="page-link" href="?{% if name %}name={{ name }}&{% endif %}{% if selected_year %}year={{ selected_year }}&{% endif %}{% if selected_month %}month={{ selected_month }}&{% endif %}{% if selected_title %}title={{ selected_title }}&{% endif %}{% if selected_hostel %}hostel={{ selected_hostel }}&{% endif %}page=1" aria-label="First">
-                                    <i class="bi bi-chevron-double-left"></i>
-                                </a>
-                            </li>
-                            <li class="page-item">
-                                <a class="page-link" href="?{% if name %}name={{ name }}&{% endif %}{% if selected_year %}year={{ selected_year }}&{% endif %}{% if selected_month %}month={{ selected_month }}&{% endif %}{% if selected_title %}title={{ selected_title }}&{% endif %}{% if selected_hostel %}hostel={{ selected_hostel }}&{% endif %}page={{ page_obj.previous_page_number }}">
-                                    <i class="bi bi-chevron-left"></i>
-                                </a>
-                            </li>
-                        {% endif %}
+        </div>
+    </div>
 
-                        {% for num in page_obj.paginator.page_range %}
-                            {% if page_obj.number == num %}
-                                <li class="page-item active">
-                                    <span class="page-link">{{ num }}</span>
-                                </li>
-                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                                <li class="page-item">
-                                    <a class="page-link" href="?{% if name %}name={{ name }}&{% endif %}{% if selected_year %}year={{ selected_year }}&{% endif %}{% if selected_month %}month={{ selected_month }}&{% endif %}{% if selected_title %}title={{ selected_title }}&{% endif %}{% if selected_hostel %}hostel={{ selected_hostel }}&{% endif %}page={{ num }}">{{ num }}</a>
-                                </li>
-                            {% endif %}
+    <!-- Rent Records Section -->
+    <div class="card">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="bi bi-house-door me-2"></i>Rent Records</h6>
+            <span class="badge bg-dark small">{{ rent_revenues|length }} records found</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 table-sm">
+                    <thead class="custom-thead">
+                        <tr>
+                            <th class="small">Customer</th>
+                            <th class="text-center small">Year-Month</th>
+                            <th class="text-end small">Internet</th>
+                            <th class="text-end small">Utilities</th>
+                            <th class="text-end small">Rent</th>
+                            <th class="text-center small">Rent Discount</th>
+                            <th class="text-end small">Rent After Discount</th>
+                            <th class="text-end fw-bold small">Total</th>
+                            <th class="text-center small">Payment Type</th>
+                            <th class="text-end small">Collected</th>
+                            <th class="text-end small">Prepaid/Postpaid</th>
+                            <th class="text-center small">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for revenue in rent_revenues %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'customer:customer_detail' revenue.customer.id %}" class="text-decoration-none fw-semibold">
+                                        {{ revenue.customer.name }}
+                                    </a>
+                                </td>
+                                <td class="text-center">{{ revenue.year }}-{{ revenue.month|stringformat:'02d' }}</td>
+
+                                <td class="text-end">{{ revenue.internet|default:"-" }}</td>
+                                <td class="text-end">{{ revenue.utilities|default:"-" }}</td>
+                                <td class="text-end">{{ revenue.rent|default:"-" }}</td>
+                                <td class="text-center">{{ revenue.rent_discount_percent|default:"-" }}</td>
+                                <td class="text-end">{{ revenue.rent_after_discount|default:"-" }}</td>
+
+                                <td class="text-end fw-bold text-success">¥{{ revenue.total_amount|default:"-" }}</td>
+                                
+                                <!-- Payment Type -->
+                                <td class="text-center">
+                                    {% if revenue.payment_type == 'prepaid' %}
+                                        <span class="badge bg-info">Prepaid</span>
+                                    {% elif revenue.payment_type == 'postpaid' %}
+                                        <span class="badge bg-warning">Postpaid</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Normal</span>
+                                    {% endif %}
+                                </td>
+                                
+                                <!-- Collected Amount -->
+                                <td class="text-end">
+                                    {% if revenue.collected_amount %}
+                                        <div class="fw-bold text-primary">¥{{ revenue.collected_amount }}</div>
+                                        {% if revenue.collected_amount != revenue.total_amount %}
+                                            <small class="text-muted">(Total: ¥{{ revenue.total_amount }})</small>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                
+                                <!-- Prepaid/Postpaid Amount -->
+                                <td class="text-end">
+                                    {% if revenue.payment_type and revenue.prepaid_amount %}
+                                        <div class="alert alert-sm mb-0 p-1">
+                                            {% if revenue.payment_type == 'prepaid' %}
+                                                <span class="text-info fw-bold">+¥{{ revenue.prepaid_amount }}</span>
+                                                <small class="d-block text-muted">Prepaid</small>
+                                            {% elif revenue.payment_type == 'postpaid' %}
+                                                <span class="text-warning fw-bold">-¥{{ revenue.prepaid_amount }}</span>
+                                                <small class="d-block text-muted">Postpaid</small>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                
+                                <td class="text-center">
+                                    <a href="{% url 'finance:revenue_detail' revenue.pk %}" class="btn btn-sm btn-outline-primary" title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="12" class="text-center py-3">
+                                    <div class="text-muted small">
+                                        <i class="bi bi-inbox h3"></i>
+                                        <p class="mt-2 mb-0">No rent records found matching your criteria.</p>
+                                    </div>
+                                </td>
+                            </tr>
                         {% endfor %}
-
-                        {% if page_obj.has_next %}
-                            <li class="page-item">
-                                <a class="page-link" href="?{% if name %}name={{ name }}&{% endif %}{% if selected_year %}year={{ selected_year }}&{% endif %}{% if selected_month %}month={{ selected_month }}&{% endif %}{% if selected_title %}title={{ selected_title }}&{% endif %}{% if selected_hostel %}hostel={{ selected_hostel }}&{% endif %}page={{ page_obj.next_page_number }}">
-                                    <i class="bi bi-chevron-right"></i>
-                                </a>
-                            </li>
-                            <li class="page-item">
-                                <a class="page-link" href="?{% if name %}name={{ name }}&{% endif %}{% if selected_year %}year={{ selected_year }}&{% endif %}{% if selected_month %}month={{ selected_month }}&{% endif %}{% if selected_title %}title={{ selected_title }}&{% endif %}{% if selected_hostel %}hostel={{ selected_hostel }}&{% endif %}page={{ page_obj.paginator.num_pages }}" aria-label="Last">
-                                    <i class="bi bi-chevron-double-right"></i>
-                                </a>
-                            </li>
-                        {% endif %}
-                    </ul>
-                </nav>
-                
-                <div class="text-center mt-2">
-                    <small class="text-muted">
-                        Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} records
-                    </small>
-                </div>
+                    </tbody>
+                </table>
             </div>
-            {% endif %}
         </div>
     </div>
 </div>
