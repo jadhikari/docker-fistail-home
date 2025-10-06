@@ -16,5 +16,6 @@ urlpatterns = [
     path('registration/<int:customer_id>/', views.registration_fee, name='registration_fee'),
     path('rent/<int:customer_id>/', views.monthly_rent, name='monthly_rent'), 
     path('rent/<int:customer_id>/get-prepaid/', views.get_prepaid_amount_for_month, name='get_prepaid_amount'),
+    path('rent/<int:customer_id>/validate-month/', views.validate_rent_month, name='validate_rent_month'),
     path('notification/', views.notification, name='notification'),  
 ]

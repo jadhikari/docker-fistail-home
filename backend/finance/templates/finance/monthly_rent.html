@@ -24,10 +24,23 @@
             <!-- Payment Month -->
             <div class="row mb-3 align-items-center">
                 <div class="col-md-2">
-                    <label for="rent_month" class="form-label fw-bold mb-0">Rent Payment Month:</label>
+                    <label for="rent_month" class="form-label fw-bold mb-0">Rent Payment Month: <span class="text-danger">*</span></label>
                 </div>
                 <div class="col-md-3">
                     <input type="month" name="rent_month" id="rent_month" class="form-control" required>
+                    <div id="month-validation-feedback" class="invalid-feedback"></div>
+                    <div id="month-success-feedback" class="valid-feedback"></div>
+                </div>
+                <div class="col-md-7">
+                    <div id="month-validation-alert" class="alert" style="display: none;">
+                        <div class="d-flex align-items-center">
+                            <i id="month-alert-icon" class="me-2"></i>
+                            <div>
+                                <strong id="month-alert-title"></strong>
+                                <div id="month-alert-message" class="mt-1"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -44,6 +57,51 @@
                     <p><strong>Address:</strong> {{ customer_details.unit.hostel.address }}</p>
                     <p><strong>Room Number:</strong> {{ customer_details.unit.room_num }}</p>
                     <p><strong>Bed Number:</strong> {{ customer_details.bed_num }}</p>
+                </div>
+            </div>
+
+            <!-- Payment History Summary -->
+            <div class="card bg-light mb-3">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Payment History & Next Payment</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Registration Fee:</h6>
+                            {% if registration_payment %}
+                                <span class="badge bg-success">Paid - {{ registration_payment.year }}-{{ registration_payment.month|stringformat:"02d" }}</span>
+                            {% else %}
+                                <span class="badge bg-danger">Not Paid</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Rent Payments:</h6>
+                            {% if last_rent_payment %}
+                                <div class="mb-2">
+                                    <strong>Last Payment:</strong> 
+                                    {{ last_rent_payment.year }}-{{ last_rent_payment.month|stringformat:"02d" }}
+                                </div>
+                                <div>
+                                    <strong>Next Payment Should Be:</strong>
+                                    {% if last_rent_payment.month == 12 %}
+                                        {{ last_rent_payment.year|add:1 }}-01
+                                    {% else %}
+                                        {{ last_rent_payment.year }}-{{ last_rent_payment.month|add:1|stringformat:"02d" }}
+                                    {% endif %}
+                                </div>
+                            {% else %}
+                                <div>
+                                    <strong>First Payment Should Be:</strong>
+                                    {% if registration_payment %}
+                                        {{ registration_payment.year }}-{{ registration_payment.month|stringformat:"02d" }}
+                                    {% else %}
+                                        <span class="text-danger">Register customer first</span>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -205,10 +263,11 @@
                     </small>
                 </div>
                 <div class="col-md-6">
-                    <label for="collected_amount" class="form-label fw-bold">Amount Collected from Customer</label>
+                    <label for="collected_amount" class="form-label fw-bold">Amount Collected from Customer <span class="text-danger">*</span></label>
                     <input type="number" step="0.01" name="collected_amount" id="collected_amount" class="form-control" 
-                           placeholder="Enter amount customer actually paid"
+                           placeholder="Enter amount customer actually paid" required
                            {% if previous_prepaid_amount > 0 %}data-previous-prepaid="{{ previous_prepaid_amount }}"{% endif %}>
+                    <div id="collected-amount-feedback" class="invalid-feedback"></div>
                     {% if previous_prepaid_amount > 0 %}
                     <small class="form-text text-success">
                         <i class="bi bi-info-circle me-1"></i>
@@ -310,7 +369,8 @@
     // Global variables
     const previousPrepaidAmount = {{ previous_prepaid_amount|default:0 }};
     const previousPostpaidAmount = {{ previous_postpaid_amount|default:0 }};
-    const hadPostpaidLastMonth = {{ had_postpaid_last_month|yesno:"true,false" }};
+    const hadPostpaidLastMonth = {% if had_postpaid_last_month %}true{% else %}false{% endif %};
+    const customerId = {{ customer_details.customer.id }};
     
     document.addEventListener('DOMContentLoaded', function () {
         const discountInput = document.getElementById('discount');
@@ -320,6 +380,15 @@
         const paymentTypeSelect = document.getElementById('payment_type');
         const collectedAmountInput = document.getElementById('collected_amount');
         const prepaidAmountInput = document.getElementById('prepaid_amount');
+        const rentMonthInput = document.getElementById('rent_month');
+        
+        // Month validation elements
+        const monthValidationFeedback = document.getElementById('month-validation-feedback');
+        const monthSuccessFeedback = document.getElementById('month-success-feedback');
+        const monthValidationAlert = document.getElementById('month-validation-alert');
+        const monthAlertIcon = document.getElementById('month-alert-icon');
+        const monthAlertTitle = document.getElementById('month-alert-title');
+        const monthAlertMessage = document.getElementById('month-alert-message');
 
         const afterDiscountDisplay = document.getElementById('afterDiscount');
         const totalAmountDisplay = document.getElementById('totalAmount');
@@ -347,6 +416,114 @@
 
         // Check if user can edit fees
         const canEditFees = document.querySelector('form').dataset.canEdit === 'true';
+
+        // Month validation function
+        function validateRentMonth(year, month) {
+            if (!year || !month) {
+                hideMonthValidation();
+                return;
+            }
+
+            fetch(`{% url 'finance:validate_rent_month' customer_details.customer.id %}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({
+                    year: year,
+                    month: month
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMonthValidationSuccess(data.message);
+                } else {
+                    showMonthValidationError(data.error, data.error_type, data);
+                }
+            })
+            .catch(error => {
+                showMonthValidationError('Validation failed. Please try again.', 'system_error');
+                console.error('Validation error:', error);
+            });
+        }
+
+        function showMonthValidationSuccess(message) {
+            rentMonthInput.classList.remove('is-invalid');
+            rentMonthInput.classList.add('is-valid');
+            monthValidationFeedback.textContent = '';
+            monthSuccessFeedback.textContent = message;
+            monthValidationAlert.style.display = 'none';
+        }
+
+        function showMonthValidationError(error, errorType, data = {}) {
+            rentMonthInput.classList.remove('is-valid');
+            rentMonthInput.classList.add('is-invalid');
+            monthValidationFeedback.textContent = error;
+            monthSuccessFeedback.textContent = '';
+            
+            // Show detailed alert
+            monthValidationAlert.style.display = 'block';
+            monthAlertMessage.textContent = error;
+            
+            // Set appropriate styling and icon based on error type
+            switch (errorType) {
+                case 'registration_required':
+                    monthValidationAlert.className = 'alert alert-danger';
+                    monthAlertIcon.className = 'bi bi-exclamation-triangle-fill me-2 h5 text-danger';
+                    monthAlertTitle.textContent = 'Registration Required';
+                    break;
+                case 'duplicate_payment':
+                    monthValidationAlert.className = 'alert alert-warning';
+                    monthAlertIcon.className = 'bi bi-exclamation-circle-fill me-2 h5 text-warning';
+                    monthAlertTitle.textContent = 'Duplicate Payment';
+                    break;
+                case 'wrong_first_month':
+                    monthValidationAlert.className = 'alert alert-info';
+                    monthAlertIcon.className = 'bi bi-info-circle-fill me-2 h5 text-info';
+                    monthAlertTitle.textContent = 'Wrong First Month';
+                    if (data.suggested_month) {
+                        monthAlertMessage.innerHTML = `${error}<br><small class="text-muted">Suggested: ${data.suggested_month}</small>`;
+                    }
+                    break;
+                case 'skip_months':
+                    monthValidationAlert.className = 'alert alert-warning';
+                    monthAlertIcon.className = 'bi bi-skip-forward-circle-fill me-2 h5 text-warning';
+                    monthAlertTitle.textContent = 'Cannot Skip Months';
+                    if (data.suggested_month) {
+                        monthAlertMessage.innerHTML = `${error}<br><small class="text-muted">Suggested: ${data.suggested_month}</small>`;
+                    }
+                    break;
+                case 'backward_payment':
+                    monthValidationAlert.className = 'alert alert-danger';
+                    monthAlertIcon.className = 'bi bi-arrow-left-circle-fill me-2 h5 text-danger';
+                    monthAlertTitle.textContent = 'Backward Payment';
+                    break;
+                default:
+                    monthValidationAlert.className = 'alert alert-danger';
+                    monthAlertIcon.className = 'bi bi-exclamation-triangle-fill me-2 h5 text-danger';
+                    monthAlertTitle.textContent = 'Validation Error';
+            }
+        }
+
+        function hideMonthValidation() {
+            rentMonthInput.classList.remove('is-valid', 'is-invalid');
+            monthValidationFeedback.textContent = '';
+            monthSuccessFeedback.textContent = '';
+            monthValidationAlert.style.display = 'none';
+        }
+
+        // Add event listener for month validation
+        rentMonthInput.addEventListener('change', function() {
+            const monthValue = this.value;
+            if (monthValue) {
+                const [year, month] = monthValue.split('-').map(Number);
+                validateRentMonth(year, month);
+            } else {
+                hideMonthValidation();
+            }
+        });
 
         // Make calculate function global so it can be called from AJAX callbacks
         window.calculate = function() {
@@ -597,9 +774,26 @@
         const collectedAmount = document.getElementById('collected_amount');
         const prepaidAmount = document.getElementById('prepaid_amount');
         const adjustedTotalDisplay = document.getElementById('adjustedTotal');
+        const rentMonth = document.getElementById('rent_month');
 
         const discountApplied = parseFloat(rentDiscount.value || "0") > 0;
         const adjustedTotal = parseFloat(adjustedTotalDisplay.textContent || "0");
+
+        // Check if month is selected and valid
+        if (!rentMonth.value) {
+            e.preventDefault();
+            alert("Please select a payment month.");
+            rentMonth.focus();
+            return;
+        }
+
+        // Check if month validation failed
+        if (rentMonth.classList.contains('is-invalid')) {
+            e.preventDefault();
+            alert("Please fix the month validation error before submitting.");
+            rentMonth.focus();
+            return;
+        }
 
         // Check memo requirement for discount
         if (discountApplied && memo.value.trim() === "") {

@@ -44,9 +44,10 @@
 
                 <!-- Month-Year picker -->
                 <div class="col-md-2">
-                    <label for="month_picker" class="form-label fw-semibold small">Month-Year</label>
+                    <label for="month_picker" class="form-label fw-semibold small">Created Month-Year</label>
                     <input type="month" id="month_picker" class="form-control form-control-sm"
                         value="{{ selected_year }}-{{ selected_month|stringformat:'02d' }}">
+                    <small class="text-muted">Filter by creation date</small>
                 </div>
 
 
@@ -61,12 +62,21 @@
                     </select>
                 </div>
 
+                <!-- Record Type dropdown -->
+                <div class="col-md-2">
+                    <label for="record_type" class="form-label fw-semibold small">Record Type</label>
+                    <select id="record_type" name="record_type" class="form-select form-select-sm">
+                        <option value="rent" {% if selected_record_type == 'rent' %}selected{% endif %}>Rent Records</option>
+                        <option value="registration" {% if selected_record_type == 'registration' %}selected{% endif %}>Registration Records</option>
+                    </select>
+                </div>
+
                 <!-- Hidden inputs -->
                 <input type="hidden" name="year" id="year_input" value="{{ selected_year }}">
                 <input type="hidden" name="month" id="month_input" value="{{ selected_month }}">
 
                 <!-- Action buttons -->
-                <div class="col-md-5">
+                <div class="col-md-3">
                     <label class="form-label fw-semibold small">&nbsp;</label>
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary btn-sm">
@@ -85,25 +95,30 @@
     </div>
 
     <!-- Registration Fee Records Section -->
+    {% if selected_record_type == 'registration' %}
     <div class="card mb-4">
         <div class="card-header bg-info text-dark d-flex justify-content-between align-items-center">
-            <h6 class="mb-0"><i class="bi bi-person-plus me-2"></i>Registration Fee Records</h6>
-            <span class="badge bg-dark small">{{ registration_revenues|length }} records found</span>
+            <div>
+                <h6 class="mb-0"><i class="bi bi-person-plus me-2"></i>Registration Fee Records</h6>
+                <small class="text-muted">{{ registration_revenues.count }} records found</small>
+            </div>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover mb-0 table-sm">
                     <thead class="custom-thead">
                         <tr>
-                            <th class="small">Customer</th>
+                            <th class="text-center small">Customer</th>
                             <th class="text-center small">Year-Month</th>
-                            <th class="text-end small">Initial Fee</th>
+                            <th class="text-center small">Initial Fee</th>
                             <th class="text-center small">I.F. Discount</th>
-                            <th class="text-end small">I.F. After Discount</th>
-                            <th class="text-end small">Deposit</th>
+                            <th class="text-center small">I.F. After Discount</th>
+                            <th class="text-center small">Deposit</th>
                             <th class="text-center small">Dep. Discount</th>
-                            <th class="text-end small">Dep. After Discount</th>
-                            <th class="text-end fw-bold small">Total</th>
+                            <th class="text-center small">Dep. After Discount</th>
+                            <th class="text-center fw-bold small">Total</th>
+                            <th class="text-center small">Created At</th>
+                            <th class="text-center small">Created By</th>
                             <th class="text-center small">Actions</th>
                         </tr>
                     </thead>
@@ -117,15 +132,33 @@
                                 </td>
                                 <td class="text-center">{{ revenue.year }}-{{ revenue.month|stringformat:'02d' }}</td>
 
-                                <td class="text-end">{{ revenue.initial_fee|default:"-" }}</td>
-                                <td class="text-center">{{ revenue.initial_fee_discount_percent|default:"-" }}</td>
-                                <td class="text-end">{{ revenue.initial_fee_after_discount|default:"-" }}</td>
+                                <td class="text-center">{{ revenue.initial_fee }}</td>
+                                <td class="text-center">
+                                    {% if revenue.initial_fee_discount_percent %}
+                                        {{ revenue.initial_fee_discount_percent|floatformat:"0" }}%
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">{{ revenue.initial_fee_after_discount }}</td>
 
-                                <td class="text-end">{{ revenue.deposit|default:"-" }}</td>
-                                <td class="text-center">{{ revenue.deposit_discount_percent|default:"-" }}</td>
-                                <td class="text-end">{{ revenue.deposit_after_discount|default:"-" }}</td>
+                                <td class="text-center">{{ revenue.deposit }}</td>
+                                <td class="text-center">
+                                    {% if revenue.deposit_discount_percent %}
+                                        {{ revenue.deposit_discount_percent|floatformat:"0" }}%
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">{{ revenue.deposit_after_discount }}</td>
 
-                                <td class="text-end fw-bold text-success">¥{{ revenue.total_amount|default:"-" }}</td>
+                                <td class="text-center fw-bold text-success">¥{{ revenue.total_amount }}</td>
+                                <td class="text-center">
+                                    <small class="text-muted">{{ revenue.created_at|date:"Y-m-d H:i" }}</small>
+                                </td>
+                                <td class="text-center">
+                                    <small class="text-muted">{{ revenue.created_by.first_name|default:revenue.created_by.email|default:"-" }}</small>
+                                </td>
                                 <td class="text-center">
                                     <a href="{% url 'finance:revenue_detail' revenue.pk %}" class="btn btn-sm btn-outline-primary" title="View Details">
                                         <i class="bi bi-eye"></i>
@@ -134,7 +167,7 @@
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="10" class="text-center py-3">
+                                <td colspan="12" class="text-center py-3">
                                     <div class="text-muted small">
                                         <i class="bi bi-inbox h3"></i>
                                         <p class="mt-2 mb-0">No registration fee records found matching your criteria.</p>
@@ -143,33 +176,46 @@
                             </tr>
                         {% endfor %}
                     </tbody>
+                    <tfoot class="table-light">
+                        <tr class="fw-bold">
+                            <td colspan="8" class="text-end">Total:</td>
+                            <td class="text-center text-success">¥{{ registration_total }}</td>
+                            <td colspan="4"></td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         </div>
     </div>
+    {% endif %}
 
     <!-- Rent Records Section -->
+    {% if selected_record_type == 'rent' %}
     <div class="card">
         <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-            <h6 class="mb-0"><i class="bi bi-house-door me-2"></i>Rent Records</h6>
-            <span class="badge bg-dark small">{{ rent_revenues|length }} records found</span>
+            <div>
+                <h6 class="mb-0"><i class="bi bi-house-door me-2"></i>Rent Records</h6>
+                <small class="text-muted">{{ rent_revenues.paginator.count }} records found</small>
+            </div>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover mb-0 table-sm">
                     <thead class="custom-thead">
                         <tr>
-                            <th class="small">Customer</th>
+                            <th class="text-center small">Customer</th>
                             <th class="text-center small">Year-Month</th>
-                            <th class="text-end small">Internet</th>
-                            <th class="text-end small">Utilities</th>
-                            <th class="text-end small">Rent</th>
+                            <th class="text-center small">Internet</th>
+                            <th class="text-center small">Utilities</th>
+                            <th class="text-center small">Rent</th>
                             <th class="text-center small">Rent Discount</th>
-                            <th class="text-end small">Rent After Discount</th>
-                            <th class="text-end fw-bold small">Total</th>
+                            <th class="text-center small">Rent After Discount</th>
+                            <th class="text-center fw-bold small">Total</th>
                             <th class="text-center small">Payment Type</th>
-                            <th class="text-end small">Collected</th>
-                            <th class="text-end small">Prepaid/Postpaid</th>
+                            <th class="text-center small">Collected</th>
+                            <th class="text-center small">Prepaid/Postpaid</th>
+                            <th class="text-center small">Created At</th>
+                            <th class="text-center small">Created By</th>
                             <th class="text-center small">Actions</th>
                         </tr>
                     </thead>
@@ -183,13 +229,19 @@
                                 </td>
                                 <td class="text-center">{{ revenue.year }}-{{ revenue.month|stringformat:'02d' }}</td>
 
-                                <td class="text-end">{{ revenue.internet|default:"-" }}</td>
-                                <td class="text-end">{{ revenue.utilities|default:"-" }}</td>
-                                <td class="text-end">{{ revenue.rent|default:"-" }}</td>
-                                <td class="text-center">{{ revenue.rent_discount_percent|default:"-" }}</td>
-                                <td class="text-end">{{ revenue.rent_after_discount|default:"-" }}</td>
+                                <td class="text-center">{{ revenue.internet|default:"-" }}</td>
+                                <td class="text-center">{{ revenue.utilities|default:"-" }}</td>
+                                <td class="text-center">{{ revenue.rent|default:"-" }}</td>
+                                <td class="text-center">
+                                    {% if revenue.rent_discount_percent %}
+                                        {{ revenue.rent_discount_percent|floatformat:"0" }}%
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">{{ revenue.rent_after_discount|default:"-" }}</td>
 
-                                <td class="text-end fw-bold text-success">¥{{ revenue.total_amount|default:"-" }}</td>
+                                <td class="text-center fw-bold text-success">¥{{ revenue.total_amount|default:"-" }}</td>
                                 
                                 <!-- Payment Type -->
                                 <td class="text-center">
@@ -203,27 +255,22 @@
                                 </td>
                                 
                                 <!-- Collected Amount -->
-                                <td class="text-end">
+                                <td class="text-center">
                                     {% if revenue.collected_amount %}
                                         <div class="fw-bold text-primary">¥{{ revenue.collected_amount }}</div>
-                                        {% if revenue.collected_amount != revenue.total_amount %}
-                                            <small class="text-muted">(Total: ¥{{ revenue.total_amount }})</small>
-                                        {% endif %}
                                     {% else %}
                                         <span class="text-muted">-</span>
                                     {% endif %}
                                 </td>
                                 
                                 <!-- Prepaid/Postpaid Amount -->
-                                <td class="text-end">
+                                <td class="text-center">
                                     {% if revenue.payment_type and revenue.prepaid_amount %}
                                         <div class="alert alert-sm mb-0 p-1">
                                             {% if revenue.payment_type == 'prepaid' %}
                                                 <span class="text-info fw-bold">+¥{{ revenue.prepaid_amount }}</span>
-                                                <small class="d-block text-muted">Prepaid</small>
                                             {% elif revenue.payment_type == 'postpaid' %}
                                                 <span class="text-warning fw-bold">-¥{{ revenue.prepaid_amount }}</span>
-                                                <small class="d-block text-muted">Postpaid</small>
                                             {% endif %}
                                         </div>
                                     {% else %}
@@ -232,6 +279,12 @@
                                 </td>
                                 
                                 <td class="text-center">
+                                    <small class="text-muted">{{ revenue.created_at|date:"Y-m-d H:i" }}</small>
+                                </td>
+                                <td class="text-center">
+                                    <small class="text-muted">{{ revenue.created_by.first_name|default:revenue.created_by.email|default:"-" }}</small>
+                                </td>
+                                <td class="text-center">
                                     <a href="{% url 'finance:revenue_detail' revenue.pk %}" class="btn btn-sm btn-outline-primary" title="View Details">
                                         <i class="bi bi-eye"></i>
                                     </a>
@@ -239,7 +292,7 @@
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="12" class="text-center py-3">
+                                <td colspan="14" class="text-center py-3">
                                     <div class="text-muted small">
                                         <i class="bi bi-inbox h3"></i>
                                         <p class="mt-2 mb-0">No rent records found matching your criteria.</p>
@@ -248,10 +301,79 @@
                             </tr>
                         {% endfor %}
                     </tbody>
+                    <tfoot class="table-light">
+                        <tr class="fw-bold">
+                            <td colspan="7" class="text-end">Page Total Amount:</td>
+                            <td class="text-center text-info">¥{{ rent_page_total_amount }}</td>
+                            <td colspan="1"></td>
+                            <td class="text-center text-info">¥{{ rent_page_collection_total }}</td>
+                            <td colspan="4"></td>
+                        </tr>
+                        <tr class="fw-bold border-top">
+                            <td colspan="7" class="text-end">Overall Total Amount:</td>
+                            <td class="text-center text-success">¥{{ rent_total_amount }}</td>
+                            <td colspan="1"></td>
+                            <td class="text-center text-primary">¥{{ rent_collection_total }}</td>
+                            <td colspan="4"></td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
+            
+            <!-- Rent Pagination -->
+            {% if rent_revenues.has_other_pages %}
+            <div class="card-footer bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-muted small">
+                        Showing {{ rent_revenues.start_index }} to {{ rent_revenues.end_index }} of {{ rent_revenues.paginator.count }} records
+                    </div>
+                    <nav aria-label="Rent pagination">
+                        <ul class="pagination pagination-sm mb-0">
+                            {% if rent_revenues.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% if name %}name={{ name }}&{% endif %}{% if selected_year %}year={{ selected_year }}&{% endif %}{% if selected_month %}month={{ selected_month }}&{% endif %}{% if selected_hostel %}hostel={{ selected_hostel }}&{% endif %}record_type={{ selected_record_type }}&rent_page=1" title="First page">«</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% if name %}name={{ name }}&{% endif %}{% if selected_year %}year={{ selected_year }}&{% endif %}{% if selected_month %}month={{ selected_month }}&{% endif %}{% if selected_hostel %}hostel={{ selected_hostel }}&{% endif %}record_type={{ selected_record_type }}&rent_page={{ rent_revenues.previous_page_number }}">Previous</a>
+                                </li>
+                            {% endif %}
+                            
+                            {% for num in rent_revenues.paginator.page_range %}
+                                {% if num == rent_revenues.number %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num == 1 or num == rent_revenues.paginator.num_pages %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?{% if name %}name={{ name }}&{% endif %}{% if selected_year %}year={{ selected_year }}&{% endif %}{% if selected_month %}month={{ selected_month }}&{% endif %}{% if selected_hostel %}hostel={{ selected_hostel }}&{% endif %}record_type={{ selected_record_type }}&rent_page={{ num }}">{{ num }}</a>
+                                    </li>
+                                {% elif num >= rent_revenues.number|add:'-2' and num <= rent_revenues.number|add:'2' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?{% if name %}name={{ name }}&{% endif %}{% if selected_year %}year={{ selected_year }}&{% endif %}{% if selected_month %}month={{ selected_month }}&{% endif %}{% if selected_hostel %}hostel={{ selected_hostel }}&{% endif %}record_type={{ selected_record_type }}&rent_page={{ num }}">{{ num }}</a>
+                                    </li>
+                                {% elif num == rent_revenues.number|add:'-3' or num == rent_revenues.number|add:'3' %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if rent_revenues.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% if name %}name={{ name }}&{% endif %}{% if selected_year %}year={{ selected_year }}&{% endif %}{% if selected_month %}month={{ selected_month }}&{% endif %}{% if selected_hostel %}hostel={{ selected_hostel }}&{% endif %}record_type={{ selected_record_type }}&rent_page={{ rent_revenues.next_page_number }}">Next</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?{% if name %}name={{ name }}&{% endif %}{% if selected_year %}year={{ selected_year }}&{% endif %}{% if selected_month %}month={{ selected_month }}&{% endif %}{% if selected_hostel %}hostel={{ selected_hostel }}&{% endif %}record_type={{ selected_record_type }}&rent_page={{ rent_revenues.paginator.num_pages }}" title="Last page">»</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
+    {% endif %}
 </div>
 
 <script>
