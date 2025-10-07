@@ -367,8 +367,8 @@
 
 <script>
     // Global variables
-    const previousPrepaidAmount = {{ previous_prepaid_amount|default:0 }};
-    const previousPostpaidAmount = {{ previous_postpaid_amount|default:0 }};
+    window.previousPrepaidAmount = {{ previous_prepaid_amount|default:0 }};
+    window.previousPostpaidAmount = {{ previous_postpaid_amount|default:0 }};
     const hadPostpaidLastMonth = {% if had_postpaid_last_month %}true{% else %}false{% endif %};
     const customerId = {{ customer_details.customer.id }};
     
@@ -416,6 +416,135 @@
 
         // Check if user can edit fees
         const canEditFees = document.querySelector('form').dataset.canEdit === 'true';
+
+        // Function to update previous prepaid amount when month changes
+        function updatePreviousPrepaidAmount(year, month) {
+            console.log('updatePreviousPrepaidAmount called with:', year, month);
+            
+            fetch(`{% url 'finance:get_prepaid_amount' customer_details.customer.id %}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({
+                    year: year,
+                    month: month
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('AJAX response:', data);
+                if (data.success) {
+                    console.log('Previous prepaid amount:', data.previous_prepaid, 'Previous postpaid amount:', data.previous_postpaid, 'for month:', data.previous_month);
+                    
+                    // Update global variables from API
+                    window.previousPrepaidAmount = data.previous_prepaid || 0;
+                    window.previousPostpaidAmount = data.previous_postpaid || 0;
+                    
+                    // Disable postpaid option if last month was postpaid
+                    const postpaidOption = paymentTypeSelect.querySelector('option[value="postpaid"]');
+                    if (postpaidOption) {
+                        if (data.had_postpaid_last_month) {
+                            postpaidOption.disabled = true;
+                            postpaidOption.textContent = 'Postpaid Payment (Not allowed - had postpaid last month)';
+                            if (paymentTypeSelect.value === 'postpaid') {
+                                paymentTypeSelect.value = '';
+                                togglePaymentFields();
+                            }
+                        } else {
+                            postpaidOption.disabled = false;
+                            postpaidOption.textContent = 'Postpaid Payment';
+                        }
+                    }
+                    
+                    // Update the specific displays
+                    updatePreviousPrepaidDisplay(window.previousPrepaidAmount, data.previous_month);
+                    
+                    // Recalculate everything
+                    window.calculate();
+                } else {
+                    console.error('Failed to get previous prepaid amount:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching previous prepaid amount:', error);
+            });
+        }
+
+        // Function to reset previous prepaid amount when no month is selected
+        function resetPreviousPrepaidAmount() {
+            window.previousPrepaidAmount = 0;
+            window.previousPostpaidAmount = 0;
+            hidePreviousPrepaidDisplay();
+            
+            // Clear collected amount field when no month is selected
+            const collectedAmountInput = document.getElementById('collected_amount');
+            if (collectedAmountInput) {
+                collectedAmountInput.value = '';
+            }
+            
+            window.calculate();
+        }
+
+        // Function to update the previous prepaid display
+        function updatePreviousPrepaidDisplay(amount, previousMonth) {
+            console.log('updatePreviousPrepaidDisplay called with amount:', amount, 'previousMonth:', previousMonth);
+            
+            const previousPrepaidAlert = document.querySelector('.alert-success.border-success');
+            const previousPrepaidAmountSpan = document.querySelector('.alert-success .fw-bold.text-success');
+            const previousPrepaidCalculation = document.querySelector('#calculationPreviousPrepaid');
+            const suggestedAmountSpan = document.getElementById('suggestedAmount');
+            
+            console.log('Found elements:', {
+                alert: !!previousPrepaidAlert,
+                amountSpan: !!previousPrepaidAmountSpan,
+                calculation: !!previousPrepaidCalculation,
+                suggested: !!suggestedAmountSpan
+            });
+            
+            if (amount > 0) {
+                // Show the alert
+                if (previousPrepaidAlert) {
+                    previousPrepaidAlert.style.display = 'block';
+                    console.log('Showing previous prepaid alert');
+                }
+                
+                // Update amounts
+                if (previousPrepaidAmountSpan) {
+                    previousPrepaidAmountSpan.textContent = `¥${amount}`;
+                    console.log('Updated amount span to:', `¥${amount}`);
+                }
+                if (previousPrepaidCalculation) {
+                    previousPrepaidCalculation.textContent = amount;
+                    console.log('Updated calculation to:', amount);
+                }
+                if (suggestedAmountSpan) {
+                    const totalRent = parseFloat(document.getElementById('calculationTotalRent').textContent) || 0;
+                    const suggestedAmount = Math.max(0, totalRent - amount);
+                    suggestedAmountSpan.textContent = suggestedAmount.toFixed(2);
+                    console.log('Updated suggested amount to:', suggestedAmount.toFixed(2));
+                    
+                    // Auto-populate collected amount field with suggested amount
+                    const collectedAmountInput = document.getElementById('collected_amount');
+                    if (collectedAmountInput && (collectedAmountInput.value === '' || collectedAmountInput.value === '0')) {
+                        collectedAmountInput.value = suggestedAmount.toFixed(2);
+                        console.log('Auto-populated collected amount with:', suggestedAmount.toFixed(2));
+                    }
+                }
+            } else {
+                console.log('Amount is 0, hiding display');
+                hidePreviousPrepaidDisplay();
+            }
+        }
+
+        // Function to hide previous prepaid display
+        function hidePreviousPrepaidDisplay() {
+            const previousPrepaidAlert = document.querySelector('.alert-success.border-success');
+            if (previousPrepaidAlert) {
+                previousPrepaidAlert.style.display = 'none';
+            }
+        }
 
         // Month validation function
         function validateRentMonth(year, month) {
@@ -516,12 +645,17 @@
 
         // Add event listener for month validation
         rentMonthInput.addEventListener('change', function() {
+            console.log('Month input changed to:', this.value);
             const monthValue = this.value;
             if (monthValue) {
                 const [year, month] = monthValue.split('-').map(Number);
+                console.log('Parsed year:', year, 'month:', month);
                 validateRentMonth(year, month);
+                updatePreviousPrepaidAmount(year, month);
             } else {
+                console.log('No month value, hiding validation and resetting prepaid');
                 hideMonthValidation();
+                resetPreviousPrepaidAmount();
             }
         });
 
@@ -538,12 +672,12 @@
             console.log('Base rent:', baseRent);
             console.log('Internet fee:', internetFee);
             console.log('Utilities fee:', utilitiesFee);
-            console.log('Previous prepaid amount:', previousPrepaidAmount);
-            console.log('Previous postpaid amount:', previousPostpaidAmount);
+            console.log('Previous prepaid amount:', window.previousPrepaidAmount);
+            console.log('Previous postpaid amount:', window.previousPostpaidAmount);
 
             const discountedRent = baseRent * (1 - discount / 100);
             const total = discountedRent + internetFee + utilitiesFee;
-            const adjustedTotal = Math.max(0, total - previousPrepaidAmount + previousPostpaidAmount);
+            const adjustedTotal = Math.max(0, total - window.previousPrepaidAmount + window.previousPostpaidAmount);
 
             // Update basic displays
             afterDiscountDisplay.innerText = discountedRent.toFixed(2);
@@ -555,19 +689,30 @@
             summaryAmountToCollect.innerText = adjustedTotal.toFixed(2);
             summaryAmountCollected.innerText = collectedAmount.toFixed(2);
             
+            // Auto-populate collected amount field with the amount to collect
+            // Update if field is empty, zero, or if it matches the total rent (indicating it needs adjustment)
+            const currentCollectedValue = parseFloat(collectedAmountInput.value) || 0;
+            
+            if (collectedAmountInput.value === '' || 
+                collectedAmountInput.value === '0' || 
+                Math.abs(currentCollectedValue - total) < 0.01) { // If it matches total rent
+                collectedAmountInput.value = adjustedTotal.toFixed(2);
+                console.log('Auto-updated collected amount from', currentCollectedValue, 'to:', adjustedTotal.toFixed(2));
+            }
+            
             // Update previous amount display based on what's available
             const summaryPreviousLabel = document.getElementById('summaryPreviousLabel');
             const summaryPreviousAmount = document.getElementById('summaryPreviousAmount');
             const summaryPreviousType = document.getElementById('summaryPreviousType');
             
-            if (previousPrepaidAmount > 0) {
+            if (window.previousPrepaidAmount > 0) {
                 summaryPreviousLabel.textContent = 'Previous Prepaid';
-                summaryPreviousAmount.textContent = previousPrepaidAmount.toFixed(2);
+                summaryPreviousAmount.textContent = window.previousPrepaidAmount.toFixed(2);
                 summaryPreviousType.textContent = 'Prepaid Credit';
                 summaryPreviousAmount.className = 'h5 fw-bold text-info mb-0';
-            } else if (previousPostpaidAmount > 0) {
+            } else if (window.previousPostpaidAmount > 0) {
                 summaryPreviousLabel.textContent = 'Previous Postpaid';
-                summaryPreviousAmount.textContent = previousPostpaidAmount.toFixed(2);
+                summaryPreviousAmount.textContent = window.previousPostpaidAmount.toFixed(2);
                 summaryPreviousType.textContent = 'Postpaid Due';
                 summaryPreviousAmount.className = 'h5 fw-bold text-warning mb-0';
             } else {
@@ -692,9 +837,9 @@
                 }
             } else if (paymentType === '') {
                 // For normal payment, set collected amount to adjusted total (after prepaid deduction)
-                if (previousPrepaidAmount > 0 && collectedAmountInput.value === '') {
+                if (window.previousPrepaidAmount > 0 && collectedAmountInput.value === '') {
                     collectedAmountInput.value = adjustedTotal.toFixed(2);
-                } else if (previousPrepaidAmount === 0) {
+                } else if (window.previousPrepaidAmount === 0) {
                     collectedAmountInput.value = adjustedTotal.toFixed(2);
                 }
                 // Clear prepaid amount field for normal payments

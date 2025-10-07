@@ -2,62 +2,400 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Confirmation - Fishtail Home</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #007bff;
+            margin: 0;
+            font-size: 24px;
+        }
+        .section {
+            margin-bottom: 25px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #007bff;
+            font-size: 18px;
+        }
+        .payment-type {
+            background-color: #e8f5e8;
+            border-left-color: #28a745;
+        }
+        .payment-type.prepaid {
+            background-color: #fff3cd;
+            border-left-color: #ffc107;
+        }
+        .payment-type.postpaid {
+            background-color: #f8d7da;
+            border-left-color: #dc3545;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+            font-weight: bold;
+            font-size: 16px;
+            color: #007bff;
+        }
+        .label {
+            font-weight: 600;
+            color: #495057;
+        }
+        .value {
+            color: #212529;
+        }
+        .total-section {
+            background-color: #e7f3ff;
+            border-left-color: #007bff;
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            text-align: center;
+            color: #6c757d;
+        }
+        .audit-info {
+            font-size: 12px;
+            color: #6c757d;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 3px;
+        }
+        .currency {
+            color: #28a745;
+            font-weight: bold;
+        }
+    </style>
 </head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; padding: 20px;">
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏠 Fishtail Home</h1>
+            <p style="margin: 5px 0 0 0; color: #6c757d;">Payment Confirmation</p>
+        </div>
 
-    <p>Dear {{ revenue.customer.name }},</p>
+        <p>Dear <strong>{{ revenue.customer.name }}</strong>,</p>
 
-    <p>
-        This is a confirmation of your payment details for 
-        <strong>{{ revenue.get_title_display }}</strong> 
-        for the period of <strong>{{ revenue.year }}/{{ revenue.month }}</strong>.
-        <br>
-        Kindly find the breakdown of the payment below, as recorded by <strong>Fishtail Home</strong>.
-    </p>
+        <p>
+            This email confirms your payment details for 
+            <strong>{{ revenue.get_title_display }}</strong> 
+            for <strong>{{ revenue.year }}/{{ revenue.month|stringformat:"02d" }}</strong>.
+            <br>
+            Please find the complete breakdown of your transaction below.
+        </p>
 
-    <hr>
+        <div class="section">
+            <h3>📋 Transaction Summary</h3>
+            <div class="detail-row">
+                <span class="label">Customer:</span>
+                <span class="value">{{ revenue.customer.name }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Transaction Type:</span>
+                <span class="value">{{ revenue.get_title_display }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Period:</span>
+                <span class="value">{{ revenue.year }}/{{ revenue.month|stringformat:"02d" }}</span>
+            </div>
+            {% if revenue.memo %}
+            <div class="detail-row">
+                <span class="label">Notes:</span>
+                <span class="value">{{ revenue.memo }}</span>
+            </div>
+            {% endif %}
+        </div>
 
-    <h3>Payment Details</h3>
+        {% if revenue.title == 'registration_fee' %}
+        <div class="section">
+            <h3>💰 Registration Fee Breakdown</h3>
+            <div class="detail-row">
+                <span class="label">Deposit:</span>
+                <span class="value currency">{{ revenue.deposit }} ¥</span>
+            </div>
+            {% if revenue.deposit_discount_percent %}
+            <div class="detail-row">
+                <span class="label">Deposit Discount:</span>
+                <span class="value">{{ revenue.deposit_discount_percent }}%</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Deposit After Discount:</span>
+                <span class="value currency">{{ revenue.deposit_after_discount }} ¥</span>
+            </div>
+            {% endif %}
+            <div class="detail-row">
+                <span class="label">Initial Fee:</span>
+                <span class="value currency">{{ revenue.initial_fee }} ¥</span>
+            </div>
+            {% if revenue.initial_fee_discount_percent %}
+            <div class="detail-row">
+                <span class="label">Initial Fee Discount:</span>
+                <span class="value">{{ revenue.initial_fee_discount_percent }}%</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Initial Fee After Discount:</span>
+                <span class="value currency">{{ revenue.initial_fee_after_discount }} ¥</span>
+            </div>
+            {% endif %}
+        </div>
 
-    <p><strong>Customer:</strong> <a href="{{ customer_url }}">{{ revenue.customer.name }}</a></p>
-    <p><strong>Type:</strong> {{ revenue.get_title_display }}</p>
-    <p><strong>Year/Month:</strong> {{ revenue.year }}/{{ revenue.month }}</p>
-    <p><strong>Memo:</strong> {{ revenue.memo|default:"—" }}</p>
+        {% elif revenue.title == 'rent' %}
+        
+        <!-- Previous Month Balance (if any) -->
+        {% if previous_prepaid or previous_postpaid %}
+        <div class="section" style="background-color: {% if previous_prepaid %}#e8f5e9{% else %}#ffebee{% endif %}; border-left-color: {% if previous_prepaid %}#4caf50{% else %}#f44336{% endif %};">
+            <h3>📅 Previous Month Balance ({{ previous_month_display }})</h3>
+            {% if previous_prepaid %}
+            <div class="detail-row">
+                <span class="label">Previous Prepaid Balance:</span>
+                <span class="value currency" style="color: #2e7d32; font-weight: bold;">{{ previous_prepaid }} ¥</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Status:</span>
+                <span class="value" style="color: #2e7d32; font-style: italic;">Available credit from previous payment</span>
+            </div>
+            {% elif previous_postpaid %}
+            <div class="detail-row">
+                <span class="label">Previous Outstanding Balance:</span>
+                <span class="value currency" style="color: #c62828; font-weight: bold;">{{ previous_postpaid }} ¥</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Status:</span>
+                <span class="value" style="color: #c62828; font-style: italic;">Outstanding from previous month</span>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <div class="section">
+            <h3>🏠 Current Month Rent Breakdown</h3>
+            <div class="detail-row">
+                <span class="label">Rent:</span>
+                <span class="value currency">{{ revenue.rent }} ¥</span>
+            </div>
+            {% if revenue.rent_discount_percent %}
+            <div class="detail-row">
+                <span class="label">Rent Discount:</span>
+                <span class="value">{{ revenue.rent_discount_percent }}%</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Rent After Discount:</span>
+                <span class="value currency">{{ revenue.rent_after_discount }} ¥</span>
+            </div>
+            {% endif %}
+            <div class="detail-row">
+                <span class="label">Internet:</span>
+                <span class="value currency">{{ revenue.internet }} ¥</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Utilities:</span>
+                <span class="value currency">{{ revenue.utilities }} ¥</span>
+            </div>
+        </div>
 
-    {% if revenue.title == 'registration_fee' %}
-    <hr>
-    <h4>Registration Fee</h4>
-    <p><strong>Deposit:</strong> {{ revenue.deposit }} ¥</p>
-    <p><strong>Deposit Discount %:</strong> {{ revenue.deposit_discount_percent }}%</p>
-    <p><strong>Deposit After Discount:</strong> {{ revenue.deposit_after_discount }} ¥</p>
-    <p><strong>Initial Fee:</strong> {{ revenue.initial_fee }} ¥</p>
-    <p><strong>Initial Fee Discount %:</strong> {{ revenue.initial_fee_discount_percent }}%</p>
-    <p><strong>Initial Fee After Discount:</strong> {{ revenue.initial_fee_after_discount }} ¥</p>
-    {% elif revenue.title == 'rent' %}
-    <hr>
-    <h4>Rent</h4>
-    <p><strong>Internet:</strong> {{ revenue.internet }} ¥</p>
-    <p><strong>Utilities:</strong> {{ revenue.utilities }} ¥</p>
-    <p><strong>Rent:</strong> {{ revenue.rent }} ¥</p>
-    <p><strong>Rent Discount %:</strong> {{ revenue.rent_discount_percent }}</p>
-    <p><strong>Rent After Discount:</strong> {{ revenue.rent_after_discount }}</p>
-    {% endif %}
-    <p><strong>Total Amount:</strong> {{ revenue.total_amount }}</p>
+        <!-- Payment Type Information for Rent -->
+        {% if revenue.payment_type %}
+        <div class="section payment-type {% if revenue.payment_type == 'prepaid' %}prepaid{% elif revenue.payment_type == 'postpaid' %}postpaid{% endif %}">
+            <h3>
+                {% if revenue.payment_type == 'prepaid' %}
+                ⚡ Prepaid Payment Details
+                {% elif revenue.payment_type == 'postpaid' %}
+                📝 Postpaid Payment Details
+                {% endif %}
+            </h3>
+            <div class="detail-row">
+                <span class="label">Payment Type:</span>
+                <span class="value">
+                    {% if revenue.payment_type == 'prepaid' %}
+                    <strong style="color: #ffc107;">Prepaid Payment</strong>
+                    {% elif revenue.payment_type == 'postpaid' %}
+                    <strong style="color: #dc3545;">Postpaid Payment</strong>
+                    {% endif %}
+                </span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Amount Collected:</span>
+                <span class="value currency">{{ revenue.collected_amount }} ¥</span>
+            </div>
+            {% if revenue.payment_type == 'prepaid' %}
+            <div class="detail-row" style="background-color: #fff3cd; padding: 10px; margin: 5px 0; border-radius: 5px; border: 2px solid #ffc107;">
+                <span class="label"><strong>💰 Prepaid Amount:</strong></span>
+                <span class="value currency" style="font-size: 18px; color: #856404;">{{ revenue.prepaid_amount }} ¥</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Balance Available for Next Period:</span>
+                <span class="value currency">{{ revenue.prepaid_amount }} ¥</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Note:</span>
+                <span class="value" style="color: #856404; font-style: italic;">This advance payment will be applied to your next billing period</span>
+            </div>
+            {% elif revenue.payment_type == 'postpaid' %}
+            <div class="detail-row" style="background-color: #f8d7da; padding: 10px; margin: 5px 0; border-radius: 5px; border: 2px solid #dc3545;">
+                <span class="label"><strong>📋 Outstanding Amount:</strong></span>
+                <span class="value currency" style="font-size: 18px; color: #721c24;">{{ revenue.prepaid_amount }} ¥</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Status:</span>
+                <span class="value" style="color: #721c24; font-weight: bold;">Balance carried forward to next payment</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Note:</span>
+                <span class="value" style="color: #721c24; font-style: italic;">This amount will be added to your next month's payment</span>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% endif %}
 
-    <hr>
+        <!-- Payment Calculation Section -->
+        {% if revenue.title == 'rent' %}
+        <div class="section" style="background-color: #e3f2fd; border-left-color: #1976d2;">
+            <h3>🧮 Payment Calculation</h3>
+            
+            {% if previous_prepaid %}
+            <!-- Calculation with previous prepaid balance -->
+            <div class="detail-row">
+                <span class="label">① Current Month Rent Total:</span>
+                <span class="value currency">{{ revenue.total_amount }} ¥</span>
+            </div>
+            <div class="detail-row">
+                <span class="label" style="color: #2e7d32;">② Previous Prepaid Balance (Credit):</span>
+                <span class="value currency" style="color: #2e7d32;">-{{ previous_prepaid }} ¥</span>
+            </div>
+            <div class="detail-row" style="border-top: 2px solid #1976d2; padding-top: 10px; margin-top: 5px; background-color: #bbdefb; padding: 10px; border-radius: 5px;">
+                <span class="label"><strong>③ Adjusted Amount to Pay (① - ②):</strong></span>
+                <span class="value currency" style="font-size: 18px;"><strong>{{ adjusted_amount_to_pay }} ¥</strong></span>
+            </div>
+            <div class="detail-row">
+                <span class="label">④ Amount Actually Collected:</span>
+                <span class="value currency">{{ revenue.collected_amount }} ¥</span>
+            </div>
+            
+            {% elif previous_postpaid %}
+            <!-- Calculation with previous postpaid balance -->
+            <div class="detail-row">
+                <span class="label">① Current Month Rent Total:</span>
+                <span class="value currency">{{ revenue.total_amount }} ¥</span>
+            </div>
+            <div class="detail-row">
+                <span class="label" style="color: #c62828;">② Previous Outstanding Balance:</span>
+                <span class="value currency" style="color: #c62828;">+{{ previous_postpaid }} ¥</span>
+            </div>
+            <div class="detail-row" style="border-top: 2px solid #1976d2; padding-top: 10px; margin-top: 5px; background-color: #bbdefb; padding: 10px; border-radius: 5px;">
+                <span class="label"><strong>③ Total Amount to Pay (① + ②):</strong></span>
+                <span class="value currency" style="font-size: 18px;"><strong>{{ adjusted_amount_to_pay }} ¥</strong></span>
+            </div>
+            <div class="detail-row">
+                <span class="label">④ Amount Actually Collected:</span>
+                <span class="value currency">{{ revenue.collected_amount }} ¥</span>
+            </div>
+            
+            {% else %}
+            <!-- Normal calculation without previous balance -->
+            <div class="detail-row">
+                <span class="label">① Total Amount Due:</span>
+                <span class="value currency">{{ revenue.total_amount }} ¥</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">② Amount Collected:</span>
+                <span class="value currency">{{ revenue.collected_amount }} ¥</span>
+            </div>
+            {% endif %}
+            
+            {% if revenue.payment_type == 'prepaid' and revenue.prepaid_amount %}
+            <div class="detail-row" style="border-top: 2px solid #2e7d32; padding-top: 10px; margin-top: 10px; background-color: #c8e6c9; padding: 10px; border-radius: 5px;">
+                <span class="label" style="color: #1b5e20;"><strong>⑤ Excess Payment → New Prepaid Balance (④ - ③):</strong></span>
+                <span class="value currency" style="color: #1b5e20; font-size: 18px;"><strong>{{ revenue.prepaid_amount }} ¥</strong></span>
+            </div>
+            <p style="margin: 10px 0; padding: 10px; background-color: #e8f5e9; border-left: 4px solid #4caf50; border-radius: 3px; font-size: 14px; color: #2e7d32;">
+                <strong>✓ Great!</strong> You have paid <strong>{{ revenue.prepaid_amount }} ¥</strong> in advance. This amount will be applied as credit towards your next month's rent.
+            </p>
+            
+            {% elif revenue.payment_type == 'postpaid' and revenue.prepaid_amount %}
+            <div class="detail-row" style="border-top: 2px solid #c62828; padding-top: 10px; margin-top: 10px; background-color: #ffcdd2; padding: 10px; border-radius: 5px;">
+                <span class="label" style="color: #b71c1c;"><strong>⑤ Shortfall → New Outstanding Balance (③ - ④):</strong></span>
+                <span class="value currency" style="color: #b71c1c; font-size: 18px;"><strong>{{ revenue.prepaid_amount }} ¥</strong></span>
+            </div>
+            <p style="margin: 10px 0; padding: 10px; background-color: #ffebee; border-left: 4px solid #f44336; border-radius: 3px; font-size: 14px; color: #c62828;">
+                <strong>⚠ Note:</strong> There is an outstanding balance of <strong>{{ revenue.prepaid_amount }} ¥</strong> that will be added to your next month's payment.
+            </p>
+            {% endif %}
+        </div>
+        {% endif %}
 
-    <h5>Audit Info</h5>
-    <p><strong>Created At:</strong> {{ revenue.created_at|date:"Y-m-d H:i" }}</p>
-    <p><strong>Created By:</strong> {{ revenue.created_by }}</p>
+        <div class="section total-section">
+            <h3>💳 Payment Summary</h3>
+            <div class="detail-row">
+                <span class="label">Total Amount Due:</span>
+                <span class="value currency">{{ revenue.total_amount }} ¥</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">Amount Collected:</span>
+                <span class="value currency">{{ revenue.collected_amount }} ¥</span>
+            </div>
+            {% if revenue.payment_type and revenue.prepaid_amount %}
+            <div class="detail-row" style="background-color: {% if revenue.payment_type == 'prepaid' %}#fff3cd{% else %}#f8d7da{% endif %}; padding: 15px; margin: 10px 0; border-radius: 8px; border: 3px solid {% if revenue.payment_type == 'prepaid' %}#ffc107{% else %}#dc3545{% endif %};">
+                <span class="label" style="font-size: 16px; font-weight: bold;">
+                    {% if revenue.payment_type == 'prepaid' %}
+                    💰 PREPAID AMOUNT:
+                    {% elif revenue.payment_type == 'postpaid' %}
+                    📋 OUTSTANDING BALANCE:
+                    {% endif %}
+                </span>
+                <span class="value currency" style="font-size: 20px; font-weight: bold; color: {% if revenue.payment_type == 'prepaid' %}#856404{% else %}#721c24{% endif %};">{{ revenue.prepaid_amount }} ¥</span>
+            </div>
+            {% endif %}
+        </div>
 
-    <hr>
+        <div class="audit-info">
+            <strong>Transaction Details:</strong><br>
+            Recorded on: {{ revenue.created_at|date:"F d, Y \a\t g:i A" }}<br>
+            Processed by: {{ revenue.created_by|default:"System" }}
+        </div>
 
-    <p>
-        If you have any questions or need further clarification, please do not hesitate to contact us.<br>
-        Thank you for choosing <strong>Fishtail Home</strong>.
-    </p>
-    </br></br>
-    <p>Warm regards,<br><strong>Fishtail Home Team</strong></p>
-
+        <div class="footer">
+            <p>
+                <strong>Need assistance?</strong><br>
+                Contact us for any questions or clarifications regarding this payment.
+            </p>
+            <p>
+                Thank you for choosing <strong>Fishtail Home</strong>!<br>
+                <em>Your comfort is our priority</em>
+            </p>
+        </div>
+    </div>
 </body>
 </html>

@@ -144,9 +144,9 @@ def format_unpaid_bills(bills):
 def dashboard(request):
     query = request.GET.get('q', '')
     if query:
-        hostels = Hostel.objects.filter(name__icontains=query).order_by('id')
+        hostels = Hostel.objects.filter(name__icontains=query).order_by('name')
     else:
-        hostels = Hostel.objects.all().order_by('id')
+        hostels = Hostel.objects.all().order_by('name')
     
     # Get utility payment status
     utility_status = get_utility_payment_status()

@@ -402,55 +402,10 @@ def monthly_rent(request, customer_id):
             messages.error(request, "Memo is required when a discount is applied.")
             return redirect(request.path)
 
-        # Get outstanding prepaid balance and postpaid amounts for validation
+        # Compute only immediate previous month's prepaid/postpaid amounts
         previous_prepaid = Decimal('0')
         previous_postpaid = Decimal('0')
         
-        # Get all prepaid payments for this customer
-        prepaid_payments = HostelRevenue.objects.filter(
-            title='rent',
-            customer=customer_details.customer,
-            payment_type='prepaid',
-            prepaid_amount__gt=0
-        ).order_by('year', 'month')
-        
-        # Calculate total prepaid amounts
-        total_prepaid = Decimal('0')
-        for payment in prepaid_payments:
-            total_prepaid += payment.prepaid_amount
-        
-        # Get all postpaid payments for this customer
-        postpaid_payments = HostelRevenue.objects.filter(
-            title='rent',
-            customer=customer_details.customer,
-            payment_type='postpaid',
-            prepaid_amount__gt=0
-        ).order_by('year', 'month')
-        
-        # Calculate total postpaid amounts (shortfalls that need to be paid)
-        total_postpaid = Decimal('0')
-        for payment in postpaid_payments:
-            total_postpaid += payment.prepaid_amount
-        
-        # Get all rent payments for this customer
-        rent_payments = HostelRevenue.objects.filter(
-            title='rent',
-            customer=customer_details.customer
-        ).order_by('year', 'month')
-        
-        # Calculate total prepaid amounts consumed
-        total_consumed = Decimal('0')
-        for payment in rent_payments:
-            if payment.total_amount and payment.collected_amount:
-                # If collected amount is less than total amount, it means prepaid was used
-                if payment.collected_amount < payment.total_amount:
-                    total_consumed += (payment.total_amount - payment.collected_amount)
-        
-        # Calculate outstanding balances
-        previous_prepaid = max(total_prepaid - total_consumed, Decimal('0'))
-        previous_postpaid = total_postpaid  # Postpaid amounts are always outstanding until paid
-        
-        # Check if customer had postpaid payment in previous month (to restrict postpaid in current month)
         prev_month = month - 1
         prev_year = year
         if prev_month <= 0:
@@ -465,7 +420,10 @@ def monthly_rent(request, customer_id):
                 year=prev_year,
                 month=prev_month
             )
-            if prev_revenue.payment_type == 'postpaid':
+            if prev_revenue.payment_type == 'prepaid' and prev_revenue.prepaid_amount:
+                previous_prepaid = prev_revenue.prepaid_amount
+            elif prev_revenue.payment_type == 'postpaid' and prev_revenue.prepaid_amount:
+                previous_postpaid = prev_revenue.prepaid_amount
                 had_postpaid_last_month = True
         except HostelRevenue.DoesNotExist:
             had_postpaid_last_month = False
@@ -498,7 +456,7 @@ def monthly_rent(request, customer_id):
         elif payment_type == '' and collected_amount == 0:
             # Normal payment - set collected_amount to adjusted_total (after prepaid deduction)
             collected_amount = adjusted_total
-        elif payment_type == '' and collected_amount != adjusted_total:
+        elif payment_type == '' and abs(collected_amount - adjusted_total) > Decimal("0.01"):
             messages.error(request, f"For normal payment, collected amount must equal amount to collect (¥{adjusted_total}).")
             return redirect(request.path)
 
@@ -536,85 +494,39 @@ def monthly_rent(request, customer_id):
     # Check user privileges for editing fees
     can_edit_fees = request.user.has_perm('finance.change_hostelrevenue') or request.user.is_superuser
 
-    # Check if there's an outstanding prepaid balance and postpaid amounts for this customer
-    previous_prepaid = Decimal('0')
-    previous_postpaid = Decimal('0')
-    
-    # Get all prepaid payments for this customer
-    prepaid_payments = HostelRevenue.objects.filter(
-        title='rent',
-        customer=customer_details.customer,
-        payment_type='prepaid',
-        prepaid_amount__gt=0
-    ).order_by('year', 'month')
-    
-    # Calculate total prepaid amounts
-    total_prepaid = Decimal('0')
-    for payment in prepaid_payments:
-        total_prepaid += payment.prepaid_amount
-    
-    # Get all postpaid payments for this customer
-    postpaid_payments = HostelRevenue.objects.filter(
-        title='rent',
-        customer=customer_details.customer,
-        payment_type='postpaid',
-        prepaid_amount__gt=0
-    ).order_by('year', 'month')
-    
-    # Calculate total postpaid amounts (shortfalls that need to be paid)
-    total_postpaid = Decimal('0')
-    for payment in postpaid_payments:
-        total_postpaid += payment.prepaid_amount
-    
-    # Get all rent payments for this customer
-    rent_payments = HostelRevenue.objects.filter(
-        title='rent',
-        customer=customer_details.customer
-    ).order_by('year', 'month')
-    
-    # Calculate total prepaid amounts consumed
-    total_consumed = Decimal('0')
-    for payment in rent_payments:
-        if payment.total_amount and payment.collected_amount:
-            # If collected amount is less than total amount, it means prepaid was used
-            if payment.collected_amount < payment.total_amount:
-                total_consumed += (payment.total_amount - payment.collected_amount)
-    
-    # Calculate outstanding balances
-    previous_prepaid = max(total_prepaid - total_consumed, Decimal('0'))
-    previous_postpaid = total_postpaid  # Postpaid amounts are always outstanding until paid
+    # For GET requests, don't calculate previous prepaid until month is selected
+    if request.method == "GET":
+        previous_prepaid = Decimal('0')
+        previous_postpaid = Decimal('0')
+    else:
+        # For POST requests, calculate based on selected month
+        previous_prepaid = get_previous_prepaid_amount(customer_details.customer, year, month)
+        
+        # Get previous month's postpaid balance
+        previous_postpaid = Decimal('0')
+        prev_month = month - 1
+        prev_year = year
+        if prev_month <= 0:
+            prev_month = 12
+            prev_year = year - 1
+        
+        try:
+            prev_revenue = HostelRevenue.objects.get(
+                title='rent',
+                customer=customer_details.customer,
+                year=prev_year,
+                month=prev_month
+            )
+            if prev_revenue.payment_type == 'postpaid' and prev_revenue.prepaid_amount:
+                previous_postpaid = prev_revenue.prepaid_amount
+        except HostelRevenue.DoesNotExist:
+            previous_postpaid = Decimal('0')
     
     # Check if customer had postpaid payment in previous month (to restrict postpaid in current month)
-    today = timezone.now()
-    current_year = today.year
-    current_month = today.month
-    
-    prev_month = current_month - 1
-    prev_year = current_year
-    if prev_month <= 0:
-        prev_month = 12
-        prev_year = current_year - 1
-    
+    # This will be handled dynamically via AJAX when month is selected
     had_postpaid_last_month = False
-    try:
-        prev_revenue = HostelRevenue.objects.get(
-            title='rent',
-            customer=customer_details.customer,
-            year=prev_year,
-            month=prev_month
-        )
-        if prev_revenue.payment_type == 'postpaid':
-            had_postpaid_last_month = True
-    except HostelRevenue.DoesNotExist:
-        had_postpaid_last_month = False
 
-    # Add debug information
-    if previous_prepaid > 0:
-        messages.info(request, f"Outstanding prepaid balance: ¥{previous_prepaid}")
-    if previous_postpaid > 0:
-        messages.warning(request, f"Outstanding postpaid amount: ¥{previous_postpaid} (added to this month's rent)")
-    if had_postpaid_last_month:
-        messages.error(request, "Customer had postpaid payment last month. Postpaid payments are not allowed this month.")
+    # Debug information will be shown dynamically when month is selected
     
     # Get payment history for context
     registration_payment = HostelRevenue.objects.filter(
@@ -644,7 +556,7 @@ def monthly_rent(request, customer_id):
 
 @login_required(login_url='/accounts/login/')
 def get_prepaid_amount_for_month(request, customer_id):
-    """AJAX endpoint to get prepaid amount for a specific month"""
+    """AJAX endpoint to get previous month's prepaid/postpaid for a selected month"""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -661,8 +573,9 @@ def get_prepaid_amount_for_month(request, customer_id):
             # Get customer
             customer = get_object_or_404(Bed.objects.select_related('customer'), customer=customer_id).customer
             
-            # Get previous prepaid amount
             previous_prepaid = Decimal('0')
+            previous_postpaid = Decimal('0')
+            had_postpaid_last_month = False
             try:
                 prev_revenue = HostelRevenue.objects.get(
                     title='rent',
@@ -672,12 +585,17 @@ def get_prepaid_amount_for_month(request, customer_id):
                 )
                 if prev_revenue.payment_type == 'prepaid' and prev_revenue.prepaid_amount:
                     previous_prepaid = prev_revenue.prepaid_amount
+                elif prev_revenue.payment_type == 'postpaid' and prev_revenue.prepaid_amount:
+                    previous_postpaid = prev_revenue.prepaid_amount
+                    had_postpaid_last_month = True
             except HostelRevenue.DoesNotExist:
-                previous_prepaid = Decimal('0')
+                pass
             
             return JsonResponse({
                 'success': True,
                 'previous_prepaid': float(previous_prepaid),
+                'previous_postpaid': float(previous_postpaid),
+                'had_postpaid_last_month': had_postpaid_last_month,
                 'previous_month': f"{prev_year}-{prev_month:02d}"
             })
         except Exception as e:
