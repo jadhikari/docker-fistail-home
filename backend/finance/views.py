@@ -293,8 +293,10 @@ def monthly_rent(request, customer_id):
     missing_fees = []
     if not customer_details.rent or customer_details.rent == 0:
         missing_fees.append("Base Rent")
-    if not customer_details.internet_fee or customer_details.internet_fee == 0:
-        missing_fees.append("Internet Fee")
+    # interent fee can be 0
+    # if not customer_details.internet_fee or customer_details.internet_fee == 0:
+    #     missing_fees.append("Internet Fee")
+
     if not customer_details.utilities_fee or customer_details.utilities_fee == 0:
         missing_fees.append("Utilities Fee")
     
