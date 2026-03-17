@@ -228,7 +228,9 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    {{ rent.memo|slice:":20" }}{% if rent.memo|length > 20 %} ... {% endif %}
+                                    <span class="text-truncate d-inline-block" style="max-width: 150px;" title="{{ rent.memo }}">
+                                        {{ rent.memo|slice:":20" }}{% if rent.memo|length > 20 %} ... {% endif %}
+                                    </span>
                                 </td>
                                 <td>{{ rent.created_at }}</td>
                             </tr>
