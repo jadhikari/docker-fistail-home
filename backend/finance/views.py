@@ -488,7 +488,11 @@ def monthly_rent(request, customer_id):
         else:
             customer = revenue.customer
             if customer and customer.email:
-                send_revenue_email(request, revenue, subject='Rent Payment Notification - Fishtail')
+                try:
+                    send_revenue_email(request, revenue, subject='Rent Payment Notification - Fishtail')
+                except Exception as e:
+                    print("EMAIL ERROR (view level):", e)
+            
 
             messages.success(request, "Monthly rent payment recorded successfully.")
         return redirect("finance:revenues")
