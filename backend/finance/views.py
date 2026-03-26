@@ -783,7 +783,10 @@ def registration_fee(request, customer_id):
         else:
             customer = revenue.customer
             if customer and customer.email:
-                send_revenue_email(request, revenue, subject='Registration Fee Notification - Fishtail')
+                try:
+                    send_revenue_email(request, revenue, subject='Registration Fee Notification - Fishtail')
+                except Exception as e:
+                    print("EMAIL ERROR (view level):", e)
 
             messages.success(request, "Registration fee payment recorded successfully.")
 
