@@ -489,7 +489,7 @@ def monthly_rent(request, customer_id):
             customer = revenue.customer
             if customer and customer.email:
                 try:
-                    send_revenue_email(request, revenue, subject='Rent Payment Notification - Fishtail')
+                    send_revenue_email(request, revenue, subject='Rent Payment Notification - TNA  Group Limited')
                 except Exception as e:
                     print("EMAIL ERROR (view level):", e)
             
@@ -788,7 +788,7 @@ def registration_fee(request, customer_id):
             customer = revenue.customer
             if customer and customer.email:
                 try:
-                    send_revenue_email(request, revenue, subject='Registration Fee Notification - Fishtail')
+                    send_revenue_email(request, revenue, subject='Registration Fee Notification - TNA  Group Limited')
                 except Exception as e:
                     print("EMAIL ERROR (view level):", e)
 
