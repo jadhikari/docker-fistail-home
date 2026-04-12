@@ -56,6 +56,15 @@
             </a>
         </li>
 
+        {% if perms.finance.view_hostelexpense %}
+            <li class="nav-item">
+                <a href="{% url 'send_mail:dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'send_mail' and request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                    📧 <span class="link-text">Send mail</span>
+                </a>
+            </li>
+        {% endif %}
+        
+
         {% if user.is_superuser %}
             <li class="nav-item">
                 <a href="{% url 'targets:management' %}" class="nav-link {% if request.resolver_match.app_name == 'targets' and request.resolver_match.url_name == 'management' %}active{% endif %}">

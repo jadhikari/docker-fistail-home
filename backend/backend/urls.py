@@ -27,6 +27,7 @@ urlpatterns = [
     path('finance/', include('finance.urls')),
     path('targets/', include('targets.urls')),
     path('keisan/', include('keisan.urls')),
+    path('send_mail/', include('send_mail.urls')),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

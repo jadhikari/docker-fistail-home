@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'targets',  # Target management app
     'keisan',  # Keisan business management app
     'django_countries', # this is for display all the country name
+    'send_mail',
 ]
 
 AUTH_USER_MODEL = 'accounts.CustomUser' #for the custom user
