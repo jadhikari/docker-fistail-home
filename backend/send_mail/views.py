@@ -5,6 +5,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string, TemplateDoesNotExist
 from hostel.models import Hostel, Bed
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ def dashboard(request):
     if request.method == 'POST':
         hostel_value = request.POST.get('hostel')
         subject = request.POST.get('subject')
-        body = request.POST.get('body')
+        body = request.POST.get('body')  # HTML from editor
 
         # ✅ Get active customers
         beds = Bed.objects.filter(
@@ -23,11 +24,11 @@ def dashboard(request):
             customer__status=True
         )
 
-        # ✅ Filter by hostel (if not all)
+        # ✅ Filter by hostel
         if hostel_value != 'all':
             beds = beds.filter(unit__hostel_id=hostel_value)
 
-        # ✅ Collect emails (unique + clean)
+        # ✅ Collect emails
         emails = list(
             beds.select_related('customer')
                 .values_list('customer__email', flat=True)
@@ -43,25 +44,31 @@ def dashboard(request):
         try:
             from_email = settings.DEFAULT_FROM_EMAIL
 
-            # ✅ Create email (BCC method)
+            # ✅ Convert HTML → clean plain text
+            plain_text = re.sub('<br\\s*/?>', '\n', body)
+            plain_text = re.sub('</p>', '\n\n', plain_text)
+            plain_text = re.sub('<[^<]+?>', '', plain_text)
+
+            # ✅ Create email
             msg = EmailMultiAlternatives(
                 subject=subject,
-                body=body,
+                body=plain_text,   # ✅ plain text version
                 from_email=from_email,
-                to=[from_email],   # required
-                bcc=emails         # ✅ all recipients here
+                to=[from_email],
+                bcc=emails
             )
 
-            # ✅ Try HTML template (optional)
+            # ✅ Attach HTML (this is what users see)
             try:
                 html_content = render_to_string('email/send_mail.html', {
                     'body': body,
                 })
-                msg.attach_alternative(html_content, "text/html")
             except TemplateDoesNotExist:
-                pass  # fallback to plain text
+                html_content = body  # fallback
 
-            # ✅ Send email (ONE request)
+            msg.attach_alternative(html_content, "text/html")
+
+            # ✅ Send
             msg.send(fail_silently=False)
 
             messages.success(request, f"✅ Email sent to {len(emails)} users.")
