@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
-from django.template.loader import render_to_string
+from django.template.loader import render_to_string, TemplateDoesNotExist
 from hostel.models import Hostel, Bed
 import logging
 
@@ -11,13 +11,13 @@ logger = logging.getLogger(__name__)
 
 def dashboard(request):
     hostels = Hostel.objects.all()
+    results = []  # ✅ store temporary results
 
     if request.method == 'POST':
         hostel_value = request.POST.get('hostel')
         subject = request.POST.get('subject')
         body = request.POST.get('body')
 
-        # ✅ Get active customers via Bed
         beds = Bed.objects.filter(
             customer__isnull=False,
             customer__status=True
@@ -25,8 +25,6 @@ def dashboard(request):
 
         if hostel_value != 'all':
             beds = beds.filter(unit__hostel_id=hostel_value)
-
-        customers = beds.select_related('customer').values_list('customer', flat=False)
 
         emails_sent = 0
 
@@ -40,17 +38,17 @@ def dashboard(request):
                 from_email = settings.DEFAULT_FROM_EMAIL
                 to_email = customer.email
 
-                # ✅ HTML template (optional but recommended)
-                html_content = render_to_string('email/send_mail.html', {
-                    'customer': customer,
-                    'body': body,
-                })
-
-                text_content = body
+                try:
+                    html_content = render_to_string('email/send_mail.html', {
+                        'customer': customer,
+                        'body': body,
+                    })
+                except TemplateDoesNotExist:
+                    html_content = body
 
                 msg = EmailMultiAlternatives(
                     subject,
-                    text_content,
+                    body,
                     from_email,
                     [to_email]
                 )
@@ -60,16 +58,32 @@ def dashboard(request):
 
                 emails_sent += 1
 
+                # ✅ success result
+                results.append({
+                    'email': to_email,
+                    'status': 'success'
+                })
+
             except Exception as e:
                 logger.error(f"Failed to send email to {customer.email}: {e}", exc_info=True)
 
-        # ✅ UI Messages (short & clean)
+                # ❌ error result
+                results.append({
+                    'email': customer.email,
+                    'status': 'error'
+                })
+
+        # ✅ Message summary
         if emails_sent > 0:
             messages.success(request, f"✅ Email sent to {emails_sent} users.")
         else:
-            messages.error(request, "❌ No emails sent. Check configuration.")
+            messages.error(request, "❌ No emails sent.")
 
-        return redirect('send_mail:dashboard')
+        # ✅ Render SAME page with results (no redirect)
+        return render(request, 'send_mail/dashboard.html', {
+            'hostels': hostels,
+            'results': results
+        })
 
     return render(request, 'send_mail/dashboard.html', {
         'hostels': hostels
