@@ -36,18 +36,35 @@
         <div class="card-body">
             <form method="get" class="row g-3">
                 <!-- Search by name -->
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="name" class="form-label fw-semibold small">Customer Name</label>
                     <input type="text" id="name" name="name" class="form-control form-control-sm"
                         placeholder="Search by customer name" value="{{ name|default:'' }}">
                 </div>
 
-                <!-- Month-Year picker -->
+                <!-- Month-Year-Date picker -->
                 <div class="col-md-2">
-                    <label for="month_picker" class="form-label fw-semibold small">Created Month-Year</label>
-                    <input type="month" id="month_picker" class="form-control form-control-sm"
-                        value="{{ selected_year }}-{{ selected_month|stringformat:'02d' }}">
-                    <small class="text-muted">Filter by creation date</small>
+                    <label for="from_date" class="form-label fw-semibold small">
+                        From Date
+                    </label>
+                    <input
+                        type="date"
+                        id="from_date"
+                        name="from_date"
+                        class="form-control form-control-sm"
+                        value="{{ from_date|default:'' }}">
+                </div>
+
+                <div class="col-md-2">
+                    <label for="to_date" class="form-label fw-semibold small">
+                        To Date
+                    </label>
+                    <input
+                        type="date"
+                        id="to_date"
+                        name="to_date"
+                        class="form-control form-control-sm"
+                        value="{{ to_date|default:'' }}">
                 </div>
 
 
@@ -71,23 +88,19 @@
                     </select>
                 </div>
 
-                <!-- Hidden inputs -->
-                <input type="hidden" name="year" id="year_input" value="{{ selected_year }}">
-                <input type="hidden" name="month" id="month_input" value="{{ selected_month }}">
-
                 <!-- Action buttons -->
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label fw-semibold small">&nbsp;</label>
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary btn-sm">
                             <i class="bi bi-search me-1"></i>Search
                         </button>
-                        <a href="{% url 'finance:revenues' %}" class="btn btn-outline-secondary btn-sm">
-                            <i class="bi bi-arrow-clockwise me-1"></i>Reset
-                        </a>
                         <button type="submit" name="download" value="excel" class="btn btn-outline-success btn-sm">
                             <i class="bi bi-file-earmark-excel me-1"></i>Export
                         </button>
+                        <a href="{% url 'finance:revenues' %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-arrow-clockwise me-1"></i>
+                        </a> 
                     </div>
                 </div>
             </form>
@@ -331,10 +344,10 @@
                         <ul class="pagination pagination-sm mb-0">
                             {% if rent_revenues.has_previous %}
                                 <li class="page-item">
-                                    <a class="page-link" href="?{% if name %}name={{ name }}&{% endif %}{% if selected_year %}year={{ selected_year }}&{% endif %}{% if selected_month %}month={{ selected_month }}&{% endif %}{% if selected_hostel %}hostel={{ selected_hostel }}&{% endif %}record_type={{ selected_record_type }}&rent_page=1" title="First page">«</a>
+                                    <a class="page-link" href="?{% if name %}name={{ name }}&{% endif %}{% if from_date %}from_date={{ from_date }}&{% endif %}{% if to_date %}to_date={{ to_date }}&{% endif %}{% if selected_hostel %}hostel={{ selected_hostel }}&{% endif %}record_type={{ selected_record_type }}&rent_page=1" title="First page">«</a>
                                 </li>
                                 <li class="page-item">
-                                    <a class="page-link" href="?{% if name %}name={{ name }}&{% endif %}{% if selected_year %}year={{ selected_year }}&{% endif %}{% if selected_month %}month={{ selected_month }}&{% endif %}{% if selected_hostel %}hostel={{ selected_hostel }}&{% endif %}record_type={{ selected_record_type }}&rent_page={{ rent_revenues.previous_page_number }}">Previous</a>
+                                    <a class="page-link" href="?{% if name %}name={{ name }}&{% endif %}{% if from_date %}from_date={{ from_date }}&{% endif %}{% if to_date %}to_date={{ to_date }}&{% endif %}{% if selected_hostel %}hostel={{ selected_hostel }}&{% endif %}record_type={{ selected_record_type }}&rent_page={{ rent_revenues.previous_page_number }}">Previous</a>
                                 </li>
                             {% endif %}
                             
@@ -345,11 +358,11 @@
                                     </li>
                                 {% elif num == 1 or num == rent_revenues.paginator.num_pages %}
                                     <li class="page-item">
-                                        <a class="page-link" href="?{% if name %}name={{ name }}&{% endif %}{% if selected_year %}year={{ selected_year }}&{% endif %}{% if selected_month %}month={{ selected_month }}&{% endif %}{% if selected_hostel %}hostel={{ selected_hostel }}&{% endif %}record_type={{ selected_record_type }}&rent_page={{ num }}">{{ num }}</a>
+                                        <a class="page-link" href="?{% if name %}name={{ name }}&{% endif %}{% if from_date %}from_date={{ from_date }}&{% endif %}{% if to_date %}to_date={{ to_date }}&{% endif %}{% if selected_hostel %}hostel={{ selected_hostel }}&{% endif %}record_type={{ selected_record_type }}&rent_page={{ num }}">{{ num }}</a>
                                     </li>
                                 {% elif num >= rent_revenues.number|add:'-2' and num <= rent_revenues.number|add:'2' %}
                                     <li class="page-item">
-                                        <a class="page-link" href="?{% if name %}name={{ name }}&{% endif %}{% if selected_year %}year={{ selected_year }}&{% endif %}{% if selected_month %}month={{ selected_month }}&{% endif %}{% if selected_hostel %}hostel={{ selected_hostel }}&{% endif %}record_type={{ selected_record_type }}&rent_page={{ num }}">{{ num }}</a>
+                                        <a class="page-link" href="?{% if name %}name={{ name }}&{% endif %}{% if from_date %}from_date={{ from_date }}&{% endif %}{% if to_date %}to_date={{ to_date }}&{% endif %}{% if selected_hostel %}hostel={{ selected_hostel }}&{% endif %}record_type={{ selected_record_type }}&rent_page={{ num }}">{{ num }}</a>
                                     </li>
                                 {% elif num == rent_revenues.number|add:'-3' or num == rent_revenues.number|add:'3' %}
                                     <li class="page-item disabled">
@@ -360,10 +373,10 @@
                             
                             {% if rent_revenues.has_next %}
                                 <li class="page-item">
-                                    <a class="page-link" href="?{% if name %}name={{ name }}&{% endif %}{% if selected_year %}year={{ selected_year }}&{% endif %}{% if selected_month %}month={{ selected_month }}&{% endif %}{% if selected_hostel %}hostel={{ selected_hostel }}&{% endif %}record_type={{ selected_record_type }}&rent_page={{ rent_revenues.next_page_number }}">Next</a>
+                                    <a class="page-link" href="?{% if name %}name={{ name }}&{% endif %}{% if from_date %}from_date={{ from_date }}&{% endif %}{% if to_date %}to_date={{ to_date }}&{% endif %}{% if selected_hostel %}hostel={{ selected_hostel }}&{% endif %}record_type={{ selected_record_type }}&rent_page={{ rent_revenues.next_page_number }}">Next</a>
                                 </li>
                                 <li class="page-item">
-                                    <a class="page-link" href="?{% if name %}name={{ name }}&{% endif %}{% if selected_year %}year={{ selected_year }}&{% endif %}{% if selected_month %}month={{ selected_month }}&{% endif %}{% if selected_hostel %}hostel={{ selected_hostel }}&{% endif %}record_type={{ selected_record_type }}&rent_page={{ rent_revenues.paginator.num_pages }}" title="Last page">»</a>
+                                    <a class="page-link" href="?{% if name %}name={{ name }}&{% endif %}{% if from_date %}from_date={{ from_date }}&{% endif %}{% if to_date %}to_date={{ to_date }}&{% endif %}{% if selected_hostel %}hostel={{ selected_hostel }}&{% endif %}record_type={{ selected_record_type }}&rent_page={{ rent_revenues.paginator.num_pages }}" title="Last page">»</a>
                                 </li>
                             {% endif %}
                         </ul>
@@ -386,22 +399,55 @@
     }, 5000);
 
     // Month picker logic
-    document.addEventListener('DOMContentLoaded', () => {
-        const monthPicker = document.getElementById('month_picker');
-        const yearInput = document.getElementById('year_input');
-        const monthInput = document.getElementById('month_input');
+    document.addEventListener("DOMContentLoaded", function () {
 
-        if (monthPicker.value) {
-            const [year, month] = monthPicker.value.split('-');
-            yearInput.value = year;
-            monthInput.value = parseInt(month);
+        const fromDate = document.getElementById("from_date");
+        const toDate = document.getElementById("to_date");
+
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, "0");
+            const day = String(date.getDate()).padStart(2, "0");
+            return `${year}-${month}-${day}`;
         }
 
-        monthPicker.addEventListener('change', () => {
-            const [year, month] = monthPicker.value.split('-');
-            yearInput.value = year;
-            monthInput.value = parseInt(month);
-        });
+        const today = new Date();
+        const todayStr = formatDate(today);
+
+        // First day of current month
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        const firstDayStr = formatDate(firstDay);
+
+        // Keep searched values; otherwise use defaults
+        if (!fromDate.value) {
+            fromDate.value = firstDayStr;
+        }
+
+        if (!toDate.value) {
+            toDate.value = todayStr;
+        }
+
+        function updateValidation() {
+            // Prevent future dates
+            fromDate.max = todayStr;
+            toDate.max = todayStr;
+
+            // Date range validation
+            toDate.min = fromDate.value;
+            fromDate.max = toDate.value || todayStr;
+
+            // Auto-correct invalid range
+            if (fromDate.value > toDate.value) {
+                toDate.value = fromDate.value;
+            }
+        }
+
+        updateValidation();
+
+        fromDate.addEventListener("change", updateValidation);
+        toDate.addEventListener("change", updateValidation);
+
     });
+
 </script>
 {% endblock %}

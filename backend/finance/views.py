@@ -133,14 +133,12 @@ def export_revenues_to_excel(queryset, record_type='rent'):
 @login_required(login_url='/accounts/login/')
 def revenues(request):
     name = request.GET.get('name')
-    year = request.GET.get('year')
-    month = request.GET.get('month')
+    from_date = request.GET.get("from_date")
+    to_date = request.GET.get("to_date")
     hostel = request.GET.get('hostel')
     record_type = request.GET.get('record_type', 'rent')  # Default to 'rent'
 
     today = timezone.now()
-    default_year = today.year
-    default_month = today.month
 
     query = Q()
 
@@ -151,19 +149,21 @@ def revenues(request):
         query &= Q(customer__bed_assignment__unit__hostel__name__icontains=hostel)
 
     # Default filter by creation date instead of revenue year/month
-    try:
-        selected_year = int(year)
-    except (ValueError, TypeError):
-        selected_year = default_year
+    if from_date:
+        from_date = datetime.strptime(from_date, "%Y-%m-%d").date()
+    else:
+        from_date = today.replace(day=1)
 
-    try:
-        selected_month = int(month)
-    except (ValueError, TypeError):
-        selected_month = default_month
+    # Default = today
+    if to_date:
+        to_date = datetime.strptime(to_date, "%Y-%m-%d").date()
+    else:
+        to_date = today
 
-    # Filter by creation date instead of revenue date
-    query &= Q(created_at__year=selected_year, created_at__month=selected_month)
-
+    query &= Q(
+        created_at__date__gte=from_date,
+        created_at__date__lte=to_date
+)
     # Filter by record type (rent or registration)
     if record_type == 'registration':
         query &= Q(title='registration_fee')
@@ -222,7 +222,7 @@ def revenues(request):
         else:
             messages.warning(request, "No data available to export.")
 
-    if request.GET and not any([name, year, month, hostel]):
+    if request.GET and not any([name, from_date, to_date, hostel]):
         messages.warning(request, "No filter parameters provided.")
 
     year_choices = HostelRevenue.objects.values_list('year', flat=True).distinct().order_by('-year')
@@ -241,8 +241,8 @@ def revenues(request):
         'rent_page_total_amount': rent_page_total_amount,
         'rent_page_collection_total': rent_page_collection_total,
         'name': name,
-        'selected_year': selected_year,
-        'selected_month': selected_month,
+        'from_date': from_date.strftime("%Y-%m-%d"),
+        'to_date': to_date.strftime("%Y-%m-%d"),
         'selected_hostel': hostel,
         'selected_record_type': record_type,
         'year_choices': year_choices,
