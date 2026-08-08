@@ -429,6 +429,26 @@
                             </div>
                         {% endif %}
                     </div>
+                    {% comment %} <div class="col-md-6">
+                        <label for="{{ form.is_active.id_for_label }}" class="form-label fw-semibold small">
+                            Status
+                        </label>
+
+                        <select
+                            name="{{ form.is_active.name }}"
+                            id="{{ form.is_active.id_for_label }}"
+                            class="form-select form-select-sm"
+                        >
+                            <option value="True" {% if form.is_active.value %}selected{% endif %}>
+                                Active
+                            </option>
+                            <option value="False" {% if not form.is_active.value %}selected{% endif %}>
+                                Inactive
+                            </option>
+                        </select>
+                    </div> {% endcomment %}
+
+
                 </div>
 
                 <!-- Action Buttons -->

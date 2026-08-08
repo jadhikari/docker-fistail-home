@@ -13,6 +13,13 @@ class HostelForm(forms.ModelForm):
             'hostel_type': forms.Select(attrs={'class': 'form-select'}),
             'memo': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
             'address': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'status': forms.Select(
+                choices=[
+                    (True, 'Active'),
+                    (False, 'Inactive'),
+                ],
+                attrs={'class': 'form-select form-select-sm'}
+            ),
         }
 
     def __init__(self, *args, **kwargs):

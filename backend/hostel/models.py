@@ -54,6 +54,7 @@ class Hostel(TimeStampedUserModel):
     hw_contact_num = models.CharField(max_length=15, blank=True, null=True)
     deposit_fee = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.00'))])
     initial_fee = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.00'))])
+    status = models.BooleanField(default=True)
     hostel_manager = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
