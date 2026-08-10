@@ -14,13 +14,15 @@ class HostelAdmin(admin.ModelAdmin):
         'hostel_manager',
         'deposit_fee',
         'initial_fee',
+        'status',
         'created_at',
         'created_by',
         'updated_at',
         'updated_by',
     )
+    list_editable = ('status',)
     search_fields = ('name', 'common_name')
-    list_filter = ('contract_start_date', 'contract_end_date')
+    list_filter = ('status', 'hostel_type')
     autocomplete_fields = ('hostel_manager', 'created_by', 'updated_by')
     readonly_fields = ('created_at', 'updated_at')
 
@@ -41,6 +43,7 @@ class UnitAdmin(admin.ModelAdmin):
         'updated_at',
         'updated_by',
     )
+    
     list_filter = ('unit_type', 'hostel')
     search_fields = ('unit_id', 'hostel__name')
     autocomplete_fields = ('hostel', 'created_by', 'updated_by')

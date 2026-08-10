@@ -113,7 +113,7 @@
                             <th class="text-center small">Address</th>
                             <th class="text-center small">Total Beds</th>
                             <th class="text-center small">Available Beds</th>
-                            <th class="text-center small">Actions</th>
+                            <th class="text-center small">Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -121,7 +121,7 @@
                         <tr data-name="{{ hostel.name }}" data-lat="{{ hostel.latitude }}" data-lng="{{ hostel.longitude }}">
                             <td class="text-center small">
                                 <a href="{% url 'hostel:hostel_detail' hostel.id %}" class="text-decoration-none fw-semibold">
-                                    {{ hostel.name|slice:":20" }}{% if hostel.name|length > 20 %}...{% endif %}
+                                    {{ hostel.name|slice:":40" }}{% if hostel.name|length > 40 %}...{% endif %}
                                 </a>
                             </td>
                             <td class="text-center small">{{ hostel.common_name|default:"-" }}</td>
@@ -143,9 +143,11 @@
                                 <span class="badge bg-success">{{ hostel.available_beds }}</span>
                             </td>
                             <td  class="text-center small">
-                                <a href="{% url 'hostel:hostel_edit' hostel.id %}" class="btn btn-sm btn-outline-warning" title="Edit Hostel">
-                                    <i class="bi bi-pencil-square"></i>
-                                </a>
+                                {% if hostel.status %}
+                                    <span class="badge bg-success">✓</span>
+                                {% else %}
+                                    <span class="badge bg-danger">✕</span>
+                                {% endif %}
                             </td>
                         </tr>
                         {% empty %}

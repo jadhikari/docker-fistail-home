@@ -429,25 +429,26 @@
                             </div>
                         {% endif %}
                     </div>
-                    {% comment %} <div class="col-md-6">
-                        <label for="{{ form.is_active.id_for_label }}" class="form-label fw-semibold small">
-                            Status
-                        </label>
+                    {% if perms.hostel.change_hostel %}
+                        <div class="mb-3">
+                            <label for="{{ form.status.id_for_label }}" class="form-label">
+                                Status
+                            </label>
 
-                        <select
-                            name="{{ form.is_active.name }}"
-                            id="{{ form.is_active.id_for_label }}"
-                            class="form-select form-select-sm"
-                        >
-                            <option value="True" {% if form.is_active.value %}selected{% endif %}>
-                                Active
-                            </option>
-                            <option value="False" {% if not form.is_active.value %}selected{% endif %}>
-                                Inactive
-                            </option>
-                        </select>
-                    </div> {% endcomment %}
-
+                            <select
+                                name="{{ form.status.name }}"
+                                id="{{ form.status.id_for_label }}"
+                                class="form-select form-select-sm"
+                            >
+                                <option value="True" {% if form.status.value %}selected{% endif %}>
+                                    Active
+                                </option>
+                                <option value="False" {% if not form.status.value %}selected{% endif %}>
+                                    Inactive
+                                </option>
+                            </select>
+                        </div>
+                    {% endif %}
 
                 </div>
 
@@ -477,5 +478,59 @@
             bsAlert.close();
         });
     }, 5000);
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const statusField = document.getElementById('{{ form.status.id_for_label }}');
+        const form = statusField?.closest('form');
+
+        if (!statusField || !form) {
+            return;
+        }
+
+        // Original status when page was loaded
+        const originalStatus = statusField.value;
+
+        form.addEventListener('submit', function (event) {
+            const newStatus = statusField.value;
+
+            // No status change
+            if (originalStatus === newStatus) {
+                return;
+            }
+
+            let message = '';
+
+            if (originalStatus === 'True' && newStatus === 'False') {
+                message =
+                    '⚠️ WARNING⚠️ \n' +
+                    'You are about to make this hostel INACTIVE.\n' +
+                    '• New units cannot be added.\n' +
+                    '• New beds cannot be added.\n' +
+                    '• Beds cannot be assigned to customers.\n' +
+                    '• Other hostel operations may be restricted.\n' +
+                    'Make sure all customers have been released before deactivating this hostel.\n' +
+                    'Do you want to continue?';
+            }
+
+            if (originalStatus === 'False' && newStatus === 'True') {
+                message =
+                    'ℹ️ STATUS CHANGE\n' +
+                    'You are about to make this hostel ACTIVE.\n' +
+                    '• Units can be added again.\n' +
+                    '• Beds can be added again.\n' +
+                    '• Beds can be assigned to customers again.\n' +
+                    '• Normal hostel operations will be enabled.\n' +
+                    'Do you want to continue?';
+            }
+
+            if (message && !confirm(message)) {
+                event.preventDefault();
+
+                // Restore original value
+                statusField.value = originalStatus;
+            }
+        });
+    });
+
 </script>
 {% endblock %}

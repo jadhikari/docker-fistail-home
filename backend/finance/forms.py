@@ -2,7 +2,7 @@ from datetime import date
 
 from django import forms
 
-from .models import HostelExpense, UtilityExpense
+from .models import HostelExpense, UtilityExpense, Hostel
 
 
 class HostelExpenseForm(forms.ModelForm):
@@ -27,13 +27,20 @@ class HostelExpenseForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # Only show active hostels in the dropdown
+        self.fields['hostel'].queryset = Hostel.objects.filter(status=True)
+
         # Make all fields required (except hostel)
         for field_name, field in self.fields.items():
-            if field_name not in ['hostel']:
+            if field_name != 'hostel':
                 field.required = True
 
-            # Apply Bootstrap styling
-            css_class = 'form-select form-select-sm' if field.widget.__class__.__name__ == 'Select' else 'form-control form-control-sm'
+            # Bootstrap styling
+            css_class = (
+                'form-select form-select-sm'
+                if field.widget.__class__.__name__ == 'Select'
+                else 'form-control form-control-sm'
+            )
             field.widget.attrs.update({'class': css_class})
 
         self.fields['hostel'].empty_label = "ALL"
@@ -81,6 +88,9 @@ class UtilityExpenseForm(forms.ModelForm):
         self.fields['billing_month'].widget = forms.HiddenInput()
         self.fields['billing_year'].required = False
         self.fields['billing_month'].required = False
+
+        # Only show active hostels in the dropdown
+        self.fields['hostel'].queryset = Hostel.objects.filter(status=True)
 
         # Make all fields required (except usage_amount)
         optional_fields = {'usage_amount', 'description', 'billing_year', 'billing_month'}

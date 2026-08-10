@@ -229,7 +229,7 @@ def revenues(request):
 
     # Get all hostels for the filter dropdown
     from hostel.models import Hostel
-    all_hostels = Hostel.objects.all().order_by('name')
+    all_hostels = Hostel.objects.filter(status=True).order_by('name')
 
     return render(request, 'finance/revenues_dashboard.html', {
         'registration_revenues': registration_page_obj,
@@ -1028,7 +1028,7 @@ def expenses(request):
 
     # Get all hostels for the filter dropdown
     from hostel.models import Hostel
-    all_hostels = Hostel.objects.all().order_by('name')
+    all_hostels = Hostel.objects.filter(status=True).order_by('name')
     
     # Format year_month for display
     display_month = ""

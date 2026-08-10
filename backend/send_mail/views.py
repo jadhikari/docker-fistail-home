@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def dashboard(request):
-    hostels = Hostel.objects.all()
+    hostels = Hostel.objects.filter(status=True)
 
     if request.method == 'POST':
         hostel_value = request.POST.get('hostel')

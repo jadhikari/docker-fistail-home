@@ -182,18 +182,49 @@ def hostel_create(request):
 @login_required(login_url='/accounts/login/')
 def hostel_update(request, pk):
     hostel = get_object_or_404(Hostel, pk=pk)
+
+    # If hostel is inactive, only users with change_hostel permission
+    # can edit/reactivate it.
+    if not hostel.status and not request.user.has_perm('hostel.change_hostel'):
+        messages.error(
+            request,
+            "This hostel is inactive. You do not have permission to edit it."
+        )
+        return redirect(
+            'hostel:hostel_detail',
+            pk=hostel.id
+        )
+
     if request.method == 'POST':
-        form = HostelForm(request.POST, request.FILES, instance=hostel)
+        form = HostelForm(
+            request.POST,
+            request.FILES,
+            instance=hostel
+        )
+
         if form.is_valid():
             hostel = form.save(commit=False)
             hostel.updated_by = request.user
             hostel.save()
-            messages.success(request, "Updated successfully.")
+
+            messages.success(
+                request,
+                "Hostel updated successfully."
+            )
+
             return redirect('hostel:dashboard')
+
     else:
         form = HostelForm(instance=hostel)
-    return render(request, 'hostel/hostel_form.html', {'form': form, 'title': 'Edit Hostel'})
 
+    return render(
+        request,
+        'hostel/hostel_form.html',
+        {
+            'form': form,
+            'title': 'Edit Hostel'
+        }
+    )
 
 @login_required(login_url='/accounts/login/')
 def unit_detail(request, pk):
@@ -203,6 +234,15 @@ def unit_detail(request, pk):
 @login_required(login_url='/accounts/login/')
 def unit_create(request, hostel_id):
     hostel = get_object_or_404(Hostel, pk=hostel_id)
+
+    # Do not allow adding units to inactive hostels
+    if not hostel.status:
+        messages.error(
+            request,
+            "This hostel is inactive. You cannot add a unit."
+        )
+        return redirect('hostel:hostel_detail', pk=hostel.id)
+    
     if request.method == 'POST':
         form = UnitForm(request.POST, request.FILES, hostel=hostel)
         if form.is_valid():
@@ -211,6 +251,7 @@ def unit_create(request, hostel_id):
             unit.created_by = request.user
             unit.updated_by = request.user
             unit.save()
+            messages.success(request, 'Unit added successfully.')
             return redirect('hostel:hostel_detail', pk=hostel.id)
     else:
         form = UnitForm(hostel=hostel)
@@ -221,6 +262,15 @@ def unit_create(request, hostel_id):
 def unit_edit(request, pk):
     unit = get_object_or_404(Unit, pk=pk)
     hostel = unit.hostel
+
+     # Do not allow adding units to inactive hostels
+    if not hostel.status:
+        messages.error(
+            request,
+            "This hostel is inactive. You cannot edit a unit."
+        )
+        return redirect('hostel:hostel_detail', pk=hostel.id)
+    
     if request.method == 'POST':
         form = UnitForm(request.POST, request.FILES, instance=unit, hostel=hostel)
         if form.is_valid():
@@ -237,6 +287,16 @@ def unit_edit(request, pk):
 @login_required(login_url='/accounts/login/')
 def add_bed(request, unit_id):
     unit = get_object_or_404(Unit, id=unit_id)
+
+    hostel = unit.hostel
+     # Do not allow adding units to inactive hostels
+    if not hostel.status:
+        messages.error(
+            request,
+            "This hostel is inactive. You cannot add the bed."
+        )
+        return redirect('hostel:hostel_detail', pk=hostel.id)
+    
     
     if request.method == 'POST':
         form = BedForm(request.POST, unit=unit)
@@ -270,6 +330,16 @@ def add_bed(request, unit_id):
 def assign_bed(request, bed_id):
     bed = get_object_or_404(Bed, id=bed_id)
 
+    hostel = bed.unit.hostel
+    # Do not allow adding units to inactive hostels
+    if not hostel.status:
+        messages.error(
+            request,
+            "This hostel is inactive. You cannot assign the bed."
+        )
+        return redirect('hostel:hostel_detail', pk=hostel.id)
+
+    
     if request.method == 'POST':
         form = BedAssignmentForm(request.POST, instance=bed)
 
@@ -318,6 +388,15 @@ def assign_bed(request, bed_id):
 def edit_released_date(request, bed_id):
     bed = get_object_or_404(Bed, id=bed_id)
 
+    hostel = bed.unit.hostel
+    # Do not allow adding units to inactive hostels
+    if not hostel.status:
+        messages.error(
+            request,
+            "This hostel is inactive. You cannot released the user."
+        )
+        return redirect('hostel:hostel_detail', pk=hostel.id)
+
     if not bed.customer or not bed.assigned_date:
         return redirect('hostel:unit_detail', bed.unit.id)
 
@@ -344,6 +423,15 @@ def edit_released_date(request, bed_id):
 @login_required(login_url='/accounts/login/')
 def bed_edit(request, bed_id):
     bed = get_object_or_404(Bed, id=bed_id)
+
+    hostel = bed.unit.hostel
+    # Do not allow adding units to inactive hostels
+    if not hostel.status:
+        messages.error(
+            request,
+            "This hostel is inactive. You cannot released the user."
+        )
+        return redirect('hostel:hostel_detail', pk=hostel.id)
     
     if request.method == 'POST':
         form = BedForm(request.POST, instance=bed, unit=bed.unit)
