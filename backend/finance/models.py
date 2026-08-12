@@ -254,51 +254,51 @@ class UtilityExpense(TimeStampedUserModel):
         return f"{self.get_expense_type_display()} | {self.hostel.name} | {self.amount}" # type: ignore
 
 
-class TravelExpense(TimeStampedUserModel):
+# class TravelExpense(TimeStampedUserModel):
 
-    class ApprovalStatus(models.TextChoices):
-        PENDING = "PENDING", "Pending"
-        APPROVED = "APPROVED", "Approved"
-        REJECTED = "REJECTED", "Rejected"
+#     class ApprovalStatus(models.TextChoices):
+#         PENDING = "PENDING", "Pending"
+#         APPROVED = "APPROVED", "Approved"
+#         REJECTED = "REJECTED", "Rejected"
 
-    employee = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True, related_name="travel_expenses", help_text="Employee who submitted the travel expense.")
-    approved_by = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True, related_name="approved_travel_expenses", help_text="User who approved or rejected the expense.")
-    approval_status = models.CharField(max_length=20, choices=ApprovalStatus.choices, default=ApprovalStatus.PENDING, db_index=True, help_text="Current approval status of the travel expense.")
-    start_date = models.DateField(help_text="Start date of the travel.")
-    end_date = models.DateField(help_text="End date of the travel.")
-    amount = models.DecimalField(max_digits=12, decimal_places=2, help_text="Total travel expense amount.")
-    memo = models.TextField(help_text="Additional information about the travel expense.")
-    transaction_code = models.CharField(max_length=6, unique=True, editable=False, db_index=True, help_text="Unique transaction code for this travel expense.")
+#     employee = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True, related_name="travel_expenses", help_text="Employee who submitted the travel expense.")
+#     approved_by = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True, related_name="approved_travel_expenses", help_text="User who approved or rejected the expense.")
+#     approval_status = models.CharField(max_length=20, choices=ApprovalStatus.choices, default=ApprovalStatus.PENDING, db_index=True, help_text="Current approval status of the travel expense.")
+#     start_date = models.DateField(help_text="Start date of the travel.")
+#     end_date = models.DateField(help_text="End date of the travel.")
+#     amount = models.DecimalField(max_digits=12, decimal_places=2, help_text="Total travel expense amount.")
+#     memo = models.TextField(help_text="Additional information about the travel expense.")
+#     transaction_code = models.CharField(max_length=6, unique=True, editable=False, db_index=True, help_text="Unique transaction code for this travel expense.")
 
-    def clean(self):
-        super().clean()
+#     def clean(self):
+#         super().clean()
 
-        if self.start_date and self.end_date and self.end_date < self.start_date:
-            raise ValidationError({"end_date": "End date cannot be earlier than start date."})
+#         if self.start_date and self.end_date and self.end_date < self.start_date:
+#             raise ValidationError({"end_date": "End date cannot be earlier than start date."})
 
-        if self.approval_status in [self.ApprovalStatus.APPROVED, self.ApprovalStatus.REJECTED] and not self.approved_by:
-            raise ValidationError({"approved_by": "An approver is required."})
+#         if self.approval_status in [self.ApprovalStatus.APPROVED, self.ApprovalStatus.REJECTED] and not self.approved_by:
+#             raise ValidationError({"approved_by": "An approver is required."})
 
-    def save(self, *args, **kwargs):
-        if not self.transaction_code:
-            self.transaction_code = self.generate_unique_code()
+#     def save(self, *args, **kwargs):
+#         if not self.transaction_code:
+#             self.transaction_code = self.generate_unique_code()
 
-        self.full_clean()
-        super().save(*args, **kwargs)
+#         self.full_clean()
+#         super().save(*args, **kwargs)
 
-    @staticmethod
-    def generate_unique_code():
-        chars = string.ascii_uppercase + string.digits
+#     @staticmethod
+#     def generate_unique_code():
+#         chars = string.ascii_uppercase + string.digits
 
-        while True:
-            code = "".join(secrets.choice(chars) for _ in range(6))
+#         while True:
+#             code = "".join(secrets.choice(chars) for _ in range(6))
 
-            if not TravelExpense.objects.filter(transaction_code=code).exists():
-                return code
+#             if not TravelExpense.objects.filter(transaction_code=code).exists():
+#                 return code
 
-    def __str__(self):
-        if self.employee:
-            full_name = self.employee.get_full_name()
-            return f"{self.transaction_code} - {full_name or self.employee.username}"
+#     def __str__(self):
+#         if self.employee:
+#             full_name = self.employee.get_full_name()
+#             return f"{self.transaction_code} - {full_name or self.employee.username}"
 
-        return self.transaction_code
+#         return self.transaction_code
