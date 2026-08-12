@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import HostelRevenue, HostelExpense, UtilityExpense
+from .models import HostelRevenue, HostelExpense, UtilityExpense, TravelExpense
 
 @admin.register(HostelRevenue)
 class HostelRevenueAdmin(admin.ModelAdmin):
@@ -145,11 +145,11 @@ class UtilityExpenseAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
-# @admin.register(TravelExpense)
-# class TravelExpenseAdmin(admin.ModelAdmin):
-#     list_display = ("transaction_code", "employee", "start_date", "end_date", "amount", "approval_status", "approved_by", "created_by", "created_at")
-#     list_filter = ("approval_status", "start_date", "end_date", "created_at")
-#     search_fields = ("transaction_code", "employee__username", "employee__first_name", "employee__last_name", "approved_by__username")
-#     readonly_fields = ("transaction_code", "employee", "approved_by", "created_by", "updated_by", "created_at", "updated_at")
-#     ordering = ("-created_at",)
-#     date_hierarchy = "created_at"
+@admin.register(TravelExpense)
+class TravelExpenseAdmin(admin.ModelAdmin):
+    list_display = ("transaction_code", "employee", "start_date", "end_date", "amount", "approval_status", "approved_by", "created_by", "created_at")
+    list_filter = ("approval_status", "start_date", "end_date", "created_at")
+    search_fields = ("transaction_code", "employee__username", "employee__first_name", "employee__last_name", "approved_by__username")
+    readonly_fields = ("transaction_code", "employee", "approved_by", "created_by", "updated_by", "created_at", "updated_at")
+    ordering = ("-created_at",)
+    date_hierarchy = "created_at"
