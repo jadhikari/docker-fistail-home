@@ -25,9 +25,15 @@
         {% if perms.finance.view_hostelexpense %}
             <li class="nav-item">
                 <a href="{% url 'finance:expenses' %}" class="nav-link {% if request.resolver_match.url_name == 'expenses' %}active{% endif %}">
-                    🧾 <span class="link-text">Expenses</span>
+                    🧾 <span class="link-text">Hostel Exp.</span>
                 </a>
             </li>
+        {% endif %}
+
+        {% if perms.finance.view_travelexpense %}
+            <a href="{% url 'finance:travel_expense_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'travel_expense_dashboard' %}active{% endif %}">
+                    ✈️  <span class="link-text">Travel Exp.</span>
+            </a>
         {% endif %}
 
         <li class="nav-item">

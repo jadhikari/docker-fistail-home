@@ -17,5 +17,9 @@ urlpatterns = [
     path('rent/<int:customer_id>/', views.monthly_rent, name='monthly_rent'), 
     path('rent/<int:customer_id>/get-prepaid/', views.get_prepaid_amount_for_month, name='get_prepaid_amount'),
     path('rent/<int:customer_id>/validate-month/', views.validate_rent_month, name='validate_rent_month'),
-    path('notification/', views.notification, name='notification'),  
+    path('notification/', views.notification, name='notification'),
+    path('travel_expense_dashboard/', views.travel_expense_dashboard, name='travel_expense_dashboard'),
+    path('travel_expense/', views.travel_expense_list, name='travel_expense_list'),
+    path('travel_expense/add/', views.travel_expense_create, name='travel_expense_create'),
+    path('travel_expense/<int:pk>/edit/', views.travel_expense_edit, name='travel_expense_edit'),
 ]

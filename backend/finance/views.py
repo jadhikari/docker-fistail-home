@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404,redirect
-from .models import HostelRevenue, HostelExpense, UtilityExpense
+from .models import HostelRevenue, HostelExpense, UtilityExpense, TravelExpense
 from hostel.models import Bed
 from decimal import Decimal, InvalidOperation
 from django.contrib import messages
@@ -15,7 +15,7 @@ import json
 
 from .finance_helpers.rent_defaulters import get_rent_defaulters
 from datetime import date, datetime
-from .forms import HostelExpenseForm, UtilityExpenseForm
+from .forms import HostelExpenseForm, UtilityExpenseForm, TravelExpenseForm
 from django.contrib.auth.decorators import login_required, user_passes_test
 
 def export_revenues_to_excel(queryset, record_type='rent'):
@@ -1179,3 +1179,128 @@ def utility_expense_detail(request, pk):
             return redirect('finance:expenses')
 
     return render(request, 'finance/utility_expense_detail.html', {'expense': expense})
+
+
+@login_required
+def travel_expense_list(request):
+    expenses = TravelExpense.objects.filter(
+        employee=request.user
+    ).order_by("-created_at")
+
+    return render(
+        request,
+        "finance/travel_expense_list.html",
+        {
+            "expenses": expenses,
+        }
+    )
+
+
+@login_required(login_url='/accounts/login/')
+def travel_expense_create(request):
+    if request.method == "POST":
+        form = TravelExpenseForm(request.POST)
+
+        if form.is_valid():
+            expense = form.save(commit=False)
+
+            # Employee who submitted the travel expense
+            expense.employee = request.user
+
+            # Audit fields
+            expense.created_by = request.user
+            expense.updated_by = request.user
+
+            # New travel expense is always pending
+            expense.approval_status = (
+                TravelExpense.ApprovalStatus.PENDING
+            )
+
+            expense.save()
+
+            messages.success(
+                request,
+                "Travel expense submitted successfully."
+            )
+
+            return redirect("finance:travel_expense_dashboard")
+
+    else:
+        form = TravelExpenseForm()
+
+    return render(
+        request,
+        "finance/travel_expense_form.html",
+        {"form": form}
+    )
+
+@login_required(login_url='/accounts/login/')
+def travel_expense_edit(request, pk):
+    expense = get_object_or_404(
+        TravelExpense,
+        pk=pk,
+        employee=request.user
+    )
+    if expense.approval_status != TravelExpense.ApprovalStatus.PENDING:
+        messages.error(
+            request,
+            "This travel expense has already been processed and cannot be edited."
+        )
+        return redirect("finance:travel_expense_list")
+
+    if request.method == "POST":
+        form = TravelExpenseForm(
+            request.POST,
+            instance=expense
+        )
+
+        if form.is_valid():
+            form.save()
+
+            messages.success(
+                request,
+                "Travel expense updated successfully."
+            )
+
+            return redirect("finance:travel_expense_list")
+    else:
+        form = TravelExpenseForm(instance=expense)
+
+    return render(
+        request,
+        "finance/travel_expense_form.html",
+        {"form": form}
+    )
+
+
+def travel_expense_dashboard(request):
+    expenses = (
+        TravelExpense.objects
+        .select_related(
+            "employee",
+            "approved_by",
+            "created_by",
+            "updated_by",
+        )
+        .order_by("-created_at")
+    )
+
+    context = {
+        "expenses": expenses,
+        "total_count": expenses.count(),
+        "pending_count": expenses.filter(
+            approval_status=TravelExpense.ApprovalStatus.PENDING
+        ).count(),
+        "approved_count": expenses.filter(
+            approval_status=TravelExpense.ApprovalStatus.APPROVED
+        ).count(),
+        "rejected_count": expenses.filter(
+            approval_status=TravelExpense.ApprovalStatus.REJECTED
+        ).count(),
+    }
+
+    return render(
+        request,
+        "finance/travel_expense_dashboard.html",
+        context
+    )

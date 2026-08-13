@@ -1,8 +1,6 @@
 from datetime import date
-
 from django import forms
-
-from .models import HostelExpense, UtilityExpense, Hostel
+from .models import HostelExpense, UtilityExpense, Hostel, TravelExpense
 
 
 class HostelExpenseForm(forms.ModelForm):
@@ -123,3 +121,38 @@ class UtilityExpenseForm(forms.ModelForm):
             cleaned_data['billing_month'] = billing_date.month
         return cleaned_data
 
+
+
+class TravelExpenseForm(forms.ModelForm):
+    class Meta:
+        model = TravelExpense
+        fields = [
+            "start_date",
+            "end_date",
+            "amount",
+            "memo",
+        ]
+
+        widgets = {
+            "start_date": forms.DateInput(
+                attrs={
+                    "type": "date",
+                    "class": "form-control"
+                }
+            ),
+            "end_date": forms.DateInput(
+                attrs={
+                    "type": "date",
+                    "class": "form-control"
+                }
+            ),
+            "amount": forms.NumberInput(
+                attrs={"class": "form-control"}
+            ),
+            "memo": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 4
+                }
+            ),
+        }
