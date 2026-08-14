@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required, user_passes_test
@@ -9,55 +10,17 @@ from django.views.decorators.csrf import csrf_exempt
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 import json
-import openpyxl
 from .models import HostelRevenue, HostelExpense, UtilityExpense, TravelExpense
 from .forms import HostelExpenseForm, UtilityExpenseForm, TravelExpenseForm
 from .utils import send_revenue_email
+from .excel_exports import (
+    export_revenues_to_excel,
+    export_expenses_to_excel,
+    export_travel_expenses_to_excel,
+    export_unpaid_rent_to_excel,
+)
 from .finance_helpers.rent_defaulters import get_rent_defaulters
 from hostel.models import Bed
-
-
-def export_revenues_to_excel(queryset, record_type='rent'):
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    # Set worksheet title based on record type
-    if record_type == 'registration':
-        ws.title = "Registration Revenues"
-        headers = ['Customer', 'Hostel', 'Unit', 'Bed', 'Revenue Year', 'Revenue Month', 'Initial Fee', 'I. F. Discount (%)', 'I. F. After Discount', 'Deposit', 'D. Discount (%)', 'D. After Discount', 'Total Amount', 'Created At', 'Created By']
-    else:  # rent records
-        ws.title = "Rent Revenues"
-        headers = ['Customer', 'Hostel', 'Unit', 'Bed', 'Revenue Year', 'Revenue Month', 'Internet', 'Utilities', 'Rent', 'Rent Discount (%)', 'Rent After Discount', 'Total Amount', 'Payment Type', 'Collected Amount', 'Prepaid/Postpaid Amount', 'Created At', 'Created By']
-    ws.append(headers)
-    for rev in queryset:
-        customer = getattr(rev, 'customer', None)
-        bed = getattr(customer, 'bed_assignment', None) if customer else None
-        unit = getattr(bed, 'unit', None) if bed else None
-        hostel = getattr(unit, 'hostel', None) if unit else None
-        created_by = rev.created_by
-        created_by_name = ''
-        if created_by:
-            if hasattr(created_by, 'first_name') and created_by.first_name:
-                created_by_name = created_by.first_name
-            elif hasattr(created_by, 'email'):
-                created_by_name = created_by.email
-            else:
-                created_by_name = str(created_by)
-        created_at = rev.created_at.strftime('%Y-%m-%d %H:%M') if rev.created_at else ''
-        if record_type == 'registration':
-            ws.append([customer.name if customer else '', hostel.name if hostel else '', unit.room_num if unit else '', bed.bed_num if bed else '', rev.year, rev.month, rev.initial_fee or '', rev.initial_fee_discount_percent or '', rev.initial_fee_after_discount or '', rev.deposit or '', rev.deposit_discount_percent or '', rev.deposit_after_discount or '', rev.total_amount or '', created_at, created_by_name])
-        else:
-            payment_type = 'Prepaid' if rev.payment_type == 'prepaid' else ('Postpaid' if rev.payment_type == 'postpaid' else 'Normal')
-            prepaid_postpaid_amount = ''
-            if rev.payment_type and rev.prepaid_amount:
-                prepaid_postpaid_amount = f'+{rev.prepaid_amount}' if rev.payment_type == 'prepaid' else f'-{rev.prepaid_amount}'
-            ws.append([customer.name if customer else '', hostel.name if hostel else '', unit.room_num if unit else '', bed.bed_num if bed else '', rev.year, rev.month, rev.internet or '', rev.utilities or '', rev.rent or '', rev.rent_discount_percent or '', rev.rent_after_discount or '', rev.total_amount or '', payment_type, rev.collected_amount or '', prepaid_postpaid_amount, created_at, created_by_name])
-    # Set filename based on record type
-    filename = f"{record_type}_revenues.xlsx"
-    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
-    wb.save(response)
-    return response
-
 
 
 @login_required(login_url='/accounts/login/')
@@ -514,17 +477,7 @@ def notification(request):
         defaulters = [d for d in defaulters if search_name in d['customer'].name.lower()]
     # Handle Excel export
     if 'download' in request.GET:
-        workbook = openpyxl.Workbook()
-        sheet = workbook.active
-        sheet.title = 'Unpaid Rent'
-        sheet.append(['Customer Name', 'Stay Type', 'Assigned Date', 'Released/End Date', 'Unpaid Months'])
-        for entry in defaulters:
-            unpaid_str = ", ".join(f"{y}-{m:02d}" for y, m in entry['unpaid_months'])
-            sheet.append([entry['customer'].name, entry['type'].capitalize(), entry['assigned_date'], entry['end_date'], unpaid_str])
-        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = 'attachment; filename="unpaid_rent.xlsx"'
-        workbook.save(response)
-        return response
+        return export_unpaid_rent_to_excel(defaulters)
     return render(request, 'finance/notification.html', {'defaulters': defaulters, 'search_name': request.GET.get('name', ''), 'today': date.today()})
 
 
@@ -598,19 +551,7 @@ def expenses(request):
     query_string = query_params.urlencode()
     # Handle Excel export
     if export == 'excel':
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = "All Expenses"
-        ws.append(["Type", "ID", "Date", "Hostel", "Purchased By", "Approved By", "Amount", "Status", "Memo", "Created By", "Created At", "Updated By", "Updated At"])
-        for e in combined_expenses:
-            approved_name = "-"
-            if e['approved_by']:
-                approved_name = e['approved_by'].first_name or e['approved_by'].email
-            ws.append([e['type'].title(), e['transaction_code'], e['date_display'], e['hostel'], e['purchased_by'], approved_name, float(e['amount']), e['status'], e['memo'] or "-", str(e['created_by']) if e['created_by'] else "-", e['created_at'].strftime('%Y-%m-%d %H:%M:%S') if e['created_at'] else "-", str(e['updated_by']) if e['updated_by'] else "-", e['updated_at'].strftime('%Y-%m-%d %H:%M:%S') if e['updated_at'] else "-",])
-        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = 'attachment; filename=all_expenses.xlsx'
-        wb.save(response)
-        return response
+        return export_expenses_to_excel(combined_expenses)
     # Get all hostels for filter dropdown
     from hostel.models import Hostel
     all_hostels = Hostel.objects.filter(status=True).order_by('name')
@@ -806,10 +747,76 @@ def travel_expense_edit(request, pk):
 
 @login_required(login_url='/accounts/login/')
 def travel_expense_dashboard(request):
-    """Admin dashboard showing all travel expense requests with status summary"""
-    expenses = TravelExpense.objects.select_related("employee", "approved_by", "created_by", "updated_by").order_by("-created_at")
+    """Admin dashboard showing all travel expense requests with search and export."""
+    employee_id = request.GET.get("employee", "").strip()
+    transaction_code = request.GET.get("transaction_code", "").strip().upper()
+    from_date_str = request.GET.get("from_date")
+    to_date_str = request.GET.get("to_date")
+    status = request.GET.get("status")
+    export = request.GET.get("export")
+    today = timezone.now().date()
+    User = get_user_model()
+    employees = User.objects.filter(is_active=True).order_by("first_name", "last_name", "email")
+    search_by_code = bool(transaction_code)
+
+    if from_date_str:
+        try:
+            from_date = datetime.strptime(from_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            from_date = today.replace(day=1)
+    else:
+        from_date = today.replace(day=1)
+    if to_date_str:
+        try:
+            to_date = datetime.strptime(to_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            to_date = today
+    else:
+        to_date = today
+
+    query = Q()
+    if search_by_code:
+        query &= Q(transaction_code__icontains=transaction_code)
+    else:
+        query &= Q(start_date__gte=from_date, start_date__lte=to_date)
+    if employee_id:
+        try:
+            query &= Q(employee_id=int(employee_id))
+        except ValueError:
+            pass
+    if status == "pending":
+        query &= Q(approval_status=TravelExpense.ApprovalStatus.PENDING)
+    elif status == "approved":
+        query &= Q(approval_status=TravelExpense.ApprovalStatus.APPROVED)
+    elif status == "rejected":
+        query &= Q(approval_status=TravelExpense.ApprovalStatus.REJECTED)
+
+    expenses = (
+        TravelExpense.objects.select_related("employee", "approved_by", "created_by", "updated_by")
+        .filter(query)
+        .order_by("-created_at")
+    )
+
+    query_params = request.GET.copy()
+    if "export" in query_params:
+        query_params.pop("export")
+    query_string = query_params.urlencode()
+
+    if export == "excel":
+        if expenses.exists():
+            return export_travel_expenses_to_excel(expenses)
+        messages.warning(request, "No data available to export.")
+
     context = {
         "expenses": expenses,
         "total_count": expenses.count(),
+        "employees": employees,
+        "selected_employee": employee_id,
+        "transaction_code": transaction_code,
+        "search_by_code": search_by_code,
+        "from_date": from_date.strftime("%Y-%m-%d"),
+        "to_date": to_date.strftime("%Y-%m-%d"),
+        "status": status,
+        "query_string": query_string,
     }
     return render(request, "finance/travel_expense_dashboard.html", context)

@@ -24,12 +24,100 @@
         </div>
     </div>
 
+    <!-- Search Form -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="bi bi-search me-2"></i>Search & Filter</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" id="travelExpenseSearchForm">
+                <div class="row g-3 align-items-end mb-3 pb-3 border-bottom">
+                    <div class="col-md-4">
+                        <label for="transaction_code" class="form-label fw-semibold small">
+                            <i class="bi bi-upc-scan me-1"></i>Transaction Code
+                        </label>
+                        <input type="text" id="transaction_code" name="transaction_code"
+                            class="form-control form-control-sm text-uppercase"
+                            placeholder="e.g. ABC123"
+                            value="{{ transaction_code|default:'' }}"
+                            maxlength="6"
+                            autocomplete="off"
+                            style="letter-spacing: 0.08em;">
+                        <div class="form-text">Quick lookup across all months. Date range is ignored when this is filled.</div>
+                    </div>
+                    <div class="col-md-8">
+                        <div id="codeSearchNotice" class="alert alert-info py-2 mb-0 small {% if not search_by_code %}d-none{% endif %}">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Showing results for transaction code <strong>{{ transaction_code }}</strong> from any date.
+                            Employee and status filters still apply.
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label for="employee" class="form-label fw-semibold small">Employee</label>
+                    <select id="employee" name="employee" class="form-select form-select-sm">
+                        <option value="">All Employees</option>
+                        {% for user in employees %}
+                        <option value="{{ user.id }}" {% if selected_employee == user.id|stringformat:"s" %}selected{% endif %}>
+                            {{ user.get_full_name|default:user.email }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="from_date" class="form-label fw-semibold small">From Date</label>
+                    <input type="date" id="from_date" name="from_date" class="form-control form-control-sm date-filter"
+                        value="{{ from_date|default:'' }}" {% if search_by_code %}disabled{% endif %}>
+                </div>
+                <div class="col-md-2">
+                    <label for="to_date" class="form-label fw-semibold small">To Date</label>
+                    <input type="date" id="to_date" name="to_date" class="form-control form-control-sm date-filter"
+                        value="{{ to_date|default:'' }}" {% if search_by_code %}disabled{% endif %}>
+                </div>
+                <div class="col-md-2">
+                    <label for="statusFilter" class="form-label fw-semibold small">Status</label>
+                    <select id="statusFilter" name="status" class="form-select form-select-sm">
+                        <option value="">All Statuses</option>
+                        <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="approved" {% if status == 'approved' %}selected{% endif %}>Approved</option>
+                        <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>Rejected</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold small">&nbsp;</label>
+                    <div class="d-flex gap-1">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-search me-1"></i>Search
+                        </button>
+                        <a href="{% url 'finance:travel_expense_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Reset
+                        </a>
+                        <a href="?{% if query_string %}{{ query_string }}&{% endif %}export=excel"
+                            class="btn btn-outline-success btn-sm" title="Download Excel">
+                            <i class="bi bi-file-earmark-excel me-1"></i>Excel
+                        </a>
+                    </div>
+                </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Table -->
     <div class="card">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
             <h6 class="mb-0"><i class="bi bi-table me-2"></i>Travel Expense Records</h6>
             <span class="badge bg-primary small">{{ total_count }} Records</span>
         </div>
+        {% if not search_by_code %}
+        <div class="px-3 py-2 border-bottom bg-light-subtle">
+            <span class="text-muted small">
+                <i class="bi bi-calendar3 me-1"></i>
+                Showing travel expenses from {{ from_date }} to {{ to_date }}
+            </span>
+        </div>
+        {% endif %}
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover mb-0 table-sm">
@@ -137,6 +225,26 @@
 </div>
 
 <script>
+const transactionCodeInput = document.getElementById('transaction_code');
+const codeSearchNotice = document.getElementById('codeSearchNotice');
+const dateFilters = document.querySelectorAll('.date-filter');
+
+function toggleDateFilters() {
+    const hasCode = transactionCodeInput.value.trim().length > 0;
+    dateFilters.forEach((input) => {
+        input.disabled = hasCode;
+        input.classList.toggle('bg-light', hasCode);
+    });
+    codeSearchNotice.classList.toggle('d-none', !hasCode);
+}
+
+transactionCodeInput.addEventListener('input', () => {
+    transactionCodeInput.value = transactionCodeInput.value.toUpperCase();
+    toggleDateFilters();
+});
+
+toggleDateFilters();
+
 setTimeout(() => {
     document.querySelectorAll('.auto-dismiss').forEach(alert => {
         bootstrap.Alert.getOrCreateInstance(alert).close();
