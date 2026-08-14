@@ -25,60 +25,52 @@
     </div>
 
     <!-- Table -->
-    <div class="card shadow-sm">
-        <div class="card-header bg-light">
-            <div class="d-flex justify-content-between align-items-center">
-                <h6 class="mb-0"><i class="bi bi-table me-2"></i>Travel Expense Records</h6>
-                <span class="badge bg-primary">{{ total_count }} Records</span>
-            </div>
+    <div class="card">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="bi bi-table me-2"></i>Travel Expense Records</h6>
+            <span class="badge bg-primary small">{{ total_count }} Records</span>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover table-striped align-middle mb-0">
-                    <thead class="table-light">
+                <table class="table table-hover mb-0 table-sm">
+                    <thead class="custom-thead">
                         <tr>
-                            <th>Employee</th>
-                            <th>Transaction Code</th>
-                            <th>Start Date</th>
-                            <th>End Date</th>
-                            <th>Amount</th>
-                            <th>Memo</th>
-                            <th>Status</th>
-                            <th>Approved By</th>
-                            <th>Approved At</th>
-                            <th>Created By</th>
-                            <th>Created At</th>
+                            <th class="text-center small">Transaction Code</th>
+                            <th class="text-center small">Employee</th>
+                            <th class="text-center small">Start Date</th>
+                            <th class="text-center small">End Date</th>
+                            <th class="text-center small">Amount</th>
+                            <th class="text-center small">Memo</th>
+                            <th class="text-center small">Status</th>
+                            <th class="text-center small">Approved By</th>
+                            <th class="text-center small">Approved At</th>
+                            <th class="text-center small">Created By</th>
+                            <th class="text-center small">Created At</th>
                         </tr>
                     </thead>
                     <tbody>
                     {% for expense in expenses %}
                         <tr>
-                            <!-- Employee -->
-                            <td>
-                                {% if expense.employee %}
-                                <div>
-                                    <strong>
-                                        {% if expense.employee.first_name or expense.employee.last_name %}
-                                        {% else %}
-                                        {{ expense.employee.email }}
-                                        {% endif %}
-                                    </strong>
-                                </div>
-                                <small class="text-muted">{{ expense.employee.email }}</small>
-                                {% else %}
-                                <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
                             <!-- Transaction Code -->
-                            <td><span class="badge bg-dark">{{ expense.transaction_code }}</span></td>
+                            <td class="text-center">
+                                <b>
+                                    <a href="#" class="text-decoration-none fw-semibold">{{ expense.transaction_code }}</a>
+                                </b>
+                            </td>
+                            <!-- Employee -->
+                            <td class="text-center">
+                                <strong>
+                                    {{ expense.employee.first_name|default:"" }} {{ expense.employee.last_name|default:"" }}
+                                </strong>
+                            </td>
                             <!-- Start Date -->
-                            <td>{% if expense.start_date %}{{ expense.start_date|date:"Y-m-d" }}{% else %}-{% endif %}</td>
+                            <td class="text-center">{% if expense.start_date %}{{ expense.start_date|date:"Y-m-d" }}{% else %}-{% endif %}</td>
                             <!-- End Date -->
-                            <td>{% if expense.end_date %}{{ expense.end_date|date:"Y-m-d" }}{% else %}-{% endif %}</td>
+                            <td class="text-center">{% if expense.end_date %}{{ expense.end_date|date:"Y-m-d" }}{% else %}-{% endif %}</td>
                             <!-- Amount -->
-                            <td><strong>¥{{ expense.amount|floatformat:2 }}</strong></td>
+                            <td class="text-center"><strong>¥{{ expense.amount|floatformat:2 }}</strong></td>
                             <!-- Memo -->
-                            <td style="min-width: 250px; max-width: 350px;">
+                            <td style="min-width: 250px; max-width: 350px;" class="text-center">
                                 {% if expense.memo %}
                                 <span title="{{ expense.memo }}">{{ expense.memo|truncatechars:80 }}</span>
                                 {% else %}
@@ -86,7 +78,7 @@
                                 {% endif %}
                             </td>
                             <!-- Approval Status -->
-                            <td>
+                            <td class="text-center">
                                 {% if expense.approval_status == 'PENDING' %}
                                 <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>Pending</span>
                                 {% elif expense.approval_status == 'APPROVED' %}
@@ -98,21 +90,21 @@
                                 {% endif %}
                             </td>
                             <!-- Approved By -->
-                            <td>
+                            <td class="text-center">
                                 {% if expense.approved_by %}
-                                {% if expense.approved_by.first_name or expense.approved_by.last_name %}
-                                {{ expense.approved_by.first_name|default:"" }} {{ expense.approved_by.last_name|default:"" }}
-                                {% else %}
-                                {{ expense.approved_by.email }}
-                                {% endif %}
+                                    {% if expense.approved_by.first_name or expense.approved_by.last_name %}
+                                        {{ expense.approved_by.first_name|default:"" }} {{ expense.approved_by.last_name|default:"" }}
+                                    {% else %}
+                                        {{ expense.approved_by.email }}
+                                    {% endif %}
                                 {% else %}
                                 <span class="text-muted">-</span>
                                 {% endif %}
                             </td>
                             <!-- Approved At -->
-                            <td>{% if expense.approved_at %}{{ expense.approved_at|date:"Y-m-d H:i" }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                            <td class="text-center">{% if expense.approved_at %}{{ expense.approved_at|date:"Y-m-d H:i" }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
                             <!-- Created By -->
-                            <td>
+                            <td class="text-center">
                                 {% if expense.created_by %}
                                 {% if expense.created_by.first_name or expense.created_by.last_name %}
                                 {{ expense.created_by.first_name|default:"" }} {{ expense.created_by.last_name|default:"" }}
@@ -124,7 +116,7 @@
                                 {% endif %}
                             </td>
                             <!-- Created At -->
-                            <td>{% if expense.created_at %}{{ expense.created_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}</td>
+                            <td class="text-center">{% if expense.created_at %}{{ expense.created_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}</td>
                         </tr>
                     {% empty %}
                         <tr>

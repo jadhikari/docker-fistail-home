@@ -811,8 +811,5 @@ def travel_expense_dashboard(request):
     context = {
         "expenses": expenses,
         "total_count": expenses.count(),
-        "pending_count": expenses.filter(approval_status=TravelExpense.ApprovalStatus.PENDING).count(),
-        "approved_count": expenses.filter(approval_status=TravelExpense.ApprovalStatus.APPROVED).count(),
-        "rejected_count": expenses.filter(approval_status=TravelExpense.ApprovalStatus.REJECTED).count(),
     }
     return render(request, "finance/travel_expense_dashboard.html", context)
