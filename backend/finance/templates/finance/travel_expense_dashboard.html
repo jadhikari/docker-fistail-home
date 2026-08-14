@@ -1,388 +1,154 @@
 {% extends 'base.html' %}
 {% block content %}
-
 <div class="container-fluid py-3">
-
     {% if messages %}
-        <div class="mb-3">
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss">
-                    {{ message }}
-
-                    <button type="button"
-                            class="btn-close"
-                            data-bs-dismiss="alert"></button>
-                </div>
-            {% endfor %}
+    <div class="mb-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
+        {% endfor %}
+    </div>
     {% endif %}
-
 
     <!-- Header -->
     <div class="row mb-4">
-
         <div class="col-12">
-
             <div class="d-flex justify-content-between align-items-center">
-
                 <div>
-
-                    <h4 class="mb-1">
-                        <i class="bi bi-airplane text-primary me-2"></i>
-                        Travel Expenses
-                    </h4>
-
-                    <p class="text-muted mb-0 small">
-                        View and manage travel expense requests
-                    </p>
-
+                    <h4 class="mb-1"><i class="bi bi-airplane text-primary me-2"></i>Travel Expenses</h4>
+                    <p class="text-muted mb-0 small">View and manage travel expense requests</p>
                 </div>
-
             </div>
-
         </div>
-
     </div>
 
     <!-- Table -->
     <div class="card shadow-sm">
-
         <div class="card-header bg-light">
-
             <div class="d-flex justify-content-between align-items-center">
-
-                <h6 class="mb-0">
-                    <i class="bi bi-table me-2"></i>
-                    Travel Expense Records
-                </h6>
-
-                <span class="badge bg-primary">
-                    {{ total_count }} Records
-                </span>
-
+                <h6 class="mb-0"><i class="bi bi-table me-2"></i>Travel Expense Records</h6>
+                <span class="badge bg-primary">{{ total_count }} Records</span>
             </div>
-
         </div>
-
-
         <div class="card-body p-0">
-
             <div class="table-responsive">
-
                 <table class="table table-hover table-striped align-middle mb-0">
-
                     <thead class="table-light">
-
                         <tr>
-
                             <th>Employee</th>
-
                             <th>Transaction Code</th>
-
                             <th>Start Date</th>
-
                             <th>End Date</th>
-
                             <th>Amount</th>
-
                             <th>Memo</th>
-
                             <th>Status</th>
-
                             <th>Approved By</th>
-
                             <th>Approved At</th>
-
                             <th>Created By</th>
-
                             <th>Created At</th>
-
                         </tr>
-
                     </thead>
-
-
                     <tbody>
-
                     {% for expense in expenses %}
-
                         <tr>
-
                             <!-- Employee -->
                             <td>
-
                                 {% if expense.employee %}
-
-                                    <div>
-                                        <strong>
-
-                                            {% if expense.employee.first_name or expense.employee.last_name %}
-
-                                            {% else %}
-
-                                                {{ expense.employee.email }}
-
-                                            {% endif %}
-
-                                        </strong>
-                                    </div>
-
-                                    <small class="text-muted">
+                                <div>
+                                    <strong>
+                                        {% if expense.employee.first_name or expense.employee.last_name %}
+                                        {% else %}
                                         {{ expense.employee.email }}
-                                    </small>
-
+                                        {% endif %}
+                                    </strong>
+                                </div>
+                                <small class="text-muted">{{ expense.employee.email }}</small>
                                 {% else %}
-
-                                    <span class="text-muted">
-                                        -
-                                    </span>
-
+                                <span class="text-muted">-</span>
                                 {% endif %}
-
                             </td>
-
-
                             <!-- Transaction Code -->
-                            <td>
-
-                                <span class="badge bg-dark">
-                                    {{ expense.transaction_code }}
-                                </span>
-
-                            </td>
-
-
+                            <td><span class="badge bg-dark">{{ expense.transaction_code }}</span></td>
                             <!-- Start Date -->
-                            <td>
-
-                                {% if expense.start_date %}
-                                    {{ expense.start_date|date:"Y-m-d" }}
-                                {% else %}
-                                    -
-                                {% endif %}
-
-                            </td>
-
-
+                            <td>{% if expense.start_date %}{{ expense.start_date|date:"Y-m-d" }}{% else %}-{% endif %}</td>
                             <!-- End Date -->
-                            <td>
-
-                                {% if expense.end_date %}
-                                    {{ expense.end_date|date:"Y-m-d" }}
-                                {% else %}
-                                    -
-                                {% endif %}
-
-                            </td>
-
-
+                            <td>{% if expense.end_date %}{{ expense.end_date|date:"Y-m-d" }}{% else %}-{% endif %}</td>
                             <!-- Amount -->
-                            <td>
-
-                                <strong>
-                                    ¥{{ expense.amount|floatformat:2 }}
-                                </strong>
-
-                            </td>
-
-
+                            <td><strong>¥{{ expense.amount|floatformat:2 }}</strong></td>
                             <!-- Memo -->
                             <td style="min-width: 250px; max-width: 350px;">
-
                                 {% if expense.memo %}
-
-                                    <span title="{{ expense.memo }}">
-                                        {{ expense.memo|truncatechars:80 }}
-                                    </span>
-
+                                <span title="{{ expense.memo }}">{{ expense.memo|truncatechars:80 }}</span>
                                 {% else %}
-
-                                    <span class="text-muted">
-                                        -
-                                    </span>
-
+                                <span class="text-muted">-</span>
                                 {% endif %}
-
                             </td>
-
-
                             <!-- Approval Status -->
                             <td>
-
                                 {% if expense.approval_status == 'PENDING' %}
-
-                                    <span class="badge bg-warning text-dark">
-                                        <i class="bi bi-hourglass-split me-1"></i>
-                                        Pending
-                                    </span>
-
+                                <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>Pending</span>
                                 {% elif expense.approval_status == 'APPROVED' %}
-
-                                    <span class="badge bg-success">
-                                        <i class="bi bi-check-circle me-1"></i>
-                                        Approved
-                                    </span>
-
+                                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Approved</span>
                                 {% elif expense.approval_status == 'REJECTED' %}
-
-                                    <span class="badge bg-danger">
-                                        <i class="bi bi-x-circle me-1"></i>
-                                        Rejected
-                                    </span>
-
+                                <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Rejected</span>
                                 {% else %}
-
-                                    <span class="badge bg-secondary">
-                                        {{ expense.approval_status }}
-                                    </span>
-
+                                <span class="badge bg-secondary">{{ expense.approval_status }}</span>
                                 {% endif %}
-
                             </td>
-
-
                             <!-- Approved By -->
                             <td>
-
                                 {% if expense.approved_by %}
-
-                                    {% if expense.approved_by.first_name or expense.approved_by.last_name %}
-
-                                        {{ expense.approved_by.first_name|default:"" }}
-                                        {{ expense.approved_by.last_name|default:"" }}
-
-                                    {% else %}
-
-                                        {{ expense.approved_by.email }}
-
-                                    {% endif %}
-
+                                {% if expense.approved_by.first_name or expense.approved_by.last_name %}
+                                {{ expense.approved_by.first_name|default:"" }} {{ expense.approved_by.last_name|default:"" }}
                                 {% else %}
-
-                                    <span class="text-muted">
-                                        -
-                                    </span>
-
+                                {{ expense.approved_by.email }}
                                 {% endif %}
-
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
                             </td>
-
-
                             <!-- Approved At -->
-                            <td>
-
-                                {% if expense.approved_at %}
-
-                                    {{ expense.approved_at|date:"Y-m-d H:i" }}
-
-                                {% else %}
-
-                                    <span class="text-muted">
-                                        -
-                                    </span>
-
-                                {% endif %}
-
-                            </td>
-
-
+                            <td>{% if expense.approved_at %}{{ expense.approved_at|date:"Y-m-d H:i" }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
                             <!-- Created By -->
                             <td>
-
                                 {% if expense.created_by %}
-
-                                    {% if expense.created_by.first_name or expense.created_by.last_name %}
-
-                                        {{ expense.created_by.first_name|default:"" }}
-                                        {{ expense.created_by.last_name|default:"" }}
-
-                                    {% else %}
-
-                                        {{ expense.created_by.email }}
-
-                                    {% endif %}
-
+                                {% if expense.created_by.first_name or expense.created_by.last_name %}
+                                {{ expense.created_by.first_name|default:"" }} {{ expense.created_by.last_name|default:"" }}
                                 {% else %}
-
-                                    <span class="text-muted">
-                                        -
-                                    </span>
-
+                                {{ expense.created_by.email }}
                                 {% endif %}
-
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
                             </td>
-
-
                             <!-- Created At -->
-                            <td>
-
-                                {% if expense.created_at %}
-
-                                    {{ expense.created_at|date:"Y-m-d H:i" }}
-
-                                {% else %}
-
-                                    -
-                                {% endif %}
-
-                            </td>
+                            <td>{% if expense.created_at %}{{ expense.created_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}</td>
                         </tr>
-
-
                     {% empty %}
-
                         <tr>
-
-                            <td colspan="14"
-                                class="text-center py-5">
-
+                            <td colspan="14" class="text-center py-5">
                                 <i class="bi bi-airplane fs-1 text-muted"></i>
-
-                                <p class="text-muted mt-3">
-                                    No travel expense records found.
-                                </p>
-
-                                <a href="{% url 'finance:travel_expense_create' %}"
-                                   class="btn btn-primary btn-sm">
-
-                                    <i class="bi bi-plus-circle me-1"></i>
-                                    Create First Travel Expense
-
+                                <p class="text-muted mt-3">No travel expense records found.</p>
+                                <a href="{% url 'finance:travel_expense_create' %}" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-plus-circle me-1"></i>Create First Travel Expense
                                 </a>
-
                             </td>
-
                         </tr>
-
                     {% endfor %}
-
                     </tbody>
-
                 </table>
-
             </div>
-
         </div>
-
     </div>
-
 </div>
 
-
 <script>
-
 setTimeout(() => {
-
     document.querySelectorAll('.auto-dismiss').forEach(alert => {
-
-        bootstrap.Alert
-            .getOrCreateInstance(alert)
-            .close();
-
+        bootstrap.Alert.getOrCreateInstance(alert).close();
     });
-
 }, 5000);
-
 </script>
-
 {% endblock %}
