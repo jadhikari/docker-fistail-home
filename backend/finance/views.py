@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required, permission_required, 
 from django.utils import timezone
 from django.db.models import Q, Sum
 from django.http import HttpResponse, JsonResponse
+from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.views.decorators.csrf import csrf_exempt
 from datetime import date, datetime
@@ -112,6 +113,7 @@ def revenue_detail(request, pk):
     return render(request, 'finance/revenue_detail.html', {'revenue': revenue})
 
 
+@login_required(login_url='/accounts/login/')
 def get_previous_prepaid_amount(customer, year, month):
     """
     Get the prepaid amount from the previous month's rent payment.
@@ -582,8 +584,6 @@ def expenses(request):
 
 @login_required(login_url='/accounts/login/')
 @permission_required('finance.add_hostelexpense', raise_exception=True)
-@login_required(login_url='/accounts/login/')
-@permission_required('finance.add_hostelexpense', raise_exception=True)
 def hostel_expense_create(request):
     """Create a new hostel expense record"""
     if request.method == 'POST':
@@ -701,12 +701,52 @@ def utility_expense_detail(request, pk):
     return render(request, 'finance/utility_expense_detail.html', {'expense': expense})
 
 
-@login_required
+
+
+
+@login_required(login_url='/accounts/login/')
 def travel_expense_list(request):
     """List all travel expenses for the logged-in employee"""
-    expenses = TravelExpense.objects.filter(employee=request.user).order_by("-created_at")
-    return render(request, "finance/travel_expense_list.html", {"expenses": expenses})
+    transaction_code = request.GET.get("transaction_code", "").strip().upper()
+    from_date_str = request.GET.get("from_date")
+    to_date_str = request.GET.get("to_date")
+    status = request.GET.get("status")
+    today = timezone.now().date()
+    search_by_code = bool(transaction_code)
+    search_ignores_dates = search_by_code or status in {"pending", "approved", "rejected"}
 
+    try:
+        from_date = datetime.strptime(from_date_str, "%Y-%m-%d").date() if from_date_str else today.replace(day=1)
+    except ValueError:
+        from_date = today.replace(day=1)
+    try:
+        to_date = datetime.strptime(to_date_str, "%Y-%m-%d").date() if to_date_str else today
+    except ValueError:
+        to_date = today
+
+    query = Q(employee=request.user)
+    if search_by_code:
+        query &= Q(transaction_code__icontains=transaction_code)
+    if not search_ignores_dates:
+        query &= Q(start_date__gte=from_date, start_date__lte=to_date)
+    if status == "pending":
+        query &= Q(approval_status=TravelExpense.ApprovalStatus.PENDING)
+    elif status == "approved":
+        query &= Q(approval_status=TravelExpense.ApprovalStatus.APPROVED)
+    elif status == "rejected":
+        query &= Q(approval_status=TravelExpense.ApprovalStatus.REJECTED)
+
+    expenses = TravelExpense.objects.select_related("approved_by").filter(query).order_by("-created_at")
+    return render(request, "finance/travel_expense_list.html", {
+        "expenses": expenses,
+        "total_count": expenses.count(),
+        "transaction_code": transaction_code,
+        "search_by_code": search_by_code,
+        "search_ignores_dates": search_ignores_dates,
+        "from_date": from_date.strftime("%Y-%m-%d"),
+        "to_date": to_date.strftime("%Y-%m-%d"),
+        "status": status,
+    })
 
 @login_required(login_url='/accounts/login/')
 def travel_expense_create(request):
@@ -721,7 +761,7 @@ def travel_expense_create(request):
             expense.approval_status = TravelExpense.ApprovalStatus.PENDING
             expense.save()
             messages.success(request, "Travel expense submitted successfully.")
-            return redirect("finance:travel_expense_dashboard")
+            return redirect("finance:travel_expense_list")
     else:
         form = TravelExpenseForm()
     return render(request, "finance/travel_expense_form.html", {"form": form})
@@ -748,6 +788,14 @@ def travel_expense_edit(request, pk):
 @login_required(login_url='/accounts/login/')
 def travel_expense_dashboard(request):
     """Admin dashboard showing all travel expense requests with search and export."""
+    can_view_travel_expenses = (
+        request.user.is_superuser
+        or request.user.has_perm("finance.view_travelexpense")
+        or request.user.has_perm("finance.change_travelexpense")
+    )
+    if not can_view_travel_expenses:
+        raise PermissionDenied
+
     employee_id = request.GET.get("employee", "").strip()
     transaction_code = request.GET.get("transaction_code", "").strip().upper()
     from_date_str = request.GET.get("from_date")
@@ -758,6 +806,7 @@ def travel_expense_dashboard(request):
     User = get_user_model()
     employees = User.objects.filter(is_active=True).order_by("first_name", "last_name", "email")
     search_by_code = bool(transaction_code)
+    search_ignores_dates = search_by_code or status in {"pending", "approved", "rejected"}
 
     if from_date_str:
         try:
@@ -777,7 +826,7 @@ def travel_expense_dashboard(request):
     query = Q()
     if search_by_code:
         query &= Q(transaction_code__icontains=transaction_code)
-    else:
+    if not search_ignores_dates:
         query &= Q(start_date__gte=from_date, start_date__lte=to_date)
     if employee_id:
         try:
@@ -814,9 +863,46 @@ def travel_expense_dashboard(request):
         "selected_employee": employee_id,
         "transaction_code": transaction_code,
         "search_by_code": search_by_code,
+        "search_ignores_dates": search_ignores_dates,
         "from_date": from_date.strftime("%Y-%m-%d"),
         "to_date": to_date.strftime("%Y-%m-%d"),
         "status": status,
         "query_string": query_string,
+        "can_change_travel_expenses": (
+            request.user.is_superuser
+            or request.user.has_perm("finance.change_travelexpense")
+        ),
     }
     return render(request, "finance/travel_expense_dashboard.html", context)
+
+
+@login_required(login_url='/accounts/login/')
+@permission_required('finance.change_travelexpense', raise_exception=True)
+def travel_expense_update_status(request, pk):
+    """Display and update only the approval status of a travel expense."""
+    expense = get_object_or_404(TravelExpense, pk=pk)
+
+    if expense.created_by_id == request.user.id or expense.employee_id == request.user.id:
+        messages.error(request, "You cannot approve or reject a travel expense that you created.")
+        return redirect("finance:travel_expense_dashboard")
+
+    if request.method == "POST":
+        new_status = request.POST.get("approval_status")
+        valid_statuses = set(TravelExpense.ApprovalStatus.values)
+
+        if new_status not in valid_statuses:
+            messages.error(request, "Please select a valid approval status.")
+        elif new_status == expense.approval_status:
+            messages.info(request, "The travel expense already has that status.")
+        else:
+            expense.approval_status = new_status
+            expense.updated_by = request.user
+            if new_status == TravelExpense.ApprovalStatus.PENDING:
+                expense.approved_by = None
+            else:
+                expense.approved_by = request.user
+            expense.save(update_fields=["approval_status", "approved_by", "updated_by", "updated_at"])
+            messages.success(request, "Travel expense status updated successfully.")
+        return redirect("finance:travel_expense_dashboard")
+
+    return render(request, "finance/travel_expense_status_form.html", {"expense": expense})

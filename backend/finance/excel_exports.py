@@ -139,7 +139,7 @@ def export_expenses_to_excel(combined_expenses):
 def export_travel_expenses_to_excel(queryset):
     headers = [
         "Transaction Code", "Employee", "Start Date", "End Date", "Amount",
-        "Memo", "Status", "Approved By", "Created By", "Created At",
+        "Memo", "Status", "Approved By", "Status Updated At", "Created By", "Created At",
     ]
     rows = []
     for expense in queryset:
@@ -152,6 +152,7 @@ def export_travel_expenses_to_excel(queryset):
             expense.memo or "",
             expense.get_approval_status_display(),
             _user_display_name(expense.approved_by),
+            expense.updated_at.strftime("%Y-%m-%d %H:%M") if expense.approval_status != "PENDING" and expense.updated_at else "",
             _user_display_name(expense.created_by),
             expense.created_at.strftime("%Y-%m-%d %H:%M") if expense.created_at else "",
         ])
