@@ -6,10 +6,10 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h4 class="mb-1"><i class="bi bi-shield-check text-primary me-2"></i>Update Travel Expense Status</h4>
+                    <h4 class="mb-1"><i class="bi bi-shield-check text-primary me-2"></i>Update Staff Expense Status</h4>
                     <p class="text-muted mb-0 small">Transaction Code: <span class="fw-semibold">{{ expense.transaction_code }}</span></p>
                 </div>
-                <a href="{% url 'finance:travel_expense_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+                <a href="{% url 'finance:staff_expense_dashboard' %}" class="btn btn-outline-secondary btn-sm">
                     <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
                 </a>
             </div>
@@ -18,7 +18,7 @@
 
     <div class="card mb-4">
         <div class="card-header bg-light">
-            <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Travel Expense Details</h6>
+            <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Staff Expense Details</h6>
         </div>
         <div class="card-body">
             <div class="row g-3">
@@ -34,6 +34,10 @@
                     <small class="text-muted d-block">Amount</small>
                     <span class="fw-semibold">¥{{ expense.amount|floatformat:2 }}</span>
                 </div>
+                <div class="col-md-2">
+                    <small class="text-muted d-block">Expense Type</small>
+                    <span class="fw-semibold">{{ expense.get_expense_type_display }}</span>
+                </div>
                 <div class="col-md-4">
                     <small class="text-muted d-block">Memo</small>
                     <span>{{ expense.memo|default:"-" }}</span>
@@ -48,24 +52,33 @@
         </div>
         <div class="card-body">
             <div class="alert alert-info py-2 small" role="alert">
-                <i class="bi bi-info-circle me-1"></i>Only the approval status can be changed on this page.
+                <i class="bi bi-info-circle me-1"></i>
+                {% if expense.approval_status == 'PENDING' %}
+                    Only the approval status can be changed on this page.
+                {% else %}
+                    Approved or rejected staff expenses are locked and cannot be updated.
+                {% endif %}
             </div>
             <form method="post" novalidate>
                 {% csrf_token %}
                 <div class="row g-3 align-items-end">
                     <div class="col-md-4">
                         <label for="approval_status" class="form-label fw-semibold small">Approval Status</label>
-                        <select name="approval_status" id="approval_status" class="form-select form-select-sm">
+                        <select name="approval_status" id="approval_status" class="form-select form-select-sm" {% if expense.approval_status != 'PENDING' %}disabled{% endif %}>
                             <option value="PENDING" {% if expense.approval_status == 'PENDING' %}selected{% endif %}>Pending</option>
                             <option value="APPROVED" {% if expense.approval_status == 'APPROVED' %}selected{% endif %}>Approved</option>
                             <option value="REJECTED" {% if expense.approval_status == 'REJECTED' %}selected{% endif %}>Rejected</option>
                         </select>
                     </div>
-                    <div class="col-md-8">
-                        <button type="submit" class="btn btn-primary btn-sm">
+                    <div class="col-md-4">
+                        <label for="status_memo" class="form-label fw-semibold small">Status Change Memo <span class="text-danger">*</span></label>
+                        <textarea name="status_memo" id="status_memo" class="form-control form-control-sm" rows="2" required placeholder="Explain this status change" {% if expense.approval_status != 'PENDING' %}disabled{% endif %}>{{ expense.status_memo }}</textarea>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-primary btn-sm" {% if expense.approval_status != 'PENDING' %}disabled{% endif %}>
                             <i class="bi bi-check-circle me-1"></i>Save Status
                         </button>
-                        <a href="{% url 'finance:travel_expense_dashboard' %}" class="btn btn-outline-secondary btn-sm ms-1">
+                        <a href="{% url 'finance:staff_expense_dashboard' %}" class="btn btn-outline-secondary btn-sm ms-1">
                             <i class="bi bi-x-circle me-1"></i>Cancel
                         </a>
                     </div>

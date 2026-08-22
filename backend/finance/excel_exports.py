@@ -136,27 +136,29 @@ def export_expenses_to_excel(combined_expenses):
     return export_to_excel("All Expenses", headers, rows, "all_expenses.xlsx")
 
 
-def export_travel_expenses_to_excel(queryset):
+def export_staff_expenses_to_excel(queryset):
     headers = [
-        "Transaction Code", "Employee", "Start Date", "End Date", "Amount",
-        "Memo", "Status", "Approved By", "Status Updated At", "Created By", "Created At",
+        "Transaction Code", "Employee", "Expense Type", "Start Date", "End Date", "Amount",
+        "Expense Memo", "Status", "Status Change Memo", "Approved By", "Status Updated At", "Created By", "Created At",
     ]
     rows = []
     for expense in queryset:
         rows.append([
             expense.transaction_code,
             _user_display_name(expense.employee),
+            expense.get_expense_type_display(),
             expense.start_date.strftime("%Y-%m-%d") if expense.start_date else "",
             expense.end_date.strftime("%Y-%m-%d") if expense.end_date else "",
             float(expense.amount) if expense.amount is not None else "",
             expense.memo or "",
             expense.get_approval_status_display(),
+            expense.status_memo or "",
             _user_display_name(expense.approved_by),
             expense.updated_at.strftime("%Y-%m-%d %H:%M") if expense.approval_status != "PENDING" and expense.updated_at else "",
             _user_display_name(expense.created_by),
             expense.created_at.strftime("%Y-%m-%d %H:%M") if expense.created_at else "",
         ])
-    return export_to_excel("Travel Expenses", headers, rows, "travel_expenses.xlsx")
+    return export_to_excel("Staff Expenses", headers, rows, "staff_expenses.xlsx")
 
 
 def export_unpaid_rent_to_excel(defaulters):

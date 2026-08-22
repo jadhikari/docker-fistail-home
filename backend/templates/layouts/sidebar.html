@@ -30,9 +30,9 @@
             </li>
         {% endif %}
 
-        {% if perms.finance.view_travelexpense %}
-            <a href="{% url 'finance:travel_expense_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'travel_expense_dashboard' %}active{% endif %}">
-                    ✈️  <span class="link-text">Travel Exp.</span>
+        {% if perms.finance.view_staffexpense %}
+            <a href="{% url 'finance:staff_expense_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'staff_expense_dashboard' %}active{% endif %}">
+                    💼 <span class="link-text">Staff Exp.</span>
             </a>
         {% endif %}
 
@@ -65,4 +65,3 @@
         {% endif %}
     </ul>
 </div>
-

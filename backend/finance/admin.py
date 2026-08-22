@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import HostelRevenue, HostelExpense, UtilityExpense, TravelExpense
+from .models import HostelRevenue, HostelExpense, UtilityExpense, StaffExpense
 
 @admin.register(HostelRevenue)
 class HostelRevenueAdmin(admin.ModelAdmin):
@@ -145,10 +145,10 @@ class UtilityExpenseAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
-@admin.register(TravelExpense)
-class TravelExpenseAdmin(admin.ModelAdmin):
-    list_display = ("transaction_code", "employee", "start_date", "end_date", "amount", "approval_status", "approved_by", "created_by", "created_at")
-    list_filter = ("approval_status", "start_date", "end_date", "created_at")
+@admin.register(StaffExpense)
+class StaffExpenseAdmin(admin.ModelAdmin):
+    list_display = ("transaction_code", "employee", "expense_type", "start_date", "end_date", "amount", "approval_status", "status_memo", "approved_by", "created_by", "created_at")
+    list_filter = ("expense_type", "approval_status", "start_date", "end_date", "created_at")
     search_fields = ("transaction_code", "employee__username", "employee__first_name", "employee__last_name", "approved_by__username")
     readonly_fields = ("transaction_code", "employee", "created_by", "updated_by", "created_at", "updated_at")
     ordering = ("-created_at",)

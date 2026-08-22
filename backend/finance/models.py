@@ -254,21 +254,28 @@ class UtilityExpense(TimeStampedUserModel):
         return f"{self.get_expense_type_display()} | {self.hostel.name} | {self.amount}" # type: ignore
 
 
-class TravelExpense(TimeStampedUserModel):
+class StaffExpense(TimeStampedUserModel):
 
     class ApprovalStatus(models.TextChoices):
         PENDING = "PENDING", "Pending"
         APPROVED = "APPROVED", "Approved"
         REJECTED = "REJECTED", "Rejected"
 
-    employee = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True, related_name="travel_expenses", help_text="Employee who submitted the travel expense.")
-    approved_by = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True, related_name="approved_travel_expenses", help_text="User who approved or rejected the expense.")
-    approval_status = models.CharField(max_length=20, choices=ApprovalStatus.choices, default=ApprovalStatus.PENDING, db_index=True, help_text="Current approval status of the travel expense.")
-    start_date = models.DateField(help_text="Start date of the travel.")
-    end_date = models.DateField(help_text="End date of the travel.")
-    amount = models.DecimalField(max_digits=12, decimal_places=2, help_text="Total travel expense amount.")
-    memo = models.TextField(help_text="Additional information about the travel expense.")
-    transaction_code = models.CharField(max_length=6, unique=True, editable=False, db_index=True, help_text="Unique transaction code for this travel expense.")
+    class ExpenseType(models.TextChoices):
+        TRAVEL = "TRAVEL", "Travel"
+        PURCHASE = "PURCHASE", "Purchase"
+        OTHER = "OTHER", "Other"
+
+    employee = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True, related_name="staff_expenses", help_text="Employee who submitted the staff expense.")
+    approved_by = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True, related_name="approved_staff_expenses", help_text="User who approved or rejected the expense.")
+    approval_status = models.CharField(max_length=20, choices=ApprovalStatus.choices, default=ApprovalStatus.PENDING, db_index=True, help_text="Current approval status of the staff expense.")
+    expense_type = models.CharField(max_length=20, choices=ExpenseType.choices, default=ExpenseType.TRAVEL, help_text="Category of the staff expense.")
+    start_date = models.DateField(help_text="Start date of the expense period.")
+    end_date = models.DateField(help_text="End date of the expense period.")
+    amount = models.DecimalField(max_digits=12, decimal_places=2, help_text="Total staff expense amount.")
+    memo = models.TextField(help_text="Additional information about the staff expense.")
+    status_memo = models.TextField(blank=True, help_text="Memo recorded when the approval status is changed.")
+    transaction_code = models.CharField(max_length=6, unique=True, editable=False, db_index=True, help_text="Unique transaction code for this staff expense.")
 
     def clean(self):
         super().clean()
@@ -293,7 +300,7 @@ class TravelExpense(TimeStampedUserModel):
         while True:
             code = "".join(secrets.choice(chars) for _ in range(6))
 
-            if not TravelExpense.objects.filter(transaction_code=code).exists():
+            if not StaffExpense.objects.filter(transaction_code=code).exists():
                 return code
 
     def __str__(self):
@@ -302,3 +309,7 @@ class TravelExpense(TimeStampedUserModel):
             return f"{self.transaction_code} - {full_name or self.employee.username}"
 
         return self.transaction_code
+
+    class Meta:
+        verbose_name = "Staff Expense"
+        verbose_name_plural = "Staff Expenses"

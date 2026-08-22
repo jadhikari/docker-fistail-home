@@ -1,6 +1,6 @@
 from datetime import date
 from django import forms
-from .models import HostelExpense, UtilityExpense, Hostel, TravelExpense
+from .models import HostelExpense, UtilityExpense, Hostel, StaffExpense
 
 
 class HostelExpenseForm(forms.ModelForm):
@@ -69,8 +69,8 @@ class UtilityExpenseForm(forms.ModelForm):
 
 
 
-class TravelExpenseForm(forms.ModelForm):
+class StaffExpenseForm(forms.ModelForm):
     class Meta:
-        model = TravelExpense
-        fields = ["start_date", "end_date", "amount", "memo"]
-        widgets = {"start_date": forms.DateInput(attrs={"type": "date", "class": "form-control"}), "end_date": forms.DateInput(attrs={"type": "date", "class": "form-control"}), "amount": forms.NumberInput(attrs={"class": "form-control"}), "memo": forms.Textarea(attrs={"class": "form-control", "rows": 4})}
+        model = StaffExpense
+        fields = ["expense_type", "start_date", "end_date", "amount", "memo"]
+        widgets = {"expense_type": forms.Select(attrs={"class": "form-select"}), "start_date": forms.DateInput(attrs={"type": "date", "class": "form-control"}), "end_date": forms.DateInput(attrs={"type": "date", "class": "form-control"}), "amount": forms.NumberInput(attrs={"class": "form-control"}), "memo": forms.Textarea(attrs={"class": "form-control", "rows": 4})}

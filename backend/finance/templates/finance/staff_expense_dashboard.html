@@ -17,8 +17,8 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h4 class="mb-1"><i class="bi bi-airplane text-primary me-2"></i>Travel Expenses</h4>
-                    <p class="text-muted mb-0 small">View and manage travel expense requests</p>
+                    <h4 class="mb-1"><i class="bi bi-receipt text-primary me-2"></i>Staff Expenses</h4>
+                    <p class="text-muted mb-0 small">View and manage staff expense requests</p>
                 </div>
             </div>
         </div>
@@ -54,6 +54,15 @@
                         </select>
                     </div>
                     <div class="col-md-2">
+                        <label for="expenseTypeFilter" class="form-label fw-semibold small">Type</label>
+                        <select id="expenseTypeFilter" name="expense_type" class="form-select form-select-sm">
+                            <option value="">All Types</option>
+                            {% for value, label in expense_types %}
+                            <option value="{{ value }}" {% if selected_expense_type == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
                     <label for="employee" class="form-label fw-semibold small">Employee</label>
                     <select id="employee" name="employee" class="form-select form-select-sm">
                         <option value="">All Employees</option>
@@ -80,7 +89,7 @@
                         <button type="submit" class="btn btn-primary btn-sm">
                             <i class="bi bi-search me-1"></i>Search
                         </button>
-                        <a href="{% url 'finance:travel_expense_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+                        <a href="{% url 'finance:staff_expense_dashboard' %}" class="btn btn-outline-secondary btn-sm">
                             <i class="bi bi-arrow-clockwise me-1"></i>Reset
                         </a>
                         <a href="?{% if query_string %}{{ query_string }}&{% endif %}export=excel"
@@ -100,14 +109,14 @@
     <!-- Table -->
     <div class="card">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
-            <h6 class="mb-0"><i class="bi bi-table me-2"></i>Travel Expense Records</h6>
+            <h6 class="mb-0"><i class="bi bi-table me-2"></i>Staff Expense Records</h6>
             <span class="badge bg-primary small">{{ total_count }} Records</span>
         </div>
         {% if not search_ignores_dates %}
         <div class="px-3 py-2 border-bottom bg-light-subtle">
             <span class="text-muted small">
                 <i class="bi bi-calendar3 me-1"></i>
-                Showing travel expenses from {{ from_date }} to {{ to_date }}
+                Showing staff expenses from {{ from_date }} to {{ to_date }}
             </span>
         </div>
         {% endif %}
@@ -118,11 +127,13 @@
                         <tr>
                             <th class="text-center small">Transaction Code</th>
                             <th class="text-center small">Employee</th>
+                            <th class="text-center small">Type</th>
                             <th class="text-center small">Start Date</th>
                             <th class="text-center small">End Date</th>
                             <th class="text-center small">Amount</th>
                             <th class="text-center small">Memo</th>
                             <th class="text-center small">Status</th>
+                            <th class="text-center small">Status Memo</th>
                             <th class="text-center small">Approved By</th>
                             <th class="text-center small">Approved At</th>
                             <th class="text-center small">Created At</th>
@@ -134,8 +145,8 @@
                             <!-- Transaction Code -->
                             <td class="text-center">
                                 <b>
-                                    {% if can_change_travel_expenses and expense.created_by_id != user.id and expense.employee_id != user.id %}
-                                    <a href="{% url 'finance:travel_expense_update_status' expense.pk %}" class="text-decoration-none fw-semibold">{{ expense.transaction_code }}</a>
+                                    {% if can_change_staff_expenses and expense.created_by_id != user.id and expense.employee_id != user.id %}
+                                    <a href="{% url 'finance:staff_expense_update_status' expense.pk %}" class="text-decoration-none fw-semibold">{{ expense.transaction_code }}</a>
                                     {% else %}
                                     <span class="fw-semibold">{{ expense.transaction_code }}</span>
                                     {% endif %}
@@ -146,6 +157,15 @@
                                 <strong>
                                     {{ expense.employee.first_name|default:"" }} {{ expense.employee.last_name|default:"" }}
                                 </strong>
+                            </td>
+                            <td class="text-center">
+                                {% if expense.expense_type == 'TRAVEL' %}
+                                <span class="badge bg-primary"><i class="bi bi-airplane me-1"></i>{{ expense.get_expense_type_display }}</span>
+                                {% elif expense.expense_type == 'PURCHASE' %}
+                                <span class="badge bg-success"><i class="bi bi-bag-check me-1"></i>{{ expense.get_expense_type_display }}</span>
+                                {% else %}
+                                <span class="badge bg-secondary"><i class="bi bi-three-dots me-1"></i>{{ expense.get_expense_type_display }}</span>
+                                {% endif %}
                             </td>
                             <!-- Start Date -->
                             <td class="text-center">{% if expense.start_date %}{{ expense.start_date|date:"Y-m-d" }}{% else %}-{% endif %}</td>
@@ -173,6 +193,9 @@
                                 <span class="badge bg-secondary">{{ expense.approval_status }}</span>
                                 {% endif %}
                             </td>
+                            <td style="min-width: 180px; max-width: 280px;" class="text-center">
+                                <span title="{{ expense.status_memo }}">{{ expense.status_memo|default:"-"|truncatechars:80 }}</span>
+                            </td>
                             <!-- Approved By -->
                             <td class="text-center">
                                 {% if expense.approved_by %}
@@ -192,11 +215,11 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="11" class="text-center py-5">
-                                <i class="bi bi-airplane fs-1 text-muted"></i>
-                                <p class="text-muted mt-3">No travel expense records found.</p>
-                                <a href="{% url 'finance:travel_expense_create' %}" class="btn btn-primary btn-sm">
-                                    <i class="bi bi-plus-circle me-1"></i>Create First Travel Expense
+                            <td colspan="13" class="text-center py-5">
+                                <i class="bi bi-receipt fs-1 text-muted"></i>
+                                <p class="text-muted mt-3">No staff expense records found.</p>
+                                <a href="{% url 'finance:staff_expense_create' %}" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-plus-circle me-1"></i>Create First Staff Expense
                                 </a>
                             </td>
                         </tr>
