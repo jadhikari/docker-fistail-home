@@ -172,10 +172,6 @@ class RentalContract(TimeStampedUserModel):
         verbose_name = "Rental Contract"
         verbose_name_plural = "Rental Contracts"
         ordering = ['-created_at']
-        permissions = [
-            ('can_view_real_estate_revenue', 'Can view real estate revenue'),
-            ('can_confirm_ad_fee', 'Can confirm receipt of AD fees'),
-        ]
 
     def __str__(self):
         return f"{self.customer_name} - {self.contract_date} - ¥{self.total_amount}"

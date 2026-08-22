@@ -31,7 +31,7 @@
                         <i class="bi bi-building"></i><span class="link-text">Hostel Rev.</span>
                     </a>
                 </li>
-                {% if user.is_superuser or perms.targets.can_view_real_estate_revenue %}
+                {% if user.is_superuser or perms.targets.view_rentalcontract %}
                 <li class="nav-item">
                     <a href="{% url 'finance:real_estate_revenue' %}" class="nav-link {% if request.resolver_match.url_name == 'real_estate_revenue' %}active{% endif %}">
                         <i class="bi bi-houses"></i><span class="link-text">Real Estate Rev.</span>
