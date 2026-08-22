@@ -176,9 +176,6 @@ cython_debug/
 
 # Ignore migration files except for __init__.py
 backend/**/migrations/*.py
-!backend/finance/migrations/0005_staffexpense_expense_type_status_memo.py
-!backend/targets/migrations/0002_rentalcontract_ad_fee_receipt.py
-!backend/targets/migrations/0003_rentalcontract_real_estate_revenue_permission.py
 !backend/**/migrations/__init__.py
 
 # Ignore a specific media folder
