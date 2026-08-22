@@ -152,20 +152,23 @@
             <h6 class="mb-0"><i class="bi bi-gear me-2"></i>Update Status</h6>
         </div>
             <div class="card-body">
+                {% if expense.status == 'approved' %}
+                <div class="alert alert-info py-2 small"><i class="bi bi-lock me-1"></i>This expense is approved. Its status can no longer be changed.</div>
+                {% endif %}
                 <form method="post">
                     {% csrf_token %}
                     <div class="row align-items-end">
                         <div class="col-md-4">
                             <label for="status" class="form-label fw-semibold small">New Status</label>
-                            <select name="status" id="status" class="form-select">
+                            <select name="status" id="status" class="form-select" {% if expense.status == 'approved' %}disabled{% endif %}>
                                 {% for value, label in expense.STATUS_CHOICES %}
                                     <option value="{{ value }}" {% if expense.status == value %}selected{% endif %}>{{ label }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <button type="submit" class="btn btn-primary btn-sm">
-                                <i class="bi bi-check-circle me-1"></i>Update Status
+                            <button type="submit" class="btn btn-primary btn-sm" {% if expense.status == 'approved' %}disabled{% endif %}>
+                                <i class="bi {% if expense.status == 'approved' %}bi-lock{% else %}bi-check-circle{% endif %} me-1"></i>Update Status
                             </button>
                         </div>
                     </div>

@@ -117,6 +117,7 @@ def real_estate_revenue(request):
         raise PermissionDenied
     today = timezone.now().date()
     customer_name = request.GET.get('customer_name', '').strip()
+    management_company = request.GET.get('management_company', '').strip()
     from_date_str = request.GET.get('from_date', '').strip()
     to_date_str = request.GET.get('to_date', '').strip()
 
@@ -132,6 +133,9 @@ def real_estate_revenue(request):
     contracts = RentalContract.objects.select_related('created_by', 'ad_fee_confirmed_by', 'target_to', 'target_to__target_to')
     if customer_name:
         contracts = contracts.filter(customer_name__icontains=customer_name)
+    if management_company:
+        contracts = contracts.filter(management_company_name=management_company)
+    management_companies = RentalContract.objects.exclude(management_company_name='').values_list('management_company_name', flat=True).distinct().order_by('management_company_name')
     agent_contracts = contracts.filter(contract_date__range=(from_date, to_date))
     received_ad_fees = contracts.filter(ad_fee_confirmed_at__isnull=False, ad_fee_received_date__range=(from_date, to_date))
     pending_ad_fees = contracts.filter(ad_fee__gt=0, ad_fee_confirmed_at__isnull=True).order_by('contract_date')
@@ -162,6 +166,7 @@ def real_estate_revenue(request):
         'page_total_revenue': page_total_revenue,
         'customer_name': customer_name, 'from_date': from_date.strftime('%Y-%m-%d'),
         'to_date': to_date.strftime('%Y-%m-%d'), 'query_string': query_params.urlencode(),
+        'management_companies': management_companies, 'selected_management_company': management_company,
         'can_confirm_ad_fee': request.user.is_superuser or request.user.has_perm('targets.can_confirm_ad_fee'),
         'pending_ad_fees': pending_ad_fees[:20], 'pending_ad_fee_count': pending_ad_fees.count(),
     })
@@ -712,6 +717,9 @@ def hostel_expense_detail(request, pk):
     """View and update hostel expense approval status"""
     expense = get_object_or_404(HostelExpense, pk=pk)
     if request.method == 'POST':
+        if expense.status == 'approved':
+            messages.warning(request, "Approved hostel expenses cannot have their status changed.")
+            return redirect('finance:hostel_expense_detail', pk=expense.pk)
         new_status = request.POST.get('status')
         if new_status in dict(HostelExpense.STATUS_CHOICES):
             expense.status = new_status
