@@ -33,7 +33,7 @@
             <a href="?{% if query_string %}{{ query_string }}&amp;{% endif %}export=pending" class="btn btn-outline-success btn-sm ms-auto" title="Download pending AD fees as Excel" aria-label="Download pending AD fees as Excel"><i class="bi bi-file-earmark-excel"></i></a>
         </div>
         <div id="pendingAdFeeTable" class="collapse"><div class="table-responsive"><table class="table table-sm align-middle mb-0">
-            <thead><tr><th>Customer</th><th class="text-center">Contract Date</th><th>Partner / Management Company</th><th class="text-end">Expected AD Fee</th>{% if can_confirm_ad_fee %}<th class="text-center">Action</th>{% endif %}</tr></thead>
+            <thead><tr><th>Customer</th><th class="text-center">Contract Date</th><th>Management Company</th><th class="text-end">Expected AD Fee</th>{% if can_confirm_ad_fee %}<th class="text-center">Action</th>{% endif %}</tr></thead>
             <tbody>{% for contract in pending_ad_fees %}<tr>
                 <td><strong>{{ contract.customer_name }}</strong></td><td class="text-center">{{ contract.contract_date|date:"Y-m-d" }}</td><td>{{ contract.management_company_name }}</td><td class="text-end fw-semibold">¥{{ contract.ad_fee|floatformat:2 }}</td>
                 {% if can_confirm_ad_fee %}<td class="text-center"><a href="{% url 'finance:confirm_ad_fee_receipt' contract.pk %}" class="btn btn-success btn-sm"><i class="bi bi-check2-circle me-1"></i>Confirm Receipt</a></td>{% endif %}
@@ -48,14 +48,14 @@
         <div class="card-header bg-light d-flex justify-content-between align-items-center"><h6 class="mb-0"><i class="bi bi-table me-2"></i>Rental Contract Revenue</h6><div class="d-flex align-items-center gap-2"><span class="badge bg-primary">{{ total_count }} Records</span><a href="?{% if query_string %}{{ query_string }}&amp;{% endif %}export=revenue" class="btn btn-outline-success btn-sm" title="Download displayed revenue as Excel" aria-label="Download displayed revenue as Excel"><i class="bi bi-file-earmark-excel"></i></a></div></div>
         <div class="card-body p-0"><div class="table-responsive">
             <table class="table table-sm table-hover mb-0 align-middle">
-                <thead class="custom-thead"><tr><th class="text-center">Contract Date</th><th>Customer</th><th>Property Address</th><th>Partner / Management Company</th><th class="text-end">Agent Revenue</th><th class="text-end">Expected AD</th><th class="text-center">AD Status</th><th class="text-center">Received Date</th><th class="text-end">Received AD</th><th class="text-end">Transfer Fee</th><th class="text-end">Period Revenue</th>{% if can_confirm_ad_fee %}<th class="text-center">Action</th>{% endif %}</tr></thead>
+                <thead class="custom-thead"><tr><th class="text-center">Contract Date</th><th>Customer</th><th>Property Address</th><th>Management Company</th><th class="text-end">Agent Revenue</th><th class="text-end">Expected AD</th><th class="text-center">AD Status</th><th class="text-center">Received Date</th><th class="text-end">Received AD</th><th class="text-end">Transfer Fee</th><th class="text-end">Period Revenue</th>{% if can_confirm_ad_fee %}<th class="text-center">Action</th>{% endif %}</tr></thead>
                 <tbody>
                 {% for contract in contracts %}
                     <tr>
                         <td class="text-center text-nowrap">{{ contract.contract_date|date:"Y-m-d" }}</td>
                         <td><strong>{{ contract.customer_name }}</strong><div class="small text-muted">{{ contract.customer_number }}</div></td>
-                        <td style="min-width: 220px;">{{ contract.building_address|truncatechars:60 }}</td>
-                        <td style="min-width: 180px;">{{ contract.management_company_name }}</td>
+                        <td class="revenue-tooltip" data-tooltip="{{ contract.building_address }}">{{ contract.building_address|truncatechars:15 }}</td>
+                        <td class="text-center text-nowrap">{{ contract.management_company_name }}</td>
                         <td class="text-end text-nowrap">¥{{ contract.period_agent_fee|floatformat:2 }}</td>
                         <td class="text-end text-nowrap">¥{{ contract.ad_fee|floatformat:2 }}</td>
                         <td class="text-center">{% if not contract.ad_fee %}<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Confirmed (No AD Fee)</span>{% elif contract.is_ad_fee_received %}<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Received</span>{% else %}<span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Pending</span>{% endif %}</td>
@@ -88,5 +88,27 @@
 .pending-ad-toggle:hover h6 { color: #8a6500; }
 .pending-ad-chevron { transition: transform 0.15s ease; }
 .pending-ad-toggle[aria-expanded="true"] .pending-ad-chevron { transform: rotate(180deg); }
+.revenue-tooltip { position: relative; cursor: help; }
+.revenue-tooltip:hover::after {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    z-index: 1080;
+    width: max-content;
+    max-width: 320px;
+    padding: 0.45rem 0.65rem;
+    content: attr(data-tooltip);
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: normal;
+    line-height: 1.35;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    pointer-events: none;
+    background-color: #212529;
+    border-radius: 0.35rem;
+    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.2);
+    transform: translateX(-50%);
+}
 </style>
 {% endblock %}
