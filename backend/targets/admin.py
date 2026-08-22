@@ -78,7 +78,7 @@ class TargetAdmin(admin.ModelAdmin):
 @admin.register(RentalContract)
 class RentalContractAdmin(admin.ModelAdmin):
     list_display = [
-        'customer_name', 'target_to', 'contract_date', 'total_amount', 'contract_type', 
+        'customer_name', 'target_to', 'contract_date', 'total_amount', 'ad_fee_confirmed_at', 'contract_type',
         'living_num_people', 'created_at'
     ]
     list_filter = [
@@ -87,7 +87,7 @@ class RentalContractAdmin(admin.ModelAdmin):
     search_fields = [
         'customer_name', 'customer_number', 'building_address', 'target_to__target_to__email'
     ]
-    readonly_fields = ('total_amount', 'created_at', 'updated_at', 'created_by', 'updated_by')
+    readonly_fields = ('total_amount', 'ad_fee_confirmed_by', 'ad_fee_confirmed_at', 'created_at', 'updated_at', 'created_by', 'updated_by')
     
     fieldsets = (
         ('Target Information', {
@@ -103,7 +103,7 @@ class RentalContractAdmin(admin.ModelAdmin):
             'fields': ('contract_date',)
         }),
         ('Financial Information', {
-            'fields': ('agent_fee', 'ad_fee')
+            'fields': ('agent_fee', 'ad_fee', 'ad_fee_received_amount', 'ad_fee_transfer_fee', 'ad_fee_received_date', 'ad_fee_memo', 'ad_fee_confirmed_by', 'ad_fee_confirmed_at')
         }),
         ('Contract Details', {
             'fields': ('contract_type', 'cancellation_notice_period', 'cancellation_period', 'cancellation_charge')

@@ -161,6 +161,34 @@ def export_staff_expenses_to_excel(queryset):
     return export_to_excel("Staff Expenses", headers, rows, "staff_expenses.xlsx")
 
 
+def export_pending_ad_fees_to_excel(queryset):
+    headers = ['Customer', 'Phone', 'Contract Date', 'Property Address', 'Partner / Management Company', 'Expected AD Fee']
+    rows = [[
+        contract.customer_name, contract.customer_number,
+        contract.contract_date.strftime('%Y-%m-%d'), contract.building_address,
+        contract.management_company_name, float(contract.ad_fee),
+    ] for contract in queryset]
+    return export_to_excel('Pending AD Fees', headers, rows, 'pending_ad_fee_receipts.xlsx')
+
+
+def export_real_estate_revenue_to_excel(queryset, from_date, to_date):
+    headers = ['Contract Date', 'Customer', 'Phone', 'Property Address', 'Agent Revenue', 'Expected AD Fee', 'AD Status', 'Received Date', 'Received AD Fee', 'Transfer Fee', 'Period Revenue']
+    rows = []
+    for contract in queryset:
+        agent_revenue = contract.agent_fee if from_date <= contract.contract_date <= to_date else 0
+        received_ad_fee = contract.ad_fee_received_amount if contract.ad_fee_received_date and from_date <= contract.ad_fee_received_date <= to_date else 0
+        period_revenue = agent_revenue + (received_ad_fee or 0)
+        rows.append([
+            contract.contract_date.strftime('%Y-%m-%d'), contract.customer_name, contract.customer_number,
+            contract.building_address, float(agent_revenue), float(contract.ad_fee),
+            'Received' if contract.ad_fee_confirmed_at else 'Pending',
+            contract.ad_fee_received_date.strftime('%Y-%m-%d') if contract.ad_fee_received_date else '',
+            float(contract.ad_fee_received_amount) if contract.ad_fee_received_amount is not None else '',
+            float(contract.ad_fee_transfer_fee) if contract.ad_fee_confirmed_at else '', float(period_revenue),
+        ])
+    return export_to_excel('Real Estate Revenue', headers, rows, f'real_estate_revenue_{from_date}_{to_date}.xlsx')
+
+
 def export_unpaid_rent_to_excel(defaulters):
     headers = ['Customer Name', 'Stay Type', 'Assigned Date', 'Released/End Date', 'Unpaid Months']
     rows = []

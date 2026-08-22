@@ -215,7 +215,7 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="13" class="text-center py-5">
+                            <td colspan="12" class="text-center py-5">
                                 <i class="bi bi-receipt fs-1 text-muted"></i>
                                 <p class="text-muted mt-3">No staff expense records found.</p>
                                 <a href="{% url 'finance:staff_expense_create' %}" class="btn btn-primary btn-sm">
@@ -225,9 +225,23 @@
                         </tr>
                     {% endfor %}
                     </tbody>
+                    <tfoot class="table-light">
+                        <tr class="fw-bold"><td colspan="5" class="text-end">Page Total Amount:</td><td class="text-center text-info">¥{{ page_total_amount|floatformat:2 }}</td><td colspan="6"></td></tr>
+                        <tr class="fw-bold border-top"><td colspan="5" class="text-end">Overall Total Amount:</td><td class="text-center text-success">¥{{ overall_total_amount|floatformat:2 }}</td><td colspan="6"></td></tr>
+                    </tfoot>
                 </table>
             </div>
         </div>
+        {% if expenses.has_other_pages %}
+        <div class="card-footer bg-light d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Showing {{ expenses.start_index }} to {{ expenses.end_index }} of {{ expenses.paginator.count }} records</span>
+            <nav aria-label="Staff expense pages"><ul class="pagination pagination-sm mb-0">
+                {% if expenses.has_previous %}<li class="page-item"><a class="page-link" href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ expenses.previous_page_number }}">Previous</a></li>{% endif %}
+                <li class="page-item disabled"><span class="page-link">Page {{ expenses.number }} of {{ expenses.paginator.num_pages }}</span></li>
+                {% if expenses.has_next %}<li class="page-item"><a class="page-link" href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ expenses.next_page_number }}">Next</a></li>{% endif %}
+            </ul></nav>
+        </div>
+        {% endif %}
     </div>
 </div>
 

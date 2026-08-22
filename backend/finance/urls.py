@@ -5,6 +5,8 @@ app_name = 'finance'
 
 urlpatterns = [
     path('revenues/', views.revenues, name='revenues'),
+    path('revenues/real-estate/', views.real_estate_revenue, name='real_estate_revenue'),
+    path('revenues/real-estate/<int:pk>/confirm-ad-fee/', views.confirm_ad_fee_receipt, name='confirm_ad_fee_receipt'),
     path('revenues/<int:pk>/', views.revenue_detail, name='revenue_detail'),
     path('expenses/', views.expenses, name='expenses'),  # 👈 root view
     path('expenses/add/', views.hostel_expense_create, name='hostel_expense_add'),

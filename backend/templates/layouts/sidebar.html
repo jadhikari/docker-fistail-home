@@ -17,23 +17,46 @@
             </a>
         </li>
         
-        <li class="nav-item">
-            <a href="{% url 'finance:revenues' %}" class="nav-link {% if request.resolver_match.url_name == 'revenues' %}active{% endif %}">
-                💵 <span class="link-text">Revenues</span>
-            </a>
+        <li class="nav-item sidebar-flyout-menu">
+            <button class="nav-link w-100 border-0 {% if request.resolver_match.url_name == 'revenues' or request.resolver_match.url_name == 'real_estate_revenue' %}active{% endif %}"
+                    type="button" data-bs-toggle="collapse" data-bs-target="#revenueSubmenu"
+                    aria-expanded="false"
+                    aria-controls="revenueSubmenu">
+                💵 <span class="link-text flex-grow-1">Revenue</span>
+                <i class="bi bi-chevron-right submenu-chevron"></i>
+            </button>
+            <ul id="revenueSubmenu" class="nav flex-column collapse sidebar-submenu">
+                <li class="nav-item">
+                    <a href="{% url 'finance:revenues' %}" class="nav-link {% if request.resolver_match.url_name == 'revenues' %}active{% endif %}">
+                        <i class="bi bi-building"></i><span class="link-text">Hostel Rev.</span>
+                    </a>
+                </li>
+                {% if user.is_superuser or perms.targets.can_view_real_estate_revenue %}
+                <li class="nav-item">
+                    <a href="{% url 'finance:real_estate_revenue' %}" class="nav-link {% if request.resolver_match.url_name == 'real_estate_revenue' %}active{% endif %}">
+                        <i class="bi bi-houses"></i><span class="link-text">Real Estate Rev.</span>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
         </li>
-        {% if perms.finance.view_hostelexpense %}
-            <li class="nav-item">
-                <a href="{% url 'finance:expenses' %}" class="nav-link {% if request.resolver_match.url_name == 'expenses' %}active{% endif %}">
-                    🧾 <span class="link-text">Hostel Exp.</span>
-                </a>
-            </li>
-        {% endif %}
-
-        {% if perms.finance.view_staffexpense %}
-            <a href="{% url 'finance:staff_expense_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'staff_expense_dashboard' %}active{% endif %}">
-                    💼 <span class="link-text">Staff Exp.</span>
-            </a>
+        {% if perms.finance.view_hostelexpense or perms.finance.view_staffexpense %}
+        <li class="nav-item sidebar-flyout-menu">
+            <button class="nav-link w-100 border-0 {% if request.resolver_match.url_name == 'expenses' or request.resolver_match.url_name == 'staff_expense_dashboard' %}active{% endif %}"
+                    type="button" data-bs-toggle="collapse" data-bs-target="#expenseSubmenu"
+                    aria-expanded="false" aria-controls="expenseSubmenu">
+                🧾 <span class="link-text flex-grow-1">Expenses</span>
+                <i class="bi bi-chevron-right submenu-chevron"></i>
+            </button>
+            <ul id="expenseSubmenu" class="nav flex-column collapse sidebar-submenu">
+                {% if perms.finance.view_hostelexpense %}
+                <li class="nav-item"><a href="{% url 'finance:expenses' %}" class="nav-link {% if request.resolver_match.url_name == 'expenses' %}active{% endif %}"><i class="bi bi-building"></i><span class="link-text">Hostel Exp.</span></a></li>
+                {% endif %}
+                {% if perms.finance.view_staffexpense %}
+                <li class="nav-item"><a href="{% url 'finance:staff_expense_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'staff_expense_dashboard' %}active{% endif %}"><i class="bi bi-briefcase"></i><span class="link-text">Staff Exp.</span></a></li>
+                {% endif %}
+            </ul>
+        </li>
         {% endif %}
 
         <li class="nav-item">
@@ -65,3 +88,23 @@
         {% endif %}
     </ul>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const submenus = document.querySelectorAll('.sidebar-submenu');
+    submenus.forEach(function (submenu) {
+        submenu.addEventListener('show.bs.collapse', function () {
+            submenus.forEach(function (otherSubmenu) {
+                if (otherSubmenu !== submenu && otherSubmenu.classList.contains('show')) {
+                    bootstrap.Collapse.getOrCreateInstance(otherSubmenu, { toggle: false }).hide();
+                }
+            });
+        });
+        submenu.querySelectorAll('a.nav-link').forEach(function (link) {
+            link.addEventListener('click', function () {
+                bootstrap.Collapse.getOrCreateInstance(submenu, { toggle: false }).hide();
+            });
+        });
+    });
+});
+</script>

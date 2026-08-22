@@ -115,12 +115,28 @@ class RentalContract(TimeStampedUserModel):
     # Financial Information
     agent_fee = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal('0.00'))], help_text="Agent fee amount")
     ad_fee = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal('0.00'))], help_text="Advertisement fee amount")
+    ad_fee_received_amount = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal('0.00'))], null=True, blank=True, help_text="Actual AD fee amount received after deductions")
+    ad_fee_transfer_fee = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal('0.00'))], default=Decimal('0.00'), help_text="Transfer fee deducted from the AD fee")
+    ad_fee_received_date = models.DateField(null=True, blank=True, help_text="Date the AD fee was received")
+    ad_fee_confirmed_by = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='confirmed_ad_fees', null=True, blank=True)
+    ad_fee_confirmed_at = models.DateTimeField(null=True, blank=True)
+    ad_fee_memo = models.TextField(blank=True, help_text="AD fee receipt reference or notes")
 
     # Calculated total amount (agent fee + AD fee)
     @property
     def total_amount(self):
         """Calculate total amount from agent fee and AD fee"""
         return self.agent_fee + self.ad_fee
+
+    @property
+    def recognized_revenue(self):
+        """Return collected revenue, excluding an unconfirmed AD fee."""
+        return self.agent_fee + (self.ad_fee_received_amount or Decimal('0.00'))
+
+    @property
+    def is_ad_fee_received(self):
+        """Return whether the AD fee receipt has been manually confirmed."""
+        return self.ad_fee_confirmed_at is not None
 
     # Support Information
     support_phone = models.CharField(max_length=11, help_text="24/7 support phone number (maximum 11 digits)")
@@ -156,6 +172,10 @@ class RentalContract(TimeStampedUserModel):
         verbose_name = "Rental Contract"
         verbose_name_plural = "Rental Contracts"
         ordering = ['-created_at']
+        permissions = [
+            ('can_view_real_estate_revenue', 'Can view real estate revenue'),
+            ('can_confirm_ad_fee', 'Can confirm receipt of AD fees'),
+        ]
 
     def __str__(self):
         return f"{self.customer_name} - {self.contract_date} - ¥{self.total_amount}"

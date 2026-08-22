@@ -1,6 +1,8 @@
 from datetime import date
+from decimal import Decimal
 from django import forms
 from .models import HostelExpense, UtilityExpense, Hostel, StaffExpense
+from targets.models import RentalContract
 
 
 class HostelExpenseForm(forms.ModelForm):
@@ -74,3 +76,31 @@ class StaffExpenseForm(forms.ModelForm):
         model = StaffExpense
         fields = ["expense_type", "start_date", "end_date", "amount", "memo"]
         widgets = {"expense_type": forms.Select(attrs={"class": "form-select"}), "start_date": forms.DateInput(attrs={"type": "date", "class": "form-control"}), "end_date": forms.DateInput(attrs={"type": "date", "class": "form-control"}), "amount": forms.NumberInput(attrs={"class": "form-control"}), "memo": forms.Textarea(attrs={"class": "form-control", "rows": 4})}
+
+
+class AdFeeReceiptForm(forms.ModelForm):
+    class Meta:
+        model = RentalContract
+        fields = ['ad_fee_received_amount', 'ad_fee_transfer_fee', 'ad_fee_received_date', 'ad_fee_memo']
+        widgets = {
+            'ad_fee_received_amount': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}),
+            'ad_fee_transfer_fee': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}),
+            'ad_fee_received_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'ad_fee_memo': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Transfer reference or notes (optional)'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['ad_fee_received_amount'].label = 'Actual Amount Received'
+        self.fields['ad_fee_transfer_fee'].label = 'Transfer Fee Deducted'
+        self.fields['ad_fee_received_date'].label = 'Received Date'
+        self.fields['ad_fee_received_amount'].required = True
+        self.fields['ad_fee_received_date'].required = True
+
+    def clean(self):
+        cleaned_data = super().clean()
+        received_amount = cleaned_data.get('ad_fee_received_amount')
+        transfer_fee = cleaned_data.get('ad_fee_transfer_fee') or Decimal('0.00')
+        if received_amount is not None and received_amount + transfer_fee != self.instance.ad_fee:
+            raise forms.ValidationError('Actual amount received plus transfer fee deducted must equal the expected AD fee.')
+        return cleaned_data

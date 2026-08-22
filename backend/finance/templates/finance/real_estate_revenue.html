@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% block title %}Real Estate Revenues Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    {% if messages %}<div class="mb-3">{% for message in messages %}<div class="alert alert-{{ message.tags }} alert-dismissible fade show">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>{% endfor %}</div>{% endif %}
+    <div class="row mb-4"><div class="col-12">
+        <h4 class="mb-1"><i class="bi bi-houses text-primary me-2"></i>Real Estate Revenues Dashboard</h4>
+        <p class="text-muted mb-0 small">Revenue generated from rental contracts</p>
+    </div></div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-light"><h6 class="mb-0"><i class="bi bi-search me-2"></i>Search &amp; Filter</h6></div>
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-3"><label for="customer_name" class="form-label fw-semibold small">Customer Name</label><input type="text" id="customer_name" name="customer_name" class="form-control form-control-sm" value="{{ customer_name }}" placeholder="Search by customer name"></div>
+                <div class="col-md-2"><label for="from_date" class="form-label fw-semibold small">From Date</label><input type="date" id="from_date" name="from_date" class="form-control form-control-sm" value="{{ from_date }}"></div>
+                <div class="col-md-2"><label for="to_date" class="form-label fw-semibold small">To Date</label><input type="date" id="to_date" name="to_date" class="form-control form-control-sm" value="{{ to_date }}"></div>
+                <div class="col-md-5"><button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>Search</button> <a href="{% url 'finance:real_estate_revenue' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-clockwise me-1"></i>Reset</a></div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3"><div class="card h-100 border-0 shadow-sm"><div class="card-body"><div class="text-muted small">Contracts</div><div class="fs-4 fw-bold text-primary">{{ total_count }}</div></div></div></div>
+        <div class="col-md-3"><div class="card h-100 border-0 shadow-sm"><div class="card-body"><div class="text-muted small">Agent Fees</div><div class="fs-4 fw-bold">¥{{ total_agent_fee|floatformat:2 }}</div></div></div></div>
+        <div class="col-md-3"><div class="card h-100 border-0 shadow-sm"><div class="card-body"><div class="text-muted small">Received AD Fees</div><div class="fs-4 fw-bold">¥{{ total_ad_fee|floatformat:2 }}</div></div></div></div>
+        <div class="col-md-3"><div class="card h-100 border-0 shadow-sm bg-success text-white"><div class="card-body"><div class="small opacity-75">Total Revenue</div><div class="fs-4 fw-bold">¥{{ total_revenue|floatformat:2 }}</div></div></div></div>
+    </div>
+
+    {% if pending_ad_fee_count %}
+    <div class="card border-warning mb-4">
+        <div class="card-header bg-warning-subtle border-0 d-flex align-items-center gap-2">
+            <button class="pending-ad-toggle border-0 bg-transparent d-flex justify-content-between align-items-center text-start" type="button" data-bs-toggle="collapse" data-bs-target="#pendingAdFeeTable" aria-expanded="false" aria-controls="pendingAdFeeTable">
+                <h6 class="mb-0"><i class="bi bi-clock-history me-2"></i>Pending AD Fee Receipts</h6><i class="bi bi-chevron-down pending-ad-chevron ms-2"></i>
+            </button>
+            <span class="badge bg-warning text-dark">{{ pending_ad_fee_count }} Pending</span>
+            <a href="?{% if query_string %}{{ query_string }}&amp;{% endif %}export=pending" class="btn btn-outline-success btn-sm ms-auto" title="Download pending AD fees as Excel" aria-label="Download pending AD fees as Excel"><i class="bi bi-file-earmark-excel"></i></a>
+        </div>
+        <div id="pendingAdFeeTable" class="collapse"><div class="table-responsive"><table class="table table-sm align-middle mb-0">
+            <thead><tr><th>Customer</th><th class="text-center">Contract Date</th><th>Partner / Management Company</th><th class="text-end">Expected AD Fee</th>{% if can_confirm_ad_fee %}<th class="text-center">Action</th>{% endif %}</tr></thead>
+            <tbody>{% for contract in pending_ad_fees %}<tr>
+                <td><strong>{{ contract.customer_name }}</strong></td><td class="text-center">{{ contract.contract_date|date:"Y-m-d" }}</td><td>{{ contract.management_company_name }}</td><td class="text-end fw-semibold">¥{{ contract.ad_fee|floatformat:2 }}</td>
+                {% if can_confirm_ad_fee %}<td class="text-center"><a href="{% url 'finance:confirm_ad_fee_receipt' contract.pk %}" class="btn btn-success btn-sm"><i class="bi bi-check2-circle me-1"></i>Confirm Receipt</a></td>{% endif %}
+            </tr>{% endfor %}</tbody>
+        </table></div>
+        {% if pending_ad_fee_count > 20 %}<div class="card-footer small text-muted">Showing the 20 oldest pending receipts.</div>{% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center"><h6 class="mb-0"><i class="bi bi-table me-2"></i>Rental Contract Revenue</h6><div class="d-flex align-items-center gap-2"><span class="badge bg-primary">{{ total_count }} Records</span><a href="?{% if query_string %}{{ query_string }}&amp;{% endif %}export=revenue" class="btn btn-outline-success btn-sm" title="Download displayed revenue as Excel" aria-label="Download displayed revenue as Excel"><i class="bi bi-file-earmark-excel"></i></a></div></div>
+        <div class="card-body p-0"><div class="table-responsive">
+            <table class="table table-sm table-hover mb-0 align-middle">
+                <thead class="custom-thead"><tr><th class="text-center">Contract Date</th><th>Customer</th><th>Property Address</th><th class="text-end">Agent Revenue</th><th class="text-end">Expected AD</th><th class="text-center">AD Status</th><th class="text-center">Received Date</th><th class="text-end">Received AD</th><th class="text-end">Transfer Fee</th><th class="text-end">Period Revenue</th>{% if can_confirm_ad_fee %}<th class="text-center">Action</th>{% endif %}</tr></thead>
+                <tbody>
+                {% for contract in contracts %}
+                    <tr>
+                        <td class="text-center text-nowrap">{{ contract.contract_date|date:"Y-m-d" }}</td>
+                        <td><strong>{{ contract.customer_name }}</strong><div class="small text-muted">{{ contract.customer_number }}</div></td>
+                        <td style="min-width: 220px;">{{ contract.building_address|truncatechars:60 }}</td>
+                        <td class="text-end text-nowrap">¥{{ contract.period_agent_fee|floatformat:2 }}</td>
+                        <td class="text-end text-nowrap">¥{{ contract.ad_fee|floatformat:2 }}</td>
+                        <td class="text-center">{% if contract.is_ad_fee_received %}<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Received</span>{% else %}<span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Pending</span>{% endif %}</td>
+                        <td class="text-center text-nowrap">{{ contract.ad_fee_received_date|date:"Y-m-d"|default:"-" }}</td>
+                        <td class="text-end text-nowrap">{% if contract.is_ad_fee_received %}¥{{ contract.ad_fee_received_amount|floatformat:2 }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                        <td class="text-end text-nowrap">{% if contract.is_ad_fee_received %}¥{{ contract.ad_fee_transfer_fee|floatformat:2 }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                        <td class="text-end text-nowrap fw-bold text-success">¥{{ contract.period_revenue|floatformat:2 }}</td>
+                        {% if can_confirm_ad_fee %}<td class="text-center">{% if contract.is_ad_fee_received %}<span class="text-muted" title="Confirmed by {{ contract.ad_fee_confirmed_by }}"><i class="bi bi-lock"></i></span>{% elif contract.ad_fee %}<a href="{% url 'finance:confirm_ad_fee_receipt' contract.pk %}" class="btn btn-outline-success btn-sm text-nowrap"><i class="bi bi-check2-circle me-1"></i>Confirm</a>{% else %}<span class="text-muted">-</span>{% endif %}</td>{% endif %}
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="{% if can_confirm_ad_fee %}11{% else %}10{% endif %}" class="text-center py-5"><i class="bi bi-house-x fs-1 text-muted"></i><p class="text-muted mt-3 mb-0">No rental contract revenue found for this period.</p></td></tr>
+                {% endfor %}
+                </tbody>
+                <tfoot class="table-light">
+                    <tr class="fw-bold"><td colspan="9" class="text-end">Page Total Amount:</td><td class="text-end text-info">¥{{ page_total_revenue|floatformat:2 }}</td>{% if can_confirm_ad_fee %}<td></td>{% endif %}</tr>
+                    <tr class="fw-bold border-top"><td colspan="9" class="text-end">Overall Total Amount:</td><td class="text-end text-success">¥{{ total_revenue|floatformat:2 }}</td>{% if can_confirm_ad_fee %}<td></td>{% endif %}</tr>
+                </tfoot>
+            </table>
+        </div></div>
+        {% if contracts.has_other_pages %}<div class="card-footer bg-white"><nav aria-label="Real estate revenue pages"><ul class="pagination pagination-sm justify-content-center mb-0">
+            {% if contracts.has_previous %}<li class="page-item"><a class="page-link" href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ contracts.previous_page_number }}">Previous</a></li>{% endif %}
+            <li class="page-item disabled"><span class="page-link">Page {{ contracts.number }} of {{ contracts.paginator.num_pages }}</span></li>
+            {% if contracts.has_next %}<li class="page-item"><a class="page-link" href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ contracts.next_page_number }}">Next</a></li>{% endif %}
+        </ul></nav></div>{% endif %}
+    </div>
+</div>
+
+<style>
+.pending-ad-toggle { flex: 1; cursor: pointer; }
+.pending-ad-toggle:hover h6 { color: #8a6500; }
+.pending-ad-chevron { transition: transform 0.15s ease; }
+.pending-ad-toggle[aria-expanded="true"] .pending-ad-chevron { transform: rotate(180deg); }
+</style>
+{% endblock %}

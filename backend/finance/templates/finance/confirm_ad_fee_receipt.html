@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirm AD Fee Receipt{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <div class="d-flex align-items-center mb-4">
+        <a href="{% url 'finance:real_estate_revenue' %}" class="btn btn-outline-secondary btn-sm me-3"><i class="bi bi-arrow-left"></i></a>
+        <div><h4 class="mb-1">Confirm AD Fee Receipt</h4><p class="text-muted small mb-0">Record the single payment received from the partner company</p></div>
+    </div>
+
+    <div class="card mb-3 border-0 shadow-sm">
+        <div class="card-body"><div class="row g-3">
+            <div class="col-md-6"><div class="text-muted small">Customer</div><div class="fw-semibold">{{ contract.customer_name }}</div></div>
+            <div class="col-md-3"><div class="text-muted small">Contract Date</div><div class="fw-semibold">{{ contract.contract_date|date:"Y-m-d" }}</div></div>
+            <div class="col-md-3"><div class="text-muted small">Expected AD Fee</div><div class="fw-semibold">¥{{ contract.ad_fee|floatformat:2 }}</div></div>
+        </div></div>
+    </div>
+
+    <div class="card border-0 shadow-sm"><div class="card-body">
+        <form method="post" id="adFeeReceiptForm" data-expected-ad-fee="{{ contract.ad_fee }}">{% csrf_token %}
+            {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+            <div class="row g-3">
+                {% for field in form %}
+                <div class="{% if field.name == 'ad_fee_memo' %}col-12{% else %}col-md-6{% endif %}">
+                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                    {% for error in field.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+            <div id="adFeeValidation" class="alert alert-secondary mt-3 mb-0" role="status">
+                <div class="d-flex flex-wrap justify-content-between gap-2">
+                    <span><strong>Validation:</strong> Actual Amount Received + Transfer Fee Deducted</span>
+                    <span><strong id="enteredTotal">¥0.00</strong> / Expected <strong>¥{{ contract.ad_fee|floatformat:2 }}</strong></span>
+                </div>
+                <div id="adFeeValidationMessage" class="small mt-1">Enter both amounts to validate the receipt.</div>
+            </div>
+            <div class="alert alert-info small mt-3 mb-3"><i class="bi bi-info-circle me-1"></i>Only the actual amount received will be included in revenue. This confirmation can be submitted once.</div>
+            <div class="d-flex justify-content-end gap-2"><a href="{% url 'finance:real_estate_revenue' %}" class="btn btn-outline-secondary">Cancel</a><button type="submit" id="confirmReceiptButton" class="btn btn-success" disabled><i class="bi bi-check-circle me-1"></i>Confirm Receipt</button></div>
+        </form>
+    </div></div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('adFeeReceiptForm');
+    const receivedInput = document.getElementById('id_ad_fee_received_amount');
+    const transferInput = document.getElementById('id_ad_fee_transfer_fee');
+    const validationBox = document.getElementById('adFeeValidation');
+    const validationMessage = document.getElementById('adFeeValidationMessage');
+    const enteredTotal = document.getElementById('enteredTotal');
+    const submitButton = document.getElementById('confirmReceiptButton');
+    const expectedCents = Math.round(Number(form.dataset.expectedAdFee) * 100);
+
+    function yen(cents) {
+        return '¥' + (cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function validateAmounts() {
+        const hasBothAmounts = receivedInput.value !== '' && transferInput.value !== '';
+        const receivedCents = Math.round(Number(receivedInput.value || 0) * 100);
+        const transferCents = Math.round(Number(transferInput.value || 0) * 100);
+        const totalCents = receivedCents + transferCents;
+        const isValid = hasBothAmounts && receivedCents >= 0 && transferCents >= 0 && totalCents === expectedCents;
+
+        enteredTotal.textContent = yen(totalCents);
+        validationBox.classList.remove('alert-secondary', 'alert-success', 'alert-danger');
+        if (!hasBothAmounts) {
+            validationBox.classList.add('alert-secondary');
+            validationMessage.textContent = 'Enter both amounts to validate the receipt.';
+        } else if (isValid) {
+            validationBox.classList.add('alert-success');
+            validationMessage.textContent = 'Amounts match the expected AD fee.';
+        } else {
+            validationBox.classList.add('alert-danger');
+            const difference = expectedCents - totalCents;
+            validationMessage.textContent = difference > 0 ? yen(difference) + ' is still unaccounted for.' : 'The entered total exceeds the expected AD fee by ' + yen(Math.abs(difference)) + '.';
+        }
+        receivedInput.setCustomValidity(isValid || !hasBothAmounts ? '' : 'The amounts must add up to the expected AD fee.');
+        transferInput.setCustomValidity(isValid || !hasBothAmounts ? '' : 'The amounts must add up to the expected AD fee.');
+        submitButton.disabled = !isValid;
+        return isValid;
+    }
+
+    receivedInput.addEventListener('input', validateAmounts);
+    transferInput.addEventListener('input', validateAmounts);
+    form.addEventListener('submit', function (event) {
+        if (!validateAmounts()) event.preventDefault();
+    });
+    validateAmounts();
+});
+</script>
+{% endblock %}

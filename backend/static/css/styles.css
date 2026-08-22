@@ -4,6 +4,7 @@
     min-height: calc(100vh - 56px); /* header height */
     transition: width 0s;
     position: fixed;
+    z-index: 1040;
     margin-top:67px;
     background-color:rgb(148, 212, 247);
     border-right: 1px solid black;
@@ -49,9 +50,98 @@
     display: none;
 }
 
+.sidebar.collapsed .nav-link {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding-right: 0.3rem;
+    padding-left: 0.3rem;
+    justify-content: center;
+}
+
+.sidebar.collapsed .nav-item {
+    width: 100%;
+    min-width: 0;
+}
+
 .sidebar .nav-link.active {
     background-color: #71a7f8;
     color: white;
+}
+
+.sidebar .sidebar-flyout-menu {
+    position: relative;
+}
+
+.sidebar .sidebar-submenu {
+    position: absolute;
+    top: 0;
+    left: calc(100% + 8px);
+    z-index: 1060;
+    width: 210px;
+    padding: 0.4rem;
+    overflow: visible;
+    list-style: none;
+    background-color: #fff;
+    border: 1px solid #dbe4ee;
+    border-radius: 0.6rem;
+    box-shadow: 0 0.5rem 1.25rem rgba(28, 51, 84, 0.18);
+}
+
+.sidebar .sidebar-submenu.collapsing {
+    transition: height 0.12s ease;
+}
+
+.sidebar .sidebar-submenu::before {
+    position: absolute;
+    top: 1rem;
+    left: -6px;
+    width: 12px;
+    height: 12px;
+    content: "";
+    background-color: #fff;
+    border-bottom: 1px solid #dbe4ee;
+    border-left: 1px solid #dbe4ee;
+    transform: rotate(45deg);
+}
+
+.sidebar .sidebar-submenu .nav-link {
+    gap: 0.6rem;
+    padding: 0.65rem 0.75rem;
+    justify-content: left;
+    color: #344054;
+    font-size: 0.9rem;
+    border-radius: 0.4rem;
+}
+
+.sidebar .sidebar-submenu .nav-link:hover {
+    color: #0d6efd;
+    background-color: #eef5ff;
+}
+
+.sidebar .sidebar-submenu .nav-link.active {
+    color: #fff;
+    background-color: #4f8ee8;
+}
+
+.sidebar .submenu-chevron {
+    margin-left: auto;
+    font-size: 0.7rem;
+    transition: transform 0.2s ease;
+}
+
+.sidebar.collapsed .submenu-chevron {
+    flex-shrink: 0;
+    margin-left: 0.1rem;
+}
+
+.sidebar .sidebar-flyout-menu button[aria-expanded="true"] .submenu-chevron {
+    transform: translateX(2px);
+}
+
+.sidebar.collapsed .sidebar-submenu .link-text {
+    display: inline-block;
 }
 
 .navbar{
