@@ -18,7 +18,7 @@
         </li>
         
         <li class="nav-item sidebar-flyout-menu">
-            <button class="nav-link w-100 border-0 {% if request.resolver_match.url_name == 'revenues' or request.resolver_match.url_name == 'real_estate_revenue' %}active{% endif %}"
+            <button class="nav-link w-100 border-0 {% if request.resolver_match.url_name == 'revenues' or request.resolver_match.url_name == 'revenue_detail' or request.resolver_match.url_name == 'real_estate_revenue' or request.resolver_match.url_name == 'confirm_ad_fee_receipt' or request.resolver_match.url_name == 'third_party_services' or request.resolver_match.url_name == 'third_party_service_create' or request.resolver_match.url_name == 'third_party_service_detail' or request.resolver_match.url_name == 'third_party_service_edit' %}active{% endif %}"
                     type="button" data-bs-toggle="collapse" data-bs-target="#revenueSubmenu"
                     aria-expanded="false"
                     aria-controls="revenueSubmenu">
@@ -27,22 +27,29 @@
             </button>
             <ul id="revenueSubmenu" class="nav flex-column collapse sidebar-submenu">
                 <li class="nav-item">
-                    <a href="{% url 'finance:revenues' %}" class="nav-link {% if request.resolver_match.url_name == 'revenues' %}active{% endif %}">
+                    <a href="{% url 'finance:revenues' %}" class="nav-link {% if request.resolver_match.url_name == 'revenues' or request.resolver_match.url_name == 'revenue_detail' %}active{% endif %}">
                         <i class="bi bi-building"></i><span class="link-text">Hostel Rev.</span>
                     </a>
                 </li>
                 {% if user.is_superuser or perms.targets.view_rentalcontract %}
                 <li class="nav-item">
-                    <a href="{% url 'finance:real_estate_revenue' %}" class="nav-link {% if request.resolver_match.url_name == 'real_estate_revenue' %}active{% endif %}">
+                    <a href="{% url 'finance:real_estate_revenue' %}" class="nav-link {% if request.resolver_match.url_name == 'real_estate_revenue' or request.resolver_match.url_name == 'confirm_ad_fee_receipt' %}active{% endif %}">
                         <i class="bi bi-houses"></i><span class="link-text">Real Estate Rev.</span>
+                    </a>
+                </li>
+                {% endif %}
+                {% if user.is_superuser or perms.finance.view_thirdpartyservicerecord %}
+                <li class="nav-item">
+                    <a href="{% url 'finance:third_party_services' %}" class="nav-link {% if request.resolver_match.url_name == 'third_party_services' or request.resolver_match.url_name == 'third_party_service_create' or request.resolver_match.url_name == 'third_party_service_detail' or request.resolver_match.url_name == 'third_party_service_edit' %}active{% endif %}">
+                        <i class="bi bi-shield-check"></i><span class="link-text">Ins./Guarantor</span>
                     </a>
                 </li>
                 {% endif %}
             </ul>
         </li>
-        {% if perms.finance.view_hostelexpense or perms.finance.view_staffexpense %}
+        {% if user.is_superuser or perms.finance.view_hostelexpense or perms.finance.view_staffexpense %}
         <li class="nav-item sidebar-flyout-menu">
-            <button class="nav-link w-100 border-0 {% if request.resolver_match.url_name == 'expenses' or request.resolver_match.url_name == 'staff_expense_dashboard' %}active{% endif %}"
+            <button class="nav-link w-100 border-0 {% if request.resolver_match.url_name == 'expenses' or request.resolver_match.url_name == 'hostel_expense_add' or request.resolver_match.url_name == 'hostel_expense_edit' or request.resolver_match.url_name == 'hostel_expense_detail' or request.resolver_match.url_name == 'utility_expense_add' or request.resolver_match.url_name == 'utility_expense_edit' or request.resolver_match.url_name == 'utility_expense_detail' or request.resolver_match.url_name == 'staff_expense_dashboard' or request.resolver_match.url_name == 'staff_expense_list' or request.resolver_match.url_name == 'staff_expense_create' or request.resolver_match.url_name == 'staff_expense_edit' or request.resolver_match.url_name == 'staff_expense_update_status' %}active{% endif %}"
                     type="button" data-bs-toggle="collapse" data-bs-target="#expenseSubmenu"
                     aria-expanded="false" aria-controls="expenseSubmenu">
                 🧾 <span class="link-text flex-grow-1">Expenses</span>
@@ -50,10 +57,10 @@
             </button>
             <ul id="expenseSubmenu" class="nav flex-column collapse sidebar-submenu">
                 {% if perms.finance.view_hostelexpense %}
-                <li class="nav-item"><a href="{% url 'finance:expenses' %}" class="nav-link {% if request.resolver_match.url_name == 'expenses' %}active{% endif %}"><i class="bi bi-building"></i><span class="link-text">Hostel Exp.</span></a></li>
+                <li class="nav-item"><a href="{% url 'finance:expenses' %}" class="nav-link {% if request.resolver_match.url_name == 'expenses' or request.resolver_match.url_name == 'hostel_expense_add' or request.resolver_match.url_name == 'hostel_expense_edit' or request.resolver_match.url_name == 'hostel_expense_detail' or request.resolver_match.url_name == 'utility_expense_add' or request.resolver_match.url_name == 'utility_expense_edit' or request.resolver_match.url_name == 'utility_expense_detail' %}active{% endif %}"><i class="bi bi-building"></i><span class="link-text">Hostel Exp.</span></a></li>
                 {% endif %}
                 {% if perms.finance.view_staffexpense %}
-                <li class="nav-item"><a href="{% url 'finance:staff_expense_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'staff_expense_dashboard' %}active{% endif %}"><i class="bi bi-briefcase"></i><span class="link-text">Staff Exp.</span></a></li>
+                <li class="nav-item"><a href="{% url 'finance:staff_expense_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'staff_expense_dashboard' or request.resolver_match.url_name == 'staff_expense_list' or request.resolver_match.url_name == 'staff_expense_create' or request.resolver_match.url_name == 'staff_expense_edit' or request.resolver_match.url_name == 'staff_expense_update_status' %}active{% endif %}"><i class="bi bi-briefcase"></i><span class="link-text">Staff Exp.</span></a></li>
                 {% endif %}
             </ul>
         </li>

@@ -313,3 +313,99 @@ class StaffExpense(TimeStampedUserModel):
     class Meta:
         verbose_name = "Staff Expense"
         verbose_name_plural = "Staff Expenses"
+
+
+class ThirdPartyServiceRecord(TimeStampedUserModel):
+    class ServiceType(models.TextChoices):
+        INSURANCE = "INSURANCE", "Insurance"
+        GUARANTOR = "GUARANTOR", "Guarantor"
+
+    class ServiceSubjectType(models.TextChoices):
+        COMPANY = "COMPANY", "Company"
+        HOTEL = "HOTEL", "Hotel"
+        HOUSE = "HOUSE", "House"
+
+    class RemittanceStatus(models.TextChoices):
+        PENDING = "PENDING", "Not Sent to Company"
+        REMITTED = "REMITTED", "Sent to Company"
+
+    transaction_code = models.CharField(max_length=8, unique=True, editable=False, db_index=True)
+    service_type = models.CharField(max_length=20, choices=ServiceType.choices, db_index=True)
+    applicant_name = models.CharField(max_length=120, help_text="Person who needs the insurance or guarantor service.")
+    phone_number = models.CharField(max_length=20, default="")
+    applicant_address = models.TextField(default="")
+    service_subject_type = models.CharField(max_length=20, choices=ServiceSubjectType.choices, blank=True, help_text="Required for insurance records.")
+    service_subject_address = models.TextField(blank=True, help_text="Required for insurance records.")
+    company_name = models.CharField(max_length=150, help_text="Insurance or guarantor company.")
+    company_phone_number = models.CharField(max_length=20, default="")
+    collected_amount = models.DecimalField(max_digits=12, decimal_places=2, help_text="Amount collected from the applicant.")
+    collected_date = models.DateField(db_index=True)
+    remitted_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"), help_text="Amount sent to the company.")
+    remitted_date = models.DateField(null=True, blank=True)
+    remittance_status = models.CharField(max_length=20, choices=RemittanceStatus.choices, default=RemittanceStatus.PENDING, db_index=True)
+    memo = models.TextField()
+
+    @property
+    def commission_amount(self):
+        return (self.collected_amount or Decimal("0.00")) - (self.remitted_amount or Decimal("0.00"))
+
+    def clean(self):
+        super().clean()
+        errors = {}
+        if not self.phone_number:
+            errors["phone_number"] = "Customer phone number is required."
+        if not self.applicant_address:
+            errors["applicant_address"] = "Customer address is required."
+        if not self.company_phone_number:
+            errors["company_phone_number"] = "Company phone number is required."
+        if not self.memo:
+            errors["memo"] = "Memo is required."
+        if self.collected_amount is not None and self.collected_amount <= 0:
+            errors["collected_amount"] = "Collected amount must be greater than zero."
+        if self.remitted_amount is not None and self.remitted_amount < 0:
+            errors["remitted_amount"] = "Remitted amount cannot be negative."
+        if self.collected_amount is not None and self.remitted_amount is not None and self.remitted_amount > self.collected_amount:
+            errors["remitted_amount"] = "Remitted amount cannot be greater than collected amount."
+        if self.remitted_amount and self.remitted_amount > 0 and not self.remitted_date:
+            errors["remitted_date"] = "Remitted date is required when remitted amount is entered."
+        if self.remitted_date and self.collected_date and self.remitted_date < self.collected_date:
+            errors["remitted_date"] = "Remitted date cannot be before collected date."
+        if self.service_type == self.ServiceType.INSURANCE:
+            if not self.service_subject_type:
+                errors["service_subject_type"] = "Insurance for what is required for insurance records."
+            if not self.service_subject_address:
+                errors["service_subject_address"] = "Address is required for insurance records."
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        if not self.transaction_code:
+            self.transaction_code = self.generate_unique_code()
+        if self.remitted_amount is None:
+            self.remitted_amount = Decimal("0.00")
+
+        if self.remitted_amount == 0:
+            self.remittance_status = self.RemittanceStatus.PENDING
+        else:
+            self.remittance_status = self.RemittanceStatus.REMITTED
+
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    @staticmethod
+    def generate_unique_code():
+        chars = string.ascii_uppercase + string.digits
+
+        while True:
+            code = "TPS-" + "".join(secrets.choice(chars) for _ in range(4))
+
+            if not ThirdPartyServiceRecord.objects.filter(transaction_code=code).exists():
+                return code
+
+    def __str__(self):
+        return f"{self.transaction_code} - {self.applicant_name} - {self.get_service_type_display()}"
+
+    class Meta:
+        ordering = ["-collected_date", "-created_at"]
+        verbose_name = "Insurance / Guarantor Record"
+        verbose_name_plural = "Insurance / Guarantor Records"

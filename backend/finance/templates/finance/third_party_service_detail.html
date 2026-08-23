@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}Insurance / Guarantor Detail{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    {% if messages %}
+        <div class="mb-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>{{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1"><i class="bi bi-shield-check text-primary me-2"></i>{{ record.transaction_code }}</h4>
+                    <p class="text-muted mb-0 small">{{ record.applicant_name }} | {{ record.get_service_type_display }}</p>
+                </div>
+                <div class="d-flex gap-2">
+                    {% if perms.finance.change_thirdpartyservicerecord and record.remittance_status != "REMITTED" %}
+                    <a href="{% url 'finance:third_party_service_edit' record.pk %}" class="btn btn-outline-warning btn-sm">
+                        <i class="bi bi-pencil-square me-1"></i>Edit
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'finance:third_party_services' %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Back
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Details</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-borderless mb-0">
+                    <tbody>
+                        <tr><th class="text-muted" style="width: 220px;">Customer Name</th><td>{{ record.applicant_name }}</td></tr>
+                        <tr><th class="text-muted">Customer Phone</th><td>{{ record.phone_number|default:"-" }}</td></tr>
+                        <tr><th class="text-muted">Customer Address</th><td>{{ record.applicant_address|linebreaksbr }}</td></tr>
+                        <tr><th class="text-muted">Service</th><td>{{ record.get_service_type_display }}</td></tr>
+                        {% if record.service_type == "INSURANCE" %}
+                        <tr><th class="text-muted">Insurance For</th><td>{{ record.get_service_subject_type_display }}</td></tr>
+                        <tr><th class="text-muted">Insurance Address</th><td>{{ record.service_subject_address|linebreaksbr }}</td></tr>
+                        {% endif %}
+                        <tr><th class="text-muted">Company</th><td>{{ record.company_name }}</td></tr>
+                        <tr><th class="text-muted">Company Phone</th><td>{{ record.company_phone_number }}</td></tr>
+                        <tr><th class="text-muted">Collected Amount</th><td class="fw-semibold text-success">¥{{ record.collected_amount|floatformat:0 }} on {{ record.collected_date|date:"Y-m-d" }}</td></tr>
+                        <tr><th class="text-muted">Remittance Status</th><td>{{ record.get_remittance_status_display }}</td></tr>
+                        <tr><th class="text-muted">Memo</th><td>{{ record.memo|default:"-" }}</td></tr>
+                        <tr><th class="text-muted">Created By</th><td>{{ record.created_by|default:"-" }}</td></tr>
+                        <tr><th class="text-muted">Created At</th><td>{{ record.created_at|date:"Y-m-d H:i" }}</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="bi bi-bank me-2"></i>Company Remittance</h6>
+        </div>
+        <div class="card-body">
+            {% if record.remittance_status == "REMITTED" %}
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="text-muted small">Remittance Amount</div>
+                        <div class="fw-semibold text-danger">¥{{ record.remitted_amount|floatformat:0 }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-muted small">Remittance Date</div>
+                        <div class="fw-semibold">{{ record.remitted_date|date:"Y-m-d" }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-muted small">Commission Amount</div>
+                        <div class="fw-semibold text-primary">¥{{ record.commission_amount|floatformat:0 }}</div>
+                    </div>
+                </div>
+                <div class="alert alert-secondary mt-3 mb-0">
+                    This transaction is locked because remittance has already been recorded.
+                </div>
+            {% elif remittance_form %}
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    {% if remittance_form.non_field_errors %}
+                        <div class="alert alert-danger">{{ remittance_form.non_field_errors }}</div>
+                    {% endif %}
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="{{ remittance_form.remitted_amount.id_for_label }}" class="form-label fw-semibold small">Remittance Amount <span class="text-danger">*</span></label>
+                            {{ remittance_form.remitted_amount }}
+                            {% if remittance_form.remitted_amount.errors %}<div class="text-danger small mt-1">{{ remittance_form.remitted_amount.errors|striptags }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ remittance_form.remitted_date.id_for_label }}" class="form-label fw-semibold small">Remittance Date <span class="text-danger">*</span></label>
+                            {{ remittance_form.remitted_date }}
+                            {% if remittance_form.remitted_date.errors %}<div class="text-danger small mt-1">{{ remittance_form.remitted_date.errors|striptags }}</div>{% endif %}
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-check-circle me-1"></i>Record Remittance
+                        </button>
+                    </div>
+                </form>
+            {% else %}
+                <div class="alert alert-warning mb-0">Remittance has not been recorded.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

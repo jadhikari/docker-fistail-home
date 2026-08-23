@@ -11,8 +11,8 @@ from django.views.decorators.csrf import csrf_exempt
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 import json
-from .models import HostelRevenue, HostelExpense, UtilityExpense, StaffExpense
-from .forms import HostelExpenseForm, UtilityExpenseForm, StaffExpenseForm, AdFeeReceiptForm
+from .models import HostelRevenue, HostelExpense, UtilityExpense, StaffExpense, ThirdPartyServiceRecord
+from .forms import HostelExpenseForm, UtilityExpenseForm, StaffExpenseForm, AdFeeReceiptForm, ThirdPartyServiceRecordCreateForm, ThirdPartyServiceRecordUpdateForm, ThirdPartyServiceRemittanceForm
 from .utils import send_revenue_email
 from .excel_exports import (
     export_revenues_to_excel,
@@ -21,6 +21,7 @@ from .excel_exports import (
     export_pending_ad_fees_to_excel,
     export_real_estate_revenue_to_excel,
     export_unpaid_rent_to_excel,
+    export_third_party_services_to_excel,
 )
 from .finance_helpers.rent_defaulters import get_rent_defaulters
 from hostel.models import Bed
@@ -795,6 +796,131 @@ def utility_expense_detail(request, pk):
 
 
 
+
+
+@login_required(login_url='/accounts/login/')
+@permission_required('finance.view_thirdpartyservicerecord', raise_exception=True)
+def third_party_services(request):
+    service_type = request.GET.get('service_type', '').strip()
+    status = request.GET.get('status', '').strip()
+    applicant = request.GET.get('applicant', '').strip()
+    from_date_str = request.GET.get('from_date', '').strip()
+    to_date_str = request.GET.get('to_date', '').strip()
+    today = timezone.now().date()
+
+    try:
+        from_date = datetime.strptime(from_date_str, '%Y-%m-%d').date() if from_date_str else today.replace(day=1)
+    except ValueError:
+        from_date = today.replace(day=1)
+    try:
+        to_date = datetime.strptime(to_date_str, '%Y-%m-%d').date() if to_date_str else today
+    except ValueError:
+        to_date = today
+
+    records = ThirdPartyServiceRecord.objects.select_related('created_by', 'updated_by').filter(collected_date__range=(from_date, to_date))
+    if service_type in dict(ThirdPartyServiceRecord.ServiceType.choices):
+        records = records.filter(service_type=service_type)
+    if status in dict(ThirdPartyServiceRecord.RemittanceStatus.choices):
+        records = records.filter(remittance_status=status)
+    if applicant:
+        records = records.filter(Q(applicant_name__icontains=applicant) | Q(phone_number__icontains=applicant))
+
+    records = records.order_by('-collected_date', '-created_at')
+    if request.GET.get('export') == 'excel':
+        return export_third_party_services_to_excel(records, from_date, to_date)
+
+    total_collected = records.aggregate(total=Sum('collected_amount'))['total'] or Decimal('0')
+    total_remitted = records.aggregate(total=Sum('remitted_amount'))['total'] or Decimal('0')
+    total_commission = total_collected - total_remitted
+
+    paginator = Paginator(records, 25)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    page_total_collected = page_obj.object_list.aggregate(total=Sum('collected_amount'))['total'] or Decimal('0')
+    page_total_remitted = page_obj.object_list.aggregate(total=Sum('remitted_amount'))['total'] or Decimal('0')
+    page_total_commission = page_total_collected - page_total_remitted
+
+    query_params = request.GET.copy()
+    if 'page' in query_params:
+        query_params.pop('page')
+
+    return render(request, 'finance/third_party_services.html', {
+        'records': page_obj,
+        'page_obj': page_obj,
+        'service_type': service_type,
+        'status': status,
+        'applicant': applicant,
+        'from_date': from_date.strftime('%Y-%m-%d'),
+        'to_date': to_date.strftime('%Y-%m-%d'),
+        'service_type_choices': ThirdPartyServiceRecord.ServiceType.choices,
+        'status_choices': ThirdPartyServiceRecord.RemittanceStatus.choices,
+        'total_records': paginator.count,
+        'total_collected': total_collected,
+        'total_remitted': total_remitted,
+        'total_commission': total_commission,
+        'page_total_collected': page_total_collected,
+        'page_total_remitted': page_total_remitted,
+        'page_total_commission': page_total_commission,
+        'query_string': query_params.urlencode(),
+    })
+
+
+@login_required(login_url='/accounts/login/')
+@permission_required('finance.add_thirdpartyservicerecord', raise_exception=True)
+def third_party_service_create(request):
+    if request.method == 'POST':
+        form = ThirdPartyServiceRecordCreateForm(request.POST)
+        if form.is_valid():
+            record = form.save(commit=False)
+            record.created_by = request.user
+            record.updated_by = request.user
+            record.save()
+            messages.success(request, 'Insurance / guarantor record created successfully.')
+            return redirect('finance:third_party_services')
+    else:
+        form = ThirdPartyServiceRecordCreateForm()
+    return render(request, 'finance/third_party_service_form.html', {'form': form, 'is_create': True})
+
+
+@login_required(login_url='/accounts/login/')
+@permission_required('finance.change_thirdpartyservicerecord', raise_exception=True)
+def third_party_service_edit(request, pk):
+    record = get_object_or_404(ThirdPartyServiceRecord, pk=pk)
+    if record.remittance_status == ThirdPartyServiceRecord.RemittanceStatus.REMITTED:
+        messages.warning(request, 'This transaction has already been sent to the company and cannot be edited.')
+        return redirect('finance:third_party_service_detail', pk=record.pk)
+
+    if request.method == 'POST':
+        form = ThirdPartyServiceRecordUpdateForm(request.POST, instance=record)
+        if form.is_valid():
+            record = form.save(commit=False)
+            record.updated_by = request.user
+            record.save()
+            messages.success(request, 'Insurance / guarantor record updated successfully.')
+            return redirect('finance:third_party_services')
+    else:
+        form = ThirdPartyServiceRecordUpdateForm(instance=record)
+    return render(request, 'finance/third_party_service_form.html', {'form': form, 'record': record, 'is_create': False})
+
+
+@login_required(login_url='/accounts/login/')
+@permission_required('finance.view_thirdpartyservicerecord', raise_exception=True)
+def third_party_service_detail(request, pk):
+    record = get_object_or_404(ThirdPartyServiceRecord.objects.select_related('created_by', 'updated_by'), pk=pk)
+    remittance_form = None
+
+    if record.remittance_status != ThirdPartyServiceRecord.RemittanceStatus.REMITTED and request.user.has_perm('finance.change_thirdpartyservicerecord'):
+        if request.method == 'POST':
+            remittance_form = ThirdPartyServiceRemittanceForm(request.POST, instance=record)
+            if remittance_form.is_valid():
+                record = remittance_form.save(commit=False)
+                record.updated_by = request.user
+                record.save()
+                messages.success(request, 'Remittance was recorded successfully.')
+                return redirect('finance:third_party_services')
+        else:
+            remittance_form = ThirdPartyServiceRemittanceForm(instance=record)
+
+    return render(request, 'finance/third_party_service_detail.html', {'record': record, 'remittance_form': remittance_form})
 
 
 @login_required(login_url='/accounts/login/')

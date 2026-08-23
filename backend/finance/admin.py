@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import HostelRevenue, HostelExpense, UtilityExpense, StaffExpense
+from .models import HostelRevenue, HostelExpense, UtilityExpense, StaffExpense, ThirdPartyServiceRecord
 
 @admin.register(HostelRevenue)
 class HostelRevenueAdmin(admin.ModelAdmin):
@@ -153,3 +153,13 @@ class StaffExpenseAdmin(admin.ModelAdmin):
     readonly_fields = ("transaction_code", "employee", "created_by", "updated_by", "created_at", "updated_at")
     ordering = ("-created_at",)
     date_hierarchy = "created_at"
+
+
+@admin.register(ThirdPartyServiceRecord)
+class ThirdPartyServiceRecordAdmin(admin.ModelAdmin):
+    list_display = ("transaction_code", "service_type", "applicant_name", "phone_number", "company_name", "company_phone_number", "collected_amount", "remitted_amount", "commission_amount", "remittance_status", "collected_date", "remitted_date")
+    list_filter = ("service_type", "service_subject_type", "remittance_status", "company_name", "collected_date", "remitted_date")
+    search_fields = ("transaction_code", "applicant_name", "company_name", "phone_number", "company_phone_number", "applicant_address", "service_subject_address")
+    readonly_fields = ("transaction_code", "created_by", "updated_by", "created_at", "updated_at")
+    ordering = ("-collected_date", "-created_at")
+    date_hierarchy = "collected_date"

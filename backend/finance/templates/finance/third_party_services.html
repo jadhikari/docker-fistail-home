@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Insurance / Guarantor Records{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    {% if messages %}
+        <div class="mb-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>{{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1"><i class="bi bi-shield-check text-primary me-2"></i>Insurance / Guarantor</h4>
+                    <p class="text-muted mb-0 small">Track collected revenue and company remittance expenses</p>
+                </div>
+                {% if perms.finance.add_thirdpartyservicerecord %}
+                <a href="{% url 'finance:third_party_service_create' %}" class="btn btn-success btn-sm">
+                    <i class="bi bi-plus-circle me-1"></i>Add Record
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="bi bi-search me-2"></i>Search & Filter</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold small" for="applicant">Applicant</label>
+                    <input id="applicant" name="applicant" value="{{ applicant }}" class="form-control form-control-sm" placeholder="Name">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold small" for="service_type">Service</label>
+                    <select id="service_type" name="service_type" class="form-select form-select-sm">
+                        <option value="">All</option>
+                        {% for value, label in service_type_choices %}
+                            <option value="{{ value }}" {% if service_type == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold small" for="status">Status</label>
+                    <select id="status" name="status" class="form-select form-select-sm">
+                        <option value="">All</option>
+                        {% for value, label in status_choices %}
+                            <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold small" for="from_date">From</label>
+                    <input id="from_date" name="from_date" type="date" value="{{ from_date }}" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold small" for="to_date">To</label>
+                    <div class="d-flex gap-1">
+                        <input id="to_date" name="to_date" type="date" value="{{ to_date }}" class="form-control form-control-sm">
+                        <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-search"></i></button>
+                        <a href="{% url 'finance:third_party_services' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-clockwise"></i></a>
+                        <button class="btn btn-outline-success btn-sm" type="submit" name="export" value="excel"><i class="bi bi-file-earmark-excel"></i></button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="bi bi-table me-2"></i>Records</h6>
+            <span class="badge bg-primary">{{ total_records }} found</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-sm mb-0">
+                    <thead class="custom-thead">
+                        <tr>
+                            <th class="text-center small">ID</th>
+                            <th class="small">Applicant</th>
+                            <th class="small">Service</th>
+                            <th class="small">For</th>
+                            <th class="small">Guarantor / Insurance Comp.</th>
+                            <th class="text-center small">Collected</th>
+                            <th class="text-center small">Remittance</th>
+                            <th class="text-center small">Commission</th>
+                            <th class="text-center small">Remittance Status</th>
+                            <th class="text-center small">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in records %}
+                        <tr>
+                            <td class="text-center fw-semibold">
+                                <a href="{% url 'finance:third_party_service_detail' record.pk %}" class="text-decoration-none">{{ record.transaction_code }}</a>
+                            </td>
+                            <td>
+                                <div class="fw-semibold">{{ record.applicant_name }}</div>
+                                <small class="text-muted">{{ record.phone_number|default:"-" }}</small>
+                            </td>
+                            <td>
+                                {% if record.service_type == "INSURANCE" %}
+                                    <span class="badge bg-primary"><i class="bi bi-shield-check me-1"></i>Insurance</span>
+                                {% else %}
+                                    <span class="badge bg-info text-dark"><i class="bi bi-person-check me-1"></i>Guarantor</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if record.service_type == "INSURANCE" %}
+                                    {{ record.get_service_subject_type_display|default:"-" }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>{{ record.company_name }}</div>
+                                <small class="text-muted">{{ record.company_phone_number|default:"-" }}</small>
+                            </td>
+                            <td class="text-center">
+                                <span class="fw-semibold text-success">¥{{ record.collected_amount|floatformat:0 }}</span><br>
+                                <small class="text-muted">{{ record.collected_date|date:"Y-m-d" }}</small>
+                            </td>
+                            <td class="text-center fw-semibold text-danger">¥{{ record.remitted_amount|floatformat:0 }}</td>
+                            <td class="text-center fw-semibold text-primary">¥{{ record.commission_amount|floatformat:0 }}</td>
+                            <td class="text-center">
+                                {% if record.remittance_status == "REMITTED" %}
+                                    <span class="badge bg-success">Sent</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">Not Sent</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if perms.finance.change_thirdpartyservicerecord and record.remittance_status != "REMITTED" %}
+                                <a href="{% url 'finance:third_party_service_edit' record.pk %}" class="btn btn-sm btn-outline-warning" title="Edit"><i class="bi bi-pencil-square"></i></a>
+                                {% else %}
+                                <span class="btn btn-sm btn-outline-secondary disabled" title="Locked"><i class="bi bi-lock"></i></span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="10" class="text-center py-3 text-muted">No records found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    {% if records %}
+                    <tfoot class="table-light">
+                        <tr>
+                            <th colspan="5" class="text-end">Page Total</th>
+                            <th class="text-center text-success">¥{{ page_total_collected|floatformat:0 }}</th>
+                            <th class="text-center text-danger">¥{{ page_total_remitted|floatformat:0 }}</th>
+                            <th class="text-center text-primary">¥{{ page_total_commission|floatformat:0 }}</th>
+                            <th colspan="2"></th>
+                        </tr>
+                    </tfoot>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+        {% if page_obj.paginator.num_pages > 1 %}
+        <div class="card-footer bg-light">
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+                        {% if page_obj.has_previous %}
+                            <a class="page-link" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}">Prev</a>
+                        {% else %}
+                            <span class="page-link">Prev</span>
+                        {% endif %}
+                    </li>
+                    <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                    <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+                        {% if page_obj.has_next %}
+                            <a class="page-link" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>
+                        {% else %}
+                            <span class="page-link">Next</span>
+                        {% endif %}
+                    </li>
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

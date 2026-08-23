@@ -128,7 +128,10 @@ celerybeat.pid
 *.sage.py
 
 # Environments
+.env
 .env.*
+!.env.example
+!.env.*.example
 .venv
 env/
 venv/
@@ -160,6 +163,11 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
 #  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
@@ -174,10 +182,23 @@ cython_debug/
 .pypirc
 
 
-# Ignore migration files except for __init__.py
+# Django migrations
+# Migration files are intentionally tracked. Create them in development,
+# commit them, then apply them in production with `python manage.py migrate`.
 backend/**/migrations/*.py
 !backend/**/migrations/__init__.py
 
-# Ignore a specific media folder
+# Secrets, certificates, and database backups
+*.pem
+*.key
+*.crt
+*.sql
+*.dump
+*.bak
+
+# Docker/local overrides
+docker-compose.override.yml
+
+# Project runtime files
 backend/media/
 staticfiles/

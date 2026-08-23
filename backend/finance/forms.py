@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 from django import forms
-from .models import HostelExpense, UtilityExpense, Hostel, StaffExpense
+from .models import HostelExpense, UtilityExpense, Hostel, StaffExpense, ThirdPartyServiceRecord
 from targets.models import RentalContract
 
 
@@ -76,6 +76,138 @@ class StaffExpenseForm(forms.ModelForm):
         model = StaffExpense
         fields = ["expense_type", "start_date", "end_date", "amount", "memo"]
         widgets = {"expense_type": forms.Select(attrs={"class": "form-select"}), "start_date": forms.DateInput(attrs={"type": "date", "class": "form-control"}), "end_date": forms.DateInput(attrs={"type": "date", "class": "form-control"}), "amount": forms.NumberInput(attrs={"class": "form-control"}), "memo": forms.Textarea(attrs={"class": "form-control", "rows": 4})}
+
+
+class ThirdPartyServiceRecordBaseForm(forms.ModelForm):
+    class Meta:
+        model = ThirdPartyServiceRecord
+        fields = [
+            "service_type",
+            "applicant_name",
+            "phone_number",
+            "applicant_address",
+            "service_subject_type",
+            "service_subject_address",
+            "company_name",
+            "company_phone_number",
+            "collected_amount",
+            "collected_date",
+            "remitted_amount",
+            "remitted_date",
+            "memo",
+        ]
+        widgets = {
+            "service_type": forms.Select(attrs={"class": "form-select form-select-sm"}),
+            "applicant_name": forms.TextInput(attrs={"class": "form-control form-control-sm"}),
+            "phone_number": forms.TextInput(attrs={"class": "form-control form-control-sm"}),
+            "applicant_address": forms.Textarea(attrs={"class": "form-control form-control-sm", "rows": 2}),
+            "service_subject_type": forms.Select(attrs={"class": "form-select form-select-sm", "data-insurance-field": "true"}),
+            "service_subject_address": forms.Textarea(attrs={"class": "form-control form-control-sm", "rows": 2, "data-insurance-field": "true"}),
+            "company_name": forms.TextInput(attrs={"class": "form-control form-control-sm"}),
+            "company_phone_number": forms.TextInput(attrs={"class": "form-control form-control-sm"}),
+            "collected_amount": forms.NumberInput(attrs={"class": "form-control form-control-sm", "min": "0", "step": "0.01"}),
+            "collected_date": forms.DateInput(attrs={"class": "form-control form-control-sm", "type": "date"}),
+            "remitted_amount": forms.NumberInput(attrs={"class": "form-control form-control-sm", "min": "0", "step": "0.01"}),
+            "remitted_date": forms.DateInput(attrs={"class": "form-control form-control-sm", "type": "date"}),
+            "memo": forms.Textarea(attrs={"class": "form-control form-control-sm", "rows": 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["applicant_name"].label = "Applicant Name"
+        self.fields["phone_number"].label = "Applicant Phone Number"
+        self.fields["applicant_address"].label = "Applicant Address"
+        self.fields["service_subject_type"].label = "Insurance For"
+        self.fields["service_subject_address"].label = "Insurance Address"
+        self.fields["company_name"].label = "Insurance / Guarantor Company Name"
+        self.fields["company_phone_number"].label = "Insurance / Guarantor Company Phone Number"
+        self.fields["service_subject_type"].required = False
+        self.fields["service_subject_address"].required = False
+        if "remitted_amount" in self.fields:
+            self.fields["remitted_amount"].required = False
+        if "remitted_date" in self.fields:
+            self.fields["remitted_date"].required = False
+        self.fields["memo"].required = True
+        if not self.initial.get("collected_date") and not self.instance.pk:
+            self.fields["collected_date"].initial = date.today()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get("service_type") == ThirdPartyServiceRecord.ServiceType.INSURANCE:
+            if not cleaned_data.get("service_subject_type"):
+                self.add_error("service_subject_type", "Insurance for what is required for insurance records.")
+            if not cleaned_data.get("service_subject_address"):
+                self.add_error("service_subject_address", "Insurance address is required for insurance records.")
+        remitted_date = cleaned_data.get("remitted_date")
+        collected_date = cleaned_data.get("collected_date")
+        if remitted_date and collected_date and remitted_date < collected_date:
+            self.add_error("remitted_date", "Remitted date cannot be before collected date.")
+        return cleaned_data
+
+
+class ThirdPartyServiceRecordCreateForm(ThirdPartyServiceRecordBaseForm):
+    class Meta(ThirdPartyServiceRecordBaseForm.Meta):
+        fields = [
+            "service_type",
+            "applicant_name",
+            "phone_number",
+            "applicant_address",
+            "service_subject_type",
+            "service_subject_address",
+            "company_name",
+            "company_phone_number",
+            "collected_amount",
+            "collected_date",
+            "memo",
+        ]
+
+
+class ThirdPartyServiceRecordUpdateForm(ThirdPartyServiceRecordBaseForm):
+    class Meta(ThirdPartyServiceRecordBaseForm.Meta):
+        fields = [
+            "service_type",
+            "applicant_name",
+            "phone_number",
+            "applicant_address",
+            "service_subject_type",
+            "service_subject_address",
+            "company_name",
+            "company_phone_number",
+            "collected_amount",
+            "collected_date",
+            "memo",
+        ]
+
+
+class ThirdPartyServiceRemittanceForm(forms.ModelForm):
+    class Meta:
+        model = ThirdPartyServiceRecord
+        fields = ["remitted_amount", "remitted_date"]
+        widgets = {
+            "remitted_amount": forms.NumberInput(attrs={"class": "form-control form-control-sm", "min": "0", "step": "0.01"}),
+            "remitted_date": forms.DateInput(attrs={"class": "form-control form-control-sm", "type": "date"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["remitted_amount"].label = "Remittance Amount"
+        self.fields["remitted_date"].label = "Remittance Date"
+        self.fields["remitted_amount"].required = True
+        self.fields["remitted_date"].required = True
+
+    def clean(self):
+        cleaned_data = super().clean()
+        remitted_amount = cleaned_data.get("remitted_amount")
+        remitted_date = cleaned_data.get("remitted_date")
+
+        if remitted_amount is not None and remitted_amount <= 0:
+            self.add_error("remitted_amount", "Remittance amount must be greater than zero.")
+        if remitted_amount is not None and self.instance.collected_amount is not None and remitted_amount > self.instance.collected_amount:
+            self.add_error("remitted_amount", "Remittance amount cannot be greater than collected amount.")
+        if remitted_date and self.instance.collected_date and remitted_date < self.instance.collected_date:
+            self.add_error("remitted_date", "Remittance date cannot be before collected date.")
+
+        return cleaned_data
 
 
 class AdFeeReceiptForm(forms.ModelForm):

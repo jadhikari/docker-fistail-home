@@ -202,3 +202,35 @@ def export_unpaid_rent_to_excel(defaulters):
             unpaid_str,
         ])
     return export_to_excel("Unpaid Rent", headers, rows, "unpaid_rent.xlsx")
+
+
+def export_third_party_services_to_excel(queryset, from_date, to_date):
+    headers = [
+        "Transaction ID", "Service", "Applicant Name", "Applicant Phone", "Applicant Address",
+        "Insurance For", "Insurance Address", "Guarantor / Insurance Company", "Company Phone",
+        "Collected Amount", "Collected Date", "Remittance Amount", "Remittance Date",
+        "Commission Amount", "Remittance Status", "Memo", "Created By", "Created At",
+    ]
+    rows = []
+    for record in queryset:
+        rows.append([
+            record.transaction_code,
+            record.get_service_type_display(),
+            record.applicant_name,
+            record.phone_number,
+            record.applicant_address,
+            record.get_service_subject_type_display() if record.service_type == "INSURANCE" else "",
+            record.service_subject_address if record.service_type == "INSURANCE" else "",
+            record.company_name,
+            record.company_phone_number,
+            float(record.collected_amount) if record.collected_amount is not None else "",
+            record.collected_date.strftime("%Y-%m-%d") if record.collected_date else "",
+            float(record.remitted_amount) if record.remitted_amount is not None else "",
+            record.remitted_date.strftime("%Y-%m-%d") if record.remitted_date else "",
+            float(record.commission_amount),
+            record.get_remittance_status_display(),
+            record.memo,
+            _user_display_name(record.created_by),
+            record.created_at.strftime("%Y-%m-%d %H:%M") if record.created_at else "",
+        ])
+    return export_to_excel("Insurance Guarantor", headers, rows, f"insurance_guarantor_{from_date}_{to_date}.xlsx")
