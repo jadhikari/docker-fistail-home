@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from .models import Target, RentalContract
+import calendar
 import datetime
 
 User = get_user_model()
@@ -263,7 +264,23 @@ class RentalContractForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        self.target = kwargs.pop('target', None)
         super().__init__(*args, **kwargs)
+
+        if self.target:
+            target_year = self.target.target_year
+            target_month = self.target.target_month
+            last_day = calendar.monthrange(target_year, target_month)[1]
+            first_date = datetime.date(target_year, target_month, 1)
+            last_date = datetime.date(target_year, target_month, last_day)
+            self.fields['contract_date'].widget.attrs.update({
+                'min': first_date.isoformat(),
+                'max': last_date.isoformat(),
+            })
+            self.fields['contract_date'].help_text = (
+                f"Select a date in {first_date.strftime('%B %Y')} only."
+            )
+
         self.fields['customer_number'].help_text = "Maximum 11 digits"
         self.fields['support_phone'].help_text = "Maximum 11 digits"
         self.fields['emergency_phone'].help_text = "Maximum 11 digits"
@@ -282,6 +299,25 @@ class RentalContractForm(forms.ModelForm):
         print(f"Form initialized with {len(self.fields)} fields")
         for field_name, field in self.fields.items():
             print(f"Field: {field_name}, Required: {field.required}, Type: {type(field)}")
+
+    def clean_contract_date(self):
+        contract_date = self.cleaned_data.get('contract_date')
+
+        if self.target and contract_date:
+            if (
+                contract_date.year != self.target.target_year
+                or contract_date.month != self.target.target_month
+            ):
+                target_period = datetime.date(
+                    self.target.target_year,
+                    self.target.target_month,
+                    1,
+                ).strftime('%B %Y')
+                raise ValidationError(
+                    f"Contract date must be within the target month ({target_period})."
+                )
+
+        return contract_date
 
 
 class BulkTargetAssignmentForm(forms.Form):

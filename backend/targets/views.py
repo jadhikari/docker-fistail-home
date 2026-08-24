@@ -650,7 +650,7 @@ def create_rental_contract(request):
     if request.method == 'POST':
         # print(f"POST data received: {request.POST}")
         # print(f"POST data keys: {list(request.POST.keys())}")
-        form = RentalContractForm(request.POST)
+        form = RentalContractForm(request.POST, target=current_target)
         # print(f"Form is valid: {form.is_valid()}")
         # if not form.is_valid():
         #     print(f"Form errors: {form.errors}")
@@ -693,7 +693,7 @@ def create_rental_contract(request):
     else:
         # Create form with current target as initial data
         initial_data = {'target_to': current_target}
-        form = RentalContractForm(initial=initial_data)
+        form = RentalContractForm(initial=initial_data, target=current_target)
         
         # Debug: Check if form can be created
         # print(f"Form created successfully with {len(form.fields)} fields")

@@ -97,6 +97,9 @@
                             Contract Date <span class="text-danger">*</span>
                         </label>
                         {{ form.contract_date }}
+                        {% if form.contract_date.help_text %}
+                            <div class="form-text">{{ form.contract_date.help_text }}</div>
+                        {% endif %}
                         {% if form.contract_date.errors %}
                             <div class="text-danger small mt-1">{{ form.contract_date.errors }}</div>
                         {% endif %}
@@ -315,4 +318,4 @@
     }, 5000);
 </script>
 
-{% endblock %} 
+{% endblock %}

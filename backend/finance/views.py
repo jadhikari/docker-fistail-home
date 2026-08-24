@@ -582,7 +582,8 @@ def expenses(request):
     Supports filtering by date, status, expense type, hostel, and Excel export.
     """
     # Parse filter parameters
-    year_month = request.GET.get('year_month')
+    from_date_str = request.GET.get('from_date', '').strip()
+    to_date_str = request.GET.get('to_date', '').strip()
     status = request.GET.get('status')
     expense_type = request.GET.get('expense_type')
     hostel_filter = request.GET.get('hostel')
@@ -590,21 +591,19 @@ def expenses(request):
     # Get base querysets
     hostel_expenses = HostelExpense.objects.select_related('hostel', 'created_by', 'updated_by', 'approved_by')
     utility_expenses = UtilityExpense.objects.select_related('hostel', 'paid_by', 'approved_by')
-    # Default to current month if no filter provided
-    if not year_month and not status and not hostel_filter and not export:
-        current_date = date.today()
-        year_month = current_date.strftime('%Y-%m')
-    # Filter by year/month
-    if year_month:
-        try:
-            filter_year, filter_month = map(int, year_month.split('-'))
-            hostel_expenses = hostel_expenses.filter(purchased_date__year=filter_year, purchased_date__month=filter_month)
-            utility_expenses = utility_expenses.filter(paid_date__year=filter_year, paid_date__month=filter_month)
-        except (ValueError, TypeError):
-            current_date = date.today()
-            filter_year, filter_month = current_date.year, current_date.month
-            hostel_expenses = hostel_expenses.filter(purchased_date__year=filter_year, purchased_date__month=filter_month)
-            utility_expenses = utility_expenses.filter(paid_date__year=filter_year, paid_date__month=filter_month)
+    # Default to the current month and filter by the selected date range.
+    today = timezone.now().date()
+    try:
+        from_date = datetime.strptime(from_date_str, '%Y-%m-%d').date() if from_date_str else today.replace(day=1)
+    except ValueError:
+        from_date = today.replace(day=1)
+    try:
+        to_date = datetime.strptime(to_date_str, '%Y-%m-%d').date() if to_date_str else today
+    except ValueError:
+        to_date = today
+
+    hostel_expenses = hostel_expenses.filter(purchased_date__range=(from_date, to_date))
+    utility_expenses = utility_expenses.filter(paid_date__range=(from_date, to_date))
     # Filter by approval status
     if status in ['approved', 'pending', 'rejected']:
         hostel_expenses = hostel_expenses.filter(status=status)
@@ -648,19 +647,10 @@ def expenses(request):
     # Get all hostels for filter dropdown
     from hostel.models import Hostel
     all_hostels = Hostel.objects.filter(status=True).order_by('name')
-    # Format month display
-    display_month = ""
-    if year_month:
-        try:
-            filter_year, filter_month = map(int, year_month.split('-'))
-            from datetime import datetime
-            display_month = datetime(filter_year, filter_month, 1).strftime('%B %Y')
-        except (ValueError, TypeError):
-            display_month = "Current Month"
     return render(request, 'finance/expenses_dashboard.html', {
         'expenses': expenses_page,
-        'year_month': year_month,
-        'display_month': display_month,
+        'from_date': from_date.strftime('%Y-%m-%d'),
+        'to_date': to_date.strftime('%Y-%m-%d'),
         'status': status,
         'expense_type': expense_type,
         'hostel_filter': hostel_filter,

@@ -20,7 +20,7 @@
                 <div>
                     <h4 class="mb-1"><i class="bi bi-cash-coin text-primary me-2"></i>Hostel Expenses</h4>
                     <p class="text-muted mb-0 small">
-                        {% if display_month %}Showing expenses for {{ display_month }}{% else %}Manage and track all hostel and utility expenses{% endif %}
+                        Showing expenses from {{ from_date }} to {{ to_date }}
                     </p>
                 </div>
                 <div class="d-flex gap-2">
@@ -43,8 +43,12 @@
         <div class="card-body">
             <form method="get" class="row g-3">
                 <div class="col-md-2">
-                    <label for="yearMonth" class="form-label fw-semibold small">Year & Month</label>
-                    <input type="month" id="yearMonth" name="year_month" value="{{ year_month }}" class="form-control form-control-sm">
+                    <label for="fromDate" class="form-label fw-semibold small">From Date</label>
+                    <input type="date" id="fromDate" name="from_date" value="{{ from_date }}" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-2">
+                    <label for="toDate" class="form-label fw-semibold small">To Date</label>
+                    <input type="date" id="toDate" name="to_date" value="{{ to_date }}" class="form-control form-control-sm">
                 </div>
                 <div class="col-md-2">
                     <label for="statusFilter" class="form-label fw-semibold small">Status</label>
@@ -77,7 +81,7 @@
                     <div class="d-flex gap-1">
                         <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>Search</button>
                         <a href="{% url 'finance:expenses' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-clockwise me-1"></i>Reset</a>
-                        <a href="?{% if year_month %}year_month={{ year_month }}&{% endif %}{% if status %}status={{ status }}&{% endif %}{% if expense_type %}expense_type={{ expense_type }}&{% endif %}{% if hostel_filter %}hostel={{ hostel_filter }}&{% endif %}export=excel" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-excel me-1"></i></a>
+                        <a href="?from_date={{ from_date }}&to_date={{ to_date }}&{% if status %}status={{ status }}&{% endif %}{% if expense_type %}expense_type={{ expense_type }}&{% endif %}{% if hostel_filter %}hostel={{ hostel_filter }}&{% endif %}export=excel" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-excel me-1"></i></a>
                     </div>
                 </div>
             </form>

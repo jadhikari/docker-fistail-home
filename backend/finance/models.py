@@ -321,9 +321,9 @@ class ThirdPartyServiceRecord(TimeStampedUserModel):
         GUARANTOR = "GUARANTOR", "Guarantor"
 
     class ServiceSubjectType(models.TextChoices):
-        COMPANY = "COMPANY", "Company"
-        HOTEL = "HOTEL", "Hotel"
-        HOUSE = "HOUSE", "House"
+        RESIDENT = "RESIDENT", "Resident"
+        OFFICE_SHOP = "OFFICE_SHOP", "Office/Shop"
+        RESTAURANT = "RESTAURANT", "Restaurant"
 
     class RemittanceStatus(models.TextChoices):
         PENDING = "PENDING", "Not Sent to Company"
