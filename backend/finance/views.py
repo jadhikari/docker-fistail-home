@@ -1016,7 +1016,7 @@ def staff_expense_dashboard(request):
     User = get_user_model()
     employees = User.objects.filter(is_active=True).order_by("first_name", "last_name", "email")
     search_by_code = bool(transaction_code)
-    search_ignores_dates = search_by_code or status in {"pending", "approved", "rejected"}
+    search_ignores_dates = search_by_code
 
     if from_date_str:
         try:
@@ -1037,7 +1037,7 @@ def staff_expense_dashboard(request):
     if search_by_code:
         query &= Q(transaction_code__icontains=transaction_code)
     if not search_ignores_dates:
-        query &= Q(start_date__gte=from_date, start_date__lte=to_date)
+        query &= Q(updated_at__date__gte=from_date, updated_at__date__lte=to_date)
     if employee_id:
         try:
             query &= Q(employee_id=int(employee_id))
@@ -1056,7 +1056,7 @@ def staff_expense_dashboard(request):
     expenses = (
         StaffExpense.objects.select_related("employee", "approved_by", "created_by", "updated_by")
         .filter(query)
-        .order_by("-created_at")
+        .order_by("-updated_at")
     )
 
     total_count = expenses.count()

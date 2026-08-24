@@ -100,7 +100,7 @@
                     </div>
                 </div>
                 <div id="codeSearchNotice" class="alert alert-info py-2 mb-0 mt-3 small {% if not search_ignores_dates %}d-none{% endif %}">
-                    <i class="bi bi-info-circle me-1"></i>Showing results across all dates. Transaction code and status filters can be combined.
+                    <i class="bi bi-info-circle me-1"></i>Showing the matching transaction code across all update dates.
                 </div>
             </form>
         </div>
@@ -135,7 +135,7 @@
                             <th class="text-center small">Status</th>
                             <th class="text-center small">Status Memo</th>
                             <th class="text-center small">Approved By</th>
-                            <th class="text-center small">Approved At</th>
+                            <th class="text-center small">Updated At</th>
                             <th class="text-center small">Created At</th>
                         </tr>
                     </thead>
@@ -208,10 +208,10 @@
                                 <span class="text-muted">-</span>
                                 {% endif %}
                             </td>
-                            <!-- Status Updated At -->
-                            <td class="text-center">{% if expense.approval_status != 'PENDING' %}{{ expense.updated_at|date:"Y-m-d H:i" }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                            <!-- Updated At -->
+                            <td class="text-center">{{ expense.updated_at|date:"Y-m-d" }}</td>
                             <!-- Created At -->
-                            <td class="text-center">{% if expense.created_at %}{{ expense.created_at|date:"Y-m-d H:i" }}{% else %}-{% endif %}</td>
+                            <td class="text-center">{% if expense.created_at %}{{ expense.created_at|date:"Y-m-d" }}{% else %}-{% endif %}</td>
                         </tr>
                     {% empty %}
                         <tr>
@@ -249,10 +249,9 @@
 const transactionCodeInput = document.getElementById('transaction_code');
 const codeSearchNotice = document.getElementById('codeSearchNotice');
 const dateFilters = document.querySelectorAll('.date-filter');
-const statusFilter = document.getElementById('statusFilter');
 
 function toggleDateFilters() {
-    const hasGlobalFilter = transactionCodeInput.value.trim().length > 0 || statusFilter.value !== '';
+    const hasGlobalFilter = transactionCodeInput.value.trim().length > 0;
     dateFilters.forEach((input) => {
         input.disabled = hasGlobalFilter;
         input.classList.toggle('bg-light', hasGlobalFilter);
@@ -264,8 +263,6 @@ transactionCodeInput.addEventListener('input', () => {
     transactionCodeInput.value = transactionCodeInput.value.toUpperCase();
     toggleDateFilters();
 });
-statusFilter.addEventListener('change', toggleDateFilters);
-
 toggleDateFilters();
 
 setTimeout(() => {
