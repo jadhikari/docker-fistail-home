@@ -161,6 +161,70 @@ def export_staff_expenses_to_excel(queryset):
     return export_to_excel("Staff Expenses", headers, rows, "staff_expenses.xlsx")
 
 
+def export_office_expenses_to_excel(queryset):
+    headers = [
+        "Transaction Code", "Expense Date", "Transaction Type", "Original Expense",
+        "Category", "Other Category", "Vendor", "Description", "Amount",
+        "Payment Mode", "Bank Account", "Credit Card", "Frequency",
+        "Service Period Start", "Service Period End", "Memo", "Approval Status",
+        "Decision Note", "Approved / Rejected By", "Decision Date",
+        "Created By", "Created At", "Updated By", "Updated At",
+    ]
+    rows = []
+    for item in queryset:
+        rows.append([
+            item.transaction_code,
+            item.expense_date.strftime("%Y-%m-%d") if item.expense_date else "",
+            item.get_transaction_kind_display(),
+            item.original_expense.transaction_code if item.original_expense else "",
+            item.get_category_display(), item.other_category, item.vendor, item.description,
+            float(item.amount) if item.amount is not None else "",
+            item.get_payment_mode_display(), str(item.bank_account or ""), str(item.credit_card or ""),
+            item.get_frequency_display(),
+            item.service_period_start.strftime("%Y-%m-%d") if item.service_period_start else "",
+            item.service_period_end.strftime("%Y-%m-%d") if item.service_period_end else "",
+            item.memo, item.get_approval_status_display(), item.status_memo,
+            _user_display_name(item.approved_by),
+            item.decided_at.strftime("%Y-%m-%d %H:%M") if item.decided_at else "",
+            _user_display_name(item.created_by),
+            item.created_at.strftime("%Y-%m-%d %H:%M") if item.created_at else "",
+            _user_display_name(item.updated_by),
+            item.updated_at.strftime("%Y-%m-%d %H:%M") if item.updated_at else "",
+        ])
+    return export_to_excel("Office Expenses", headers, rows, "office_expenses.xlsx")
+
+
+def export_card_settlements_to_excel(queryset):
+    headers = [
+        "Transaction Code", "Bank Deduction Date", "Credit Card Paid",
+        "Bank Account Charged", "Card Bill Period From", "Card Bill Period To",
+        "Amount Deducted", "Approved Expense Total", "Difference", "Comparison",
+        "Notes", "Approval Status", "Decision Note",
+        "Approved / Rejected By", "Decision Date", "Created By", "Created At",
+        "Updated By", "Updated At",
+    ]
+    rows = []
+    for item in queryset:
+        rows.append([
+            item.transaction_code,
+            item.settlement_date.strftime("%Y-%m-%d") if item.settlement_date else "",
+            str(item.credit_card), str(item.bank_account),
+            item.statement_period_start.strftime("%Y-%m-%d") if item.statement_period_start else "",
+            item.statement_period_end.strftime("%Y-%m-%d") if item.statement_period_end else "",
+            float(item.amount) if item.amount is not None else "",
+            float(item.calculated_expense_total), float(item.amount_difference),
+            "Matched" if item.is_amount_matched else "Not Matched", item.memo,
+            item.get_approval_status_display(), item.status_memo,
+            _user_display_name(item.approved_by),
+            item.decided_at.strftime("%Y-%m-%d %H:%M") if item.decided_at else "",
+            _user_display_name(item.created_by),
+            item.created_at.strftime("%Y-%m-%d %H:%M") if item.created_at else "",
+            _user_display_name(item.updated_by),
+            item.updated_at.strftime("%Y-%m-%d %H:%M") if item.updated_at else "",
+        ])
+    return export_to_excel("Card Bill Payments", headers, rows, "credit_card_bill_payments.xlsx")
+
+
 def export_pending_ad_fees_to_excel(queryset):
     headers = ['Customer', 'Phone', 'Contract Date', 'Property Address', 'Partner / Management Company', 'Expected AD Fee']
     rows = [[

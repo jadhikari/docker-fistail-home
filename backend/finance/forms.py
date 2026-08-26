@@ -1,7 +1,10 @@
 from datetime import date
 from decimal import Decimal
 from django import forms
-from .models import HostelExpense, UtilityExpense, Hostel, StaffExpense, ThirdPartyServiceRecord
+from .models import (
+    HostelExpense, UtilityExpense, Hostel, StaffExpense, ThirdPartyServiceRecord,
+    OfficeExpense, OfficeBankAccount, OfficeCreditCard, CreditCardSettlement,
+)
 from targets.models import RentalContract
 
 
@@ -76,6 +79,147 @@ class StaffExpenseForm(forms.ModelForm):
         model = StaffExpense
         fields = ["expense_type", "start_date", "end_date", "amount", "memo"]
         widgets = {"expense_type": forms.Select(attrs={"class": "form-select"}), "start_date": forms.DateInput(attrs={"type": "date", "class": "form-control"}), "end_date": forms.DateInput(attrs={"type": "date", "class": "form-control"}), "amount": forms.NumberInput(attrs={"class": "form-control"}), "memo": forms.Textarea(attrs={"class": "form-control", "rows": 4})}
+
+
+class StyledModelForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            if isinstance(field.widget, forms.CheckboxInput):
+                css = "form-check-input"
+            elif isinstance(field.widget, forms.Select):
+                css = "form-select form-select-sm"
+            else:
+                css = "form-control form-control-sm"
+            field.widget.attrs.update({"class": css})
+
+
+class OfficeExpenseForm(StyledModelForm):
+    class Meta:
+        model = OfficeExpense
+        fields = [
+            "transaction_kind", "original_expense", "expense_date", "category",
+            "other_category", "vendor", "description", "amount", "payment_mode",
+            "bank_account", "credit_card", "frequency", "service_period_start",
+            "service_period_end", "memo",
+        ]
+        widgets = {
+            "expense_date": forms.DateInput(attrs={"type": "date"}),
+            "service_period_start": forms.DateInput(attrs={"type": "date"}),
+            "service_period_end": forms.DateInput(attrs={"type": "date"}),
+            "memo": forms.Textarea(attrs={"rows": 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        bank_ids = list(OfficeBankAccount.objects.filter(is_active=True).values_list("pk", flat=True))
+        card_ids = list(OfficeCreditCard.objects.filter(is_active=True).values_list("pk", flat=True))
+        original_id = self.data.get("original_expense") if self.is_bound else None
+        if original_id:
+            original = OfficeExpense.objects.filter(pk=original_id).only("bank_account_id", "credit_card_id").first()
+            if original:
+                if original.bank_account_id:
+                    bank_ids.append(original.bank_account_id)
+                if original.credit_card_id:
+                    card_ids.append(original.credit_card_id)
+        if self.instance and self.instance.pk:
+            if self.instance.bank_account_id:
+                bank_ids.append(self.instance.bank_account_id)
+            if self.instance.credit_card_id:
+                card_ids.append(self.instance.credit_card_id)
+        self.fields["bank_account"].queryset = OfficeBankAccount.objects.filter(pk__in=bank_ids)
+        self.fields["credit_card"].queryset = OfficeCreditCard.objects.filter(pk__in=card_ids)
+        self.fields["original_expense"].queryset = OfficeExpense.objects.filter(
+            transaction_kind=OfficeExpense.TransactionKind.EXPENSE,
+            approval_status=OfficeExpense.ApprovalStatus.APPROVED,
+        ).order_by("-expense_date", "-created_at")
+        self.fields["original_expense"].widget = forms.HiddenInput()
+        self.fields["service_period_start"].label = "Service period start (optional)"
+        self.fields["service_period_end"].label = "Service period end (optional)"
+        self.fields["service_period_start"].required = False
+        self.fields["service_period_end"].required = False
+        self.fields["bank_account"].help_text = "Required when Payment mode is Bank Account."
+        self.fields["credit_card"].help_text = "Required when Payment mode is Credit Card."
+
+
+class CreditCardSettlementForm(StyledModelForm):
+    class Meta:
+        model = CreditCardSettlement
+        fields = ["credit_card", "bank_account", "settlement_date", "statement_period_start", "statement_period_end", "amount", "memo"]
+        widgets = {
+            "settlement_date": forms.DateInput(attrs={"type": "date"}),
+            "statement_period_start": forms.DateInput(attrs={"type": "date"}),
+            "statement_period_end": forms.DateInput(attrs={"type": "date"}),
+            "memo": forms.Textarea(attrs={"rows": 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["credit_card"].queryset = OfficeCreditCard.objects.filter(is_active=True)
+        self.fields["bank_account"].queryset = OfficeBankAccount.objects.filter(is_active=True)
+        self.fields["credit_card"].label = "Credit card being paid"
+        self.fields["credit_card"].help_text = "Select the card whose monthly bill is being paid."
+        self.fields["bank_account"].label = "Bank account charged"
+        self.fields["bank_account"].help_text = "Select the account from which the card company deducted money."
+        self.fields["settlement_date"].label = "Bank deduction date"
+        self.fields["settlement_date"].help_text = "The date the payment appeared in your bank account."
+        self.fields["statement_period_start"].label = "Card bill period from"
+        self.fields["statement_period_start"].help_text = "Required: first purchase date covered by this card bill."
+        self.fields["statement_period_end"].label = "Card bill period to"
+        self.fields["statement_period_end"].help_text = "Required: last purchase date covered by this card bill."
+        self.fields["statement_period_start"].required = True
+        self.fields["statement_period_end"].required = True
+        self.fields["amount"].label = "Amount deducted from bank"
+        self.fields["amount"].help_text = "Enter the exact total taken from the bank account."
+        self.fields["memo"].label = "Notes (optional)"
+
+
+class OfficeBankAccountForm(StyledModelForm):
+    class Meta:
+        model = OfficeBankAccount
+        fields = ["name", "bank_name", "last_four_digits", "is_active"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["name"].label = "Account display name"
+        self.fields["name"].help_text = "A short name staff will recognize, for example Main Office Bank."
+        self.fields["name"].widget.attrs["placeholder"] = "Main Office Bank"
+        self.fields["bank_name"].label = "Bank name"
+        self.fields["bank_name"].widget.attrs["placeholder"] = "MUFG, SMBC, Japan Post Bank..."
+        self.fields["last_four_digits"].label = "Account number (last 4 digits)"
+        self.fields["last_four_digits"].help_text = "Only store the final four digits for identification."
+        self.fields["last_four_digits"].widget.attrs.update({"placeholder": "1234", "inputmode": "numeric", "maxlength": "4"})
+        self.fields["is_active"].help_text = "Inactive accounts remain in history but cannot be used for new expenses."
+
+
+class OfficeCreditCardForm(StyledModelForm):
+    class Meta:
+        model = OfficeCreditCard
+        fields = ["name", "issuer", "last_four_digits", "settlement_bank_account", "closing_day", "payment_day", "is_active"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["name"].label = "Card display name"
+        self.fields["name"].help_text = "A short name staff will recognize, for example Office Visa."
+        self.fields["name"].widget.attrs["placeholder"] = "Office Visa"
+        self.fields["issuer"].label = "Card company / issuer"
+        self.fields["issuer"].widget.attrs["placeholder"] = "Rakuten, SMBC, American Express..."
+        self.fields["last_four_digits"].label = "Card number (last 4 digits)"
+        self.fields["last_four_digits"].help_text = "Never enter the complete card number."
+        self.fields["last_four_digits"].widget.attrs.update({"placeholder": "5678", "inputmode": "numeric", "maxlength": "4"})
+        self.fields["settlement_bank_account"].label = "Default payment bank account"
+        self.fields["settlement_bank_account"].help_text = "The bank account normally charged for this card bill."
+        bank_ids = list(OfficeBankAccount.objects.filter(is_active=True).values_list("pk", flat=True))
+        if self.instance and self.instance.pk and self.instance.settlement_bank_account_id:
+            bank_ids.append(self.instance.settlement_bank_account_id)
+        self.fields["settlement_bank_account"].queryset = OfficeBankAccount.objects.filter(pk__in=bank_ids)
+        self.fields["closing_day"].label = "Monthly closing day (optional)"
+        self.fields["closing_day"].help_text = "Day purchases are grouped into the monthly bill."
+        self.fields["closing_day"].widget.attrs["placeholder"] = "15"
+        self.fields["payment_day"].label = "Bank deduction day (optional)"
+        self.fields["payment_day"].help_text = "Usual day the card bill is deducted from the bank."
+        self.fields["payment_day"].widget.attrs["placeholder"] = "27"
+        self.fields["is_active"].help_text = "Inactive cards remain in history but cannot be used for new expenses."
 
 
 class ThirdPartyServiceRecordBaseForm(forms.ModelForm):

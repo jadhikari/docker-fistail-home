@@ -409,3 +409,239 @@ class ThirdPartyServiceRecord(TimeStampedUserModel):
         ordering = ["-collected_date", "-created_at"]
         verbose_name = "Insurance / Guarantor Record"
         verbose_name_plural = "Insurance / Guarantor Records"
+
+
+class OfficeBankAccount(TimeStampedUserModel):
+    name = models.CharField(max_length=100, unique=True)
+    bank_name = models.CharField(max_length=100, blank=True)
+    last_four_digits = models.CharField(max_length=4, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def clean(self):
+        if self.last_four_digits and (len(self.last_four_digits) != 4 or not self.last_four_digits.isdigit()):
+            raise ValidationError({"last_four_digits": "Enter exactly four digits."})
+
+    def __str__(self):
+        suffix = f" ••••{self.last_four_digits}" if self.last_four_digits else ""
+        return f"{self.name}{suffix}"
+
+
+class OfficeCreditCard(TimeStampedUserModel):
+    name = models.CharField(max_length=100, unique=True)
+    issuer = models.CharField(max_length=100, blank=True)
+    last_four_digits = models.CharField(max_length=4, blank=True)
+    settlement_bank_account = models.ForeignKey(
+        OfficeBankAccount, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="credit_cards",
+    )
+    closing_day = models.PositiveSmallIntegerField(null=True, blank=True)
+    payment_day = models.PositiveSmallIntegerField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def clean(self):
+        errors = {}
+        if self.last_four_digits and (len(self.last_four_digits) != 4 or not self.last_four_digits.isdigit()):
+            errors["last_four_digits"] = "Enter exactly four digits."
+        for field in ("closing_day", "payment_day"):
+            value = getattr(self, field)
+            if value is not None and not 1 <= value <= 31:
+                errors[field] = "Enter a day between 1 and 31."
+        if errors:
+            raise ValidationError(errors)
+
+    def __str__(self):
+        suffix = f" ••••{self.last_four_digits}" if self.last_four_digits else ""
+        return f"{self.name}{suffix}"
+
+
+class OfficeExpense(TimeStampedUserModel):
+    class Category(models.TextChoices):
+        RENT = "RENT", "Office Rent"
+        ELECTRICITY = "ELECTRICITY", "Office Electricity"
+        WATER = "WATER", "Office Water"
+        INTERNET = "INTERNET", "Internet"
+        PHONE = "PHONE", "Phone"
+        WEB_HOSTING = "WEB_HOSTING", "Web Server / Hosting"
+        PARKING = "PARKING", "Parking"
+        VEHICLE_INSURANCE = "VEHICLE_INSURANCE", "Vehicle Insurance"
+        STAFF_INSURANCE = "STAFF_INSURANCE", "Staff Shakai Hoken"
+        PRINTER_PURCHASE = "PRINTER_PURCHASE", "Printer Purchase"
+        PRINTER_SUPPLIES = "PRINTER_SUPPLIES", "Printer Ink / Toner"
+        PRINTING_SERVICE = "PRINTING_SERVICE", "Printing Service"
+        SUBSCRIPTION = "SUBSCRIPTION", "Office Subscription"
+        OFFICE_SUPPLIES = "OFFICE_SUPPLIES", "Office Supplies"
+        BANK_CHARGE = "BANK_CHARGE", "Bank / Card Service Charge"
+        OTHER = "OTHER", "Other"
+
+    class PaymentMode(models.TextChoices):
+        CASH = "CASH", "Cash"
+        BANK = "BANK", "Bank Account"
+        CREDIT_CARD = "CREDIT_CARD", "Credit Card"
+
+    class Frequency(models.TextChoices):
+        ONE_TIME = "ONE_TIME", "One-time"
+        MONTHLY = "MONTHLY", "Monthly"
+        YEARLY = "YEARLY", "Yearly"
+        IRREGULAR = "IRREGULAR", "Irregular"
+
+    class ApprovalStatus(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        APPROVED = "APPROVED", "Approved"
+        REJECTED = "REJECTED", "Rejected"
+
+    class TransactionKind(models.TextChoices):
+        EXPENSE = "EXPENSE", "Expense"
+        REFUND = "REFUND", "Refund"
+
+    transaction_code = models.CharField(max_length=10, unique=True, editable=False, db_index=True)
+    transaction_kind = models.CharField(max_length=10, choices=TransactionKind.choices, default=TransactionKind.EXPENSE)
+    original_expense = models.ForeignKey("self", on_delete=models.PROTECT, null=True, blank=True, related_name="refunds")
+    expense_date = models.DateField(db_index=True)
+    category = models.CharField(max_length=30, choices=Category.choices, db_index=True)
+    other_category = models.CharField(max_length=100, blank=True)
+    vendor = models.CharField(max_length=150)
+    description = models.CharField(max_length=255)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    payment_mode = models.CharField(max_length=20, choices=PaymentMode.choices, db_index=True)
+    bank_account = models.ForeignKey(OfficeBankAccount, on_delete=models.PROTECT, null=True, blank=True, related_name="expenses")
+    credit_card = models.ForeignKey(OfficeCreditCard, on_delete=models.PROTECT, null=True, blank=True, related_name="expenses")
+    frequency = models.CharField(max_length=15, choices=Frequency.choices, default=Frequency.ONE_TIME)
+    service_period_start = models.DateField(null=True, blank=True)
+    service_period_end = models.DateField(null=True, blank=True)
+    memo = models.TextField(blank=True)
+    approval_status = models.CharField(max_length=10, choices=ApprovalStatus.choices, default=ApprovalStatus.PENDING, db_index=True)
+    status_memo = models.TextField(blank=True)
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="approved_office_expenses")
+    decided_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-expense_date", "-created_at"]
+
+    def clean(self):
+        errors = {}
+        if self.amount is not None and self.amount <= 0:
+            errors["amount"] = "Amount must be greater than zero."
+        if self.category == self.Category.OTHER and not self.other_category.strip():
+            errors["other_category"] = "Describe the category when Other is selected."
+        if self.category != self.Category.OTHER and self.other_category:
+            errors["other_category"] = "Only use this field when the category is Other."
+        if self.payment_mode == self.PaymentMode.BANK:
+            if not self.bank_account:
+                errors["bank_account"] = "Select the bank account used."
+            if self.credit_card:
+                errors["credit_card"] = "Do not select a credit card for a bank payment."
+        elif self.payment_mode == self.PaymentMode.CREDIT_CARD:
+            if not self.credit_card:
+                errors["credit_card"] = "Select the credit card used."
+            if self.bank_account:
+                errors["bank_account"] = "The bank deduction is recorded later as a card settlement."
+        elif self.bank_account or self.credit_card:
+            errors["payment_mode"] = "Cash expenses cannot have a bank account or credit card."
+        if self.service_period_start and self.service_period_end and self.service_period_end < self.service_period_start:
+            errors["service_period_end"] = "Service period end cannot be before its start."
+        if self.transaction_kind == self.TransactionKind.REFUND:
+            if not self.original_expense:
+                errors["original_expense"] = "Select the original expense for a refund."
+            elif self.original_expense.transaction_kind != self.TransactionKind.EXPENSE:
+                errors["original_expense"] = "A refund must link to an expense, not another refund."
+            elif self.amount:
+                previous_refunds = self.original_expense.refunds.exclude(pk=self.pk).exclude(
+                    approval_status=self.ApprovalStatus.REJECTED
+                ).aggregate(total=models.Sum("amount"))["total"] or Decimal("0")
+                if previous_refunds + self.amount > self.original_expense.amount:
+                    errors["amount"] = "Refunds cannot exceed the original expense amount."
+        elif self.original_expense:
+            errors["original_expense"] = "Only refunds can link to an original expense."
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            current = OfficeExpense.objects.filter(pk=self.pk).values_list("approval_status", flat=True).first()
+            if current in (self.ApprovalStatus.APPROVED, self.ApprovalStatus.REJECTED):
+                raise ValidationError("Approved or rejected office expenses are locked.")
+        if not self.transaction_code:
+            while True:
+                code = "OE-" + "".join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6))
+                if not OfficeExpense.objects.filter(transaction_code=code).exists():
+                    self.transaction_code = code
+                    break
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.transaction_code} - {self.vendor}"
+
+
+class CreditCardSettlement(TimeStampedUserModel):
+    class ApprovalStatus(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        APPROVED = "APPROVED", "Approved"
+        REJECTED = "REJECTED", "Rejected"
+
+    transaction_code = models.CharField(max_length=10, unique=True, editable=False, db_index=True)
+    credit_card = models.ForeignKey(OfficeCreditCard, on_delete=models.PROTECT, related_name="settlements")
+    bank_account = models.ForeignKey(OfficeBankAccount, on_delete=models.PROTECT, related_name="card_settlements")
+    settlement_date = models.DateField(db_index=True)
+    statement_period_start = models.DateField(null=True, blank=False)
+    statement_period_end = models.DateField(null=True, blank=False)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    calculated_expense_total = models.DecimalField(
+        max_digits=12, decimal_places=2, default=Decimal("0.00"), editable=False,
+        help_text="Snapshot of approved card expenses less refunds for the selected bill period.",
+    )
+    matched_expenses = models.ManyToManyField(
+        OfficeExpense, blank=True, related_name="card_bill_settlements",
+    )
+    memo = models.TextField(blank=True)
+    approval_status = models.CharField(max_length=10, choices=ApprovalStatus.choices, default=ApprovalStatus.PENDING, db_index=True)
+    status_memo = models.TextField(blank=True)
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="approved_card_settlements")
+    decided_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-settlement_date", "-created_at"]
+
+    def clean(self):
+        errors = {}
+        if self.amount is not None and self.amount <= 0:
+            errors["amount"] = "Amount must be greater than zero."
+        if not self.statement_period_start:
+            errors["statement_period_start"] = "Card bill period start is required."
+        if not self.statement_period_end:
+            errors["statement_period_end"] = "Card bill period end is required."
+        if self.statement_period_start and self.statement_period_end and self.statement_period_end < self.statement_period_start:
+            errors["statement_period_end"] = "Card bill period end cannot be before its start."
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            current = CreditCardSettlement.objects.filter(pk=self.pk).values_list("approval_status", flat=True).first()
+            if current in (self.ApprovalStatus.APPROVED, self.ApprovalStatus.REJECTED):
+                raise ValidationError("Approved or rejected settlements are locked.")
+        if not self.transaction_code:
+            while True:
+                code = "CC-" + "".join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(6))
+                if not CreditCardSettlement.objects.filter(transaction_code=code).exists():
+                    self.transaction_code = code
+                    break
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.transaction_code} - {self.credit_card}"
+
+    @property
+    def amount_difference(self):
+        return (self.amount or Decimal("0.00")) - (self.calculated_expense_total or Decimal("0.00"))
+
+    @property
+    def is_amount_matched(self):
+        return abs(self.amount_difference) <= Decimal("0.01")

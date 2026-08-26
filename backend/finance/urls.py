@@ -4,6 +4,23 @@ from . import views
 app_name = 'finance'
 
 urlpatterns = [
+    path('office-expenses/', views.office_expense_list, name='office_expenses'),
+    path('office-expenses/add/', views.office_expense_create, name='office_expense_add'),
+    path('office-expenses/lookup/', views.office_expense_lookup, name='office_expense_lookup'),
+    path('office-expenses/<int:pk>/', views.office_expense_detail, name='office_expense_detail'),
+    path('office-expenses/<int:pk>/edit/', views.office_expense_edit, name='office_expense_edit'),
+    path('office-expenses/<int:pk>/decision/', views.office_expense_decide, name='office_expense_decide'),
+    path('office-expenses/card-settlements/add/', views.card_settlement_create, name='card_settlement_add'),
+    path('office-expenses/card-settlements/', views.card_settlement_list, name='card_settlements'),
+    path('office-expenses/card-settlements/preview/', views.card_settlement_preview, name='card_settlement_preview'),
+    path('office-expenses/card-settlements/<int:pk>/', views.card_settlement_detail, name='card_settlement_detail'),
+    path('office-expenses/card-settlements/<int:pk>/edit/', views.card_settlement_edit, name='card_settlement_edit'),
+    path('office-expenses/card-settlements/<int:pk>/decision/', views.card_settlement_decide, name='card_settlement_decide'),
+    path('office-expenses/payment-accounts/', views.office_payment_accounts, name='office_payment_accounts'),
+    path('office-expenses/payment-accounts/banks/add/', views.office_bank_account_create, name='office_bank_account_add'),
+    path('office-expenses/payment-accounts/banks/<int:pk>/edit/', views.office_bank_account_edit, name='office_bank_account_edit'),
+    path('office-expenses/payment-accounts/cards/add/', views.office_credit_card_create, name='office_credit_card_add'),
+    path('office-expenses/payment-accounts/cards/<int:pk>/edit/', views.office_credit_card_edit, name='office_credit_card_edit'),
     path('revenues/', views.revenues, name='revenues'),
     path('revenues/real-estate/', views.real_estate_revenue, name='real_estate_revenue'),
     path('revenues/real-estate/<int:pk>/confirm-ad-fee/', views.confirm_ad_fee_receipt, name='confirm_ad_fee_receipt'),

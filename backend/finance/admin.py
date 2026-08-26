@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import HostelRevenue, HostelExpense, UtilityExpense, StaffExpense, ThirdPartyServiceRecord
+from .models import (HostelRevenue, HostelExpense, UtilityExpense, StaffExpense, ThirdPartyServiceRecord,
+                     OfficeExpense, OfficeBankAccount, OfficeCreditCard, CreditCardSettlement)
 
 @admin.register(HostelRevenue)
 class HostelRevenueAdmin(admin.ModelAdmin):
@@ -163,3 +164,47 @@ class ThirdPartyServiceRecordAdmin(admin.ModelAdmin):
     readonly_fields = ("transaction_code", "created_by", "updated_by", "created_at", "updated_at")
     ordering = ("-collected_date", "-created_at")
     date_hierarchy = "collected_date"
+
+
+class SuperuserManagedPaymentAccountAdmin(admin.ModelAdmin):
+    """Payment-account configuration is restricted to superusers in every UI."""
+
+    def has_add_permission(self, request):
+        return request.user.is_superuser
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    def has_view_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+
+@admin.register(OfficeBankAccount)
+class OfficeBankAccountAdmin(SuperuserManagedPaymentAccountAdmin):
+    list_display = ("name", "bank_name", "last_four_digits", "is_active")
+    list_filter = ("is_active",)
+
+
+@admin.register(OfficeCreditCard)
+class OfficeCreditCardAdmin(SuperuserManagedPaymentAccountAdmin):
+    list_display = ("name", "issuer", "last_four_digits", "settlement_bank_account", "closing_day", "payment_day", "is_active")
+    list_filter = ("is_active",)
+
+
+@admin.register(OfficeExpense)
+class OfficeExpenseAdmin(admin.ModelAdmin):
+    list_display = ("transaction_code", "expense_date", "transaction_kind", "category", "vendor", "amount", "payment_mode", "approval_status", "created_by", "approved_by")
+    list_filter = ("transaction_kind", "category", "payment_mode", "frequency", "approval_status")
+    search_fields = ("transaction_code", "vendor", "description", "memo")
+    readonly_fields = ("transaction_code", "created_at", "updated_at")
+
+
+@admin.register(CreditCardSettlement)
+class CreditCardSettlementAdmin(admin.ModelAdmin):
+    list_display = ("transaction_code", "settlement_date", "credit_card", "bank_account", "amount", "approval_status", "created_by", "approved_by")
+    list_filter = ("credit_card", "bank_account", "approval_status")
+    search_fields = ("transaction_code", "memo")
+    readonly_fields = ("transaction_code", "created_at", "updated_at")

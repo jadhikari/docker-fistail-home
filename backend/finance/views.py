@@ -11,8 +11,12 @@ from django.views.decorators.csrf import csrf_exempt
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 import json
-from .models import HostelRevenue, HostelExpense, UtilityExpense, StaffExpense, ThirdPartyServiceRecord
-from .forms import HostelExpenseForm, UtilityExpenseForm, StaffExpenseForm, AdFeeReceiptForm, ThirdPartyServiceRecordCreateForm, ThirdPartyServiceRecordUpdateForm, ThirdPartyServiceRemittanceForm
+from .models import (HostelRevenue, HostelExpense, UtilityExpense, StaffExpense, ThirdPartyServiceRecord,
+                     OfficeExpense, OfficeBankAccount, OfficeCreditCard, CreditCardSettlement)
+from .forms import (HostelExpenseForm, UtilityExpenseForm, StaffExpenseForm, AdFeeReceiptForm,
+                    ThirdPartyServiceRecordCreateForm, ThirdPartyServiceRecordUpdateForm,
+                    ThirdPartyServiceRemittanceForm, OfficeExpenseForm,
+                    CreditCardSettlementForm, OfficeBankAccountForm, OfficeCreditCardForm)
 from .utils import send_revenue_email
 from .excel_exports import (
     export_revenues_to_excel,
@@ -22,10 +26,413 @@ from .excel_exports import (
     export_real_estate_revenue_to_excel,
     export_unpaid_rent_to_excel,
     export_third_party_services_to_excel,
+    export_office_expenses_to_excel,
+    export_card_settlements_to_excel,
 )
 from .finance_helpers.rent_defaulters import get_rent_defaulters
 from hostel.models import Bed
 from targets.models import RentalContract
+
+
+def _credit_card_period_expenses(credit_card_id, period_start, period_end):
+    records = OfficeExpense.objects.filter(
+        credit_card_id=credit_card_id,
+        payment_mode=OfficeExpense.PaymentMode.CREDIT_CARD,
+        approval_status=OfficeExpense.ApprovalStatus.APPROVED,
+        expense_date__range=(period_start, period_end),
+    ).order_by('expense_date', 'created_at')
+    expense_total = records.filter(
+        transaction_kind=OfficeExpense.TransactionKind.EXPENSE
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+    refund_total = records.filter(
+        transaction_kind=OfficeExpense.TransactionKind.REFUND
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+    return records, expense_total - refund_total
+
+
+@login_required(login_url='/accounts/login/')
+@permission_required('finance.view_officeexpense', raise_exception=True)
+def office_expense_list(request):
+    today = timezone.localdate()
+    transaction_code = request.GET.get('transaction_code', '').strip().upper()
+    status = request.GET.get('status', '').strip().upper()
+    payment_mode = request.GET.get('payment_mode', '').strip().upper()
+    search_ignores_dates = bool(transaction_code)
+    try:
+        from_date = datetime.strptime(request.GET.get('from_date', ''), '%Y-%m-%d').date()
+    except (TypeError, ValueError):
+        from_date = today.replace(day=1)
+    try:
+        to_date = datetime.strptime(request.GET.get('to_date', ''), '%Y-%m-%d').date()
+    except (TypeError, ValueError):
+        to_date = today
+    expenses = OfficeExpense.objects.select_related(
+        'bank_account', 'credit_card', 'created_by', 'updated_by', 'approved_by', 'original_expense'
+    ).all()
+    if transaction_code:
+        expenses = expenses.filter(transaction_code__iexact=transaction_code)
+    else:
+        expenses = expenses.filter(expense_date__range=(from_date, to_date))
+    if status in OfficeExpense.ApprovalStatus.values:
+        expenses = expenses.filter(approval_status=status)
+    if payment_mode in OfficeExpense.PaymentMode.values:
+        expenses = expenses.filter(payment_mode=payment_mode)
+    if request.GET.get('export') == 'excel':
+        return export_office_expenses_to_excel(expenses)
+    overall_expense_total = expenses.filter(
+        transaction_kind=OfficeExpense.TransactionKind.EXPENSE
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+    overall_refund_total = expenses.filter(
+        transaction_kind=OfficeExpense.TransactionKind.REFUND
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+    page_obj = Paginator(expenses, 25).get_page(request.GET.get('page'))
+    page_records = list(page_obj.object_list)
+    page_expense_total = sum(
+        (item.amount for item in page_records if item.transaction_kind == OfficeExpense.TransactionKind.EXPENSE),
+        Decimal('0'),
+    )
+    page_refund_total = sum(
+        (item.amount for item in page_records if item.transaction_kind == OfficeExpense.TransactionKind.REFUND),
+        Decimal('0'),
+    )
+    query_params = request.GET.copy()
+    query_params.pop('page', None)
+    return render(request, 'finance/office_expense_list.html', {
+        'expenses': page_obj, 'page_obj': page_obj, 'total_count': page_obj.paginator.count,
+        'transaction_code': transaction_code, 'status': status,
+        'payment_mode': payment_mode, 'from_date': from_date.strftime('%Y-%m-%d'),
+        'to_date': to_date.strftime('%Y-%m-%d'), 'search_ignores_dates': search_ignores_dates,
+        'status_choices': OfficeExpense.ApprovalStatus.choices,
+        'payment_mode_choices': OfficeExpense.PaymentMode.choices,
+        'query_string': query_params.urlencode(),
+        'page_expense_total': page_expense_total, 'page_refund_total': page_refund_total,
+        'page_net_total': page_expense_total - page_refund_total,
+        'overall_expense_total': overall_expense_total, 'overall_refund_total': overall_refund_total,
+        'overall_net_total': overall_expense_total - overall_refund_total,
+    })
+
+
+@login_required(login_url='/accounts/login/')
+@permission_required('finance.view_creditcardsettlement', raise_exception=True)
+def card_settlement_list(request):
+    today = timezone.localdate()
+    transaction_code = request.GET.get('transaction_code', '').strip().upper()
+    status = request.GET.get('status', '').strip().upper()
+    search_ignores_dates = bool(transaction_code)
+    try:
+        from_date = datetime.strptime(request.GET.get('from_date', ''), '%Y-%m-%d').date()
+    except (TypeError, ValueError):
+        from_date = today.replace(day=1)
+    try:
+        to_date = datetime.strptime(request.GET.get('to_date', ''), '%Y-%m-%d').date()
+    except (TypeError, ValueError):
+        to_date = today
+    settlements = CreditCardSettlement.objects.select_related(
+        'credit_card', 'bank_account', 'created_by', 'updated_by', 'approved_by'
+    )
+    if transaction_code:
+        settlements = settlements.filter(transaction_code__iexact=transaction_code)
+    else:
+        settlements = settlements.filter(settlement_date__range=(from_date, to_date))
+    if status in CreditCardSettlement.ApprovalStatus.values:
+        settlements = settlements.filter(approval_status=status)
+    if request.GET.get('export') == 'excel':
+        return export_card_settlements_to_excel(settlements)
+    overall_total = settlements.aggregate(total=Sum('amount'))['total'] or Decimal('0')
+    page_obj = Paginator(settlements, 25).get_page(request.GET.get('page'))
+    page_total = sum((item.amount for item in page_obj.object_list), Decimal('0'))
+    query_params = request.GET.copy()
+    query_params.pop('page', None)
+    return render(request, 'finance/card_settlement_list.html', {
+        'settlements': page_obj, 'page_obj': page_obj, 'total_count': page_obj.paginator.count,
+        'transaction_code': transaction_code, 'status': status,
+        'from_date': from_date.strftime('%Y-%m-%d'),
+        'to_date': to_date.strftime('%Y-%m-%d'), 'search_ignores_dates': search_ignores_dates,
+        'status_choices': CreditCardSettlement.ApprovalStatus.choices,
+        'query_string': query_params.urlencode(),
+        'page_total': page_total, 'overall_total': overall_total,
+    })
+
+
+@login_required(login_url='/accounts/login/')
+def card_settlement_preview(request):
+    if not (
+        request.user.has_perm('finance.view_creditcardsettlement')
+        or request.user.has_perm('finance.add_creditcardsettlement')
+        or request.user.has_perm('finance.change_creditcardsettlement')
+    ):
+        raise PermissionDenied
+    credit_card_id = request.GET.get('credit_card', '').strip()
+    try:
+        period_start = datetime.strptime(request.GET.get('period_start', ''), '%Y-%m-%d').date()
+        period_end = datetime.strptime(request.GET.get('period_end', ''), '%Y-%m-%d').date()
+    except (TypeError, ValueError):
+        return JsonResponse({'error': 'Select the credit card and both card bill period dates.'}, status=400)
+    if not credit_card_id.isdigit():
+        return JsonResponse({'error': 'Select the credit card being paid.'}, status=400)
+    if period_end < period_start:
+        return JsonResponse({'error': 'Card bill period to cannot be before card bill period from.'}, status=400)
+    if not OfficeCreditCard.objects.filter(pk=credit_card_id).exists():
+        return JsonResponse({'error': 'The selected credit card was not found.'}, status=404)
+    records, calculated_total = _credit_card_period_expenses(credit_card_id, period_start, period_end)
+    return JsonResponse({
+        'calculated_total': str(calculated_total),
+        'record_count': records.count(),
+        'transactions': [
+            {
+                'id': item.transaction_code,
+                'date': item.expense_date.isoformat(),
+                'kind': item.get_transaction_kind_display(),
+                'amount': str(item.amount),
+            }
+            for item in records
+        ],
+    })
+
+
+@login_required(login_url='/accounts/login/')
+@permission_required('finance.add_officeexpense', raise_exception=True)
+def office_expense_create(request):
+    form = OfficeExpenseForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        expense = form.save(commit=False)
+        expense.created_by = expense.updated_by = request.user
+        expense.save()
+        messages.success(request, 'Office expense submitted for approval.')
+        return redirect('finance:office_expenses')
+    return render(request, 'finance/office_expense_form.html', {'form': form, 'title': 'Add Office Expense'})
+
+
+@login_required(login_url='/accounts/login/')
+@permission_required('finance.change_officeexpense', raise_exception=True)
+def office_expense_edit(request, pk):
+    expense = get_object_or_404(OfficeExpense, pk=pk)
+    if expense.approval_status != OfficeExpense.ApprovalStatus.PENDING:
+        messages.error(request, 'Only pending office expenses can be edited.')
+        return redirect('finance:office_expenses')
+    form = OfficeExpenseForm(request.POST or None, instance=expense)
+    if request.method == 'POST' and form.is_valid():
+        expense = form.save(commit=False)
+        expense.updated_by = request.user
+        expense.save()
+        messages.success(request, 'Office expense updated.')
+        return redirect('finance:office_expenses')
+    return render(request, 'finance/office_expense_form.html', {'form': form, 'title': 'Edit Office Expense'})
+
+
+@login_required(login_url='/accounts/login/')
+@permission_required('finance.view_officeexpense', raise_exception=True)
+def office_expense_detail(request, pk):
+    expense = get_object_or_404(
+        OfficeExpense.objects.select_related(
+            'bank_account', 'credit_card', 'original_expense', 'created_by',
+            'updated_by', 'approved_by'
+        ),
+        pk=pk,
+    )
+    return render(request, 'finance/office_expense_detail.html', {'expense': expense})
+
+
+@login_required(login_url='/accounts/login/')
+@permission_required('finance.view_officeexpense', raise_exception=True)
+def office_expense_lookup(request):
+    transaction_code = request.GET.get('transaction_code', '').strip().upper()
+    if not transaction_code:
+        return JsonResponse({'error': 'Enter an expense transaction ID.'}, status=400)
+    expense = OfficeExpense.objects.select_related('bank_account', 'credit_card').filter(
+        transaction_code__iexact=transaction_code,
+        transaction_kind=OfficeExpense.TransactionKind.EXPENSE,
+        approval_status=OfficeExpense.ApprovalStatus.APPROVED,
+    ).first()
+    if not expense:
+        return JsonResponse({'error': 'No approved expense was found with this ID.'}, status=404)
+    previous_refunds = expense.refunds.exclude(
+        approval_status=OfficeExpense.ApprovalStatus.REJECTED
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+    remaining_amount = expense.amount - previous_refunds
+    if remaining_amount <= 0:
+        return JsonResponse({'error': 'This expense has already been fully refunded.'}, status=400)
+    return JsonResponse({
+        'id': expense.pk, 'transaction_code': expense.transaction_code,
+        'category': expense.category, 'other_category': expense.other_category,
+        'vendor': expense.vendor, 'description': expense.description,
+        'amount': str(remaining_amount), 'original_amount': str(expense.amount),
+        'payment_mode': expense.payment_mode,
+        'bank_account': expense.bank_account_id or '',
+        'bank_account_label': str(expense.bank_account) if expense.bank_account else '',
+        'credit_card': expense.credit_card_id or '',
+        'credit_card_label': str(expense.credit_card) if expense.credit_card else '',
+        'frequency': expense.frequency,
+        'service_period_start': expense.service_period_start.isoformat() if expense.service_period_start else '',
+        'service_period_end': expense.service_period_end.isoformat() if expense.service_period_end else '',
+        'memo': expense.memo,
+    })
+
+
+def _decide_record(request, record, pending_value, approved_value, rejected_value, redirect_name):
+    if record.created_by_id == request.user.id:
+        messages.error(request, 'You cannot approve or reject a transaction that you created.')
+        return redirect(redirect_name)
+    if request.method != 'POST':
+        return render(request, 'finance/office_approval_form.html', {'record': record, 'cancel_url_name': redirect_name})
+    if record.approval_status != pending_value:
+        messages.error(request, 'This record has already been decided.')
+        return redirect(redirect_name)
+    decision = request.POST.get('decision')
+    status_memo = request.POST.get('status_memo', '').strip()
+    if decision not in (approved_value, rejected_value):
+        messages.error(request, 'Select Approve or Reject.')
+    elif decision == rejected_value and not status_memo:
+        messages.error(request, 'A rejection reason is required.')
+    else:
+        record.approval_status = decision
+        record.status_memo = status_memo
+        record.approved_by = request.user
+        record.decided_at = timezone.now()
+        record.updated_by = request.user
+        record.save()
+        messages.success(request, f'{record.transaction_code} was {decision.lower()}.')
+        return redirect(redirect_name)
+    return render(request, 'finance/office_approval_form.html', {
+        'record': record, 'status_memo': status_memo, 'cancel_url_name': redirect_name,
+    })
+
+
+@login_required(login_url='/accounts/login/')
+@permission_required('finance.change_officeexpense', raise_exception=True)
+def office_expense_decide(request, pk):
+    record = get_object_or_404(OfficeExpense, pk=pk)
+    return _decide_record(request, record, OfficeExpense.ApprovalStatus.PENDING,
+                          OfficeExpense.ApprovalStatus.APPROVED, OfficeExpense.ApprovalStatus.REJECTED,
+                          'finance:office_expenses')
+
+
+@login_required(login_url='/accounts/login/')
+@permission_required('finance.add_creditcardsettlement', raise_exception=True)
+def card_settlement_create(request):
+    form = CreditCardSettlementForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        settlement = form.save(commit=False)
+        settlement.created_by = settlement.updated_by = request.user
+        matched_expenses, calculated_total = _credit_card_period_expenses(
+            settlement.credit_card_id, settlement.statement_period_start, settlement.statement_period_end
+        )
+        settlement.calculated_expense_total = calculated_total
+        settlement.save()
+        settlement.matched_expenses.set(matched_expenses)
+        messages.success(request, 'Credit-card settlement submitted for approval. It was not recorded as an expense.')
+        return redirect('finance:card_settlements')
+    return render(request, 'finance/office_expense_form.html', {'form': form, 'title': 'Add Credit Card Settlement'})
+
+
+@login_required(login_url='/accounts/login/')
+@permission_required('finance.change_creditcardsettlement', raise_exception=True)
+def card_settlement_edit(request, pk):
+    settlement = get_object_or_404(CreditCardSettlement, pk=pk)
+    if settlement.approval_status != CreditCardSettlement.ApprovalStatus.PENDING:
+        messages.error(request, 'Only pending settlements can be edited.')
+        return redirect('finance:card_settlements')
+    form = CreditCardSettlementForm(request.POST or None, instance=settlement)
+    if request.method == 'POST' and form.is_valid():
+        settlement = form.save(commit=False)
+        settlement.updated_by = request.user
+        matched_expenses, calculated_total = _credit_card_period_expenses(
+            settlement.credit_card_id, settlement.statement_period_start, settlement.statement_period_end
+        )
+        settlement.calculated_expense_total = calculated_total
+        settlement.save()
+        settlement.matched_expenses.set(matched_expenses)
+        messages.success(request, 'Credit-card settlement updated.')
+        return redirect('finance:card_settlements')
+    return render(request, 'finance/office_expense_form.html', {'form': form, 'title': 'Edit Credit Card Settlement'})
+
+
+@login_required(login_url='/accounts/login/')
+@permission_required('finance.view_creditcardsettlement', raise_exception=True)
+def card_settlement_detail(request, pk):
+    settlement = get_object_or_404(
+        CreditCardSettlement.objects.select_related(
+            'credit_card', 'bank_account', 'created_by', 'updated_by', 'approved_by'
+        ).prefetch_related('matched_expenses'),
+        pk=pk,
+    )
+    return render(request, 'finance/card_settlement_detail.html', {'settlement': settlement})
+
+
+@login_required(login_url='/accounts/login/')
+@permission_required('finance.change_creditcardsettlement', raise_exception=True)
+def card_settlement_decide(request, pk):
+    record = get_object_or_404(CreditCardSettlement, pk=pk)
+    if record.created_by_id == request.user.id:
+        messages.error(request, 'You cannot approve or reject a transaction that you created.')
+        return redirect('finance:card_settlements')
+    if not record.is_amount_matched:
+        messages.error(
+            request,
+            'This card bill payment cannot be reviewed because the bank deduction does not match the approved expense total.'
+        )
+        return redirect('finance:card_settlements')
+    return _decide_record(request, record, CreditCardSettlement.ApprovalStatus.PENDING,
+                          CreditCardSettlement.ApprovalStatus.APPROVED, CreditCardSettlement.ApprovalStatus.REJECTED,
+                          'finance:card_settlements')
+
+
+@login_required(login_url='/accounts/login/')
+@user_passes_test(lambda user: user.is_superuser)
+def office_payment_accounts(request):
+    return render(request, 'finance/office_payment_accounts.html', {
+        'bank_accounts': OfficeBankAccount.objects.all(), 'credit_cards': OfficeCreditCard.objects.all(),
+    })
+
+
+@login_required(login_url='/accounts/login/')
+@user_passes_test(lambda user: user.is_superuser)
+def office_bank_account_create(request):
+    form = OfficeBankAccountForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        account = form.save(commit=False)
+        account.created_by = account.updated_by = request.user
+        account.save()
+        return redirect('finance:office_payment_accounts')
+    return render(request, 'finance/office_expense_form.html', {'form': form, 'title': 'Add Bank Account'})
+
+
+@login_required(login_url='/accounts/login/')
+@user_passes_test(lambda user: user.is_superuser)
+def office_bank_account_edit(request, pk):
+    account = get_object_or_404(OfficeBankAccount, pk=pk)
+    form = OfficeBankAccountForm(request.POST or None, instance=account)
+    if request.method == 'POST' and form.is_valid():
+        account = form.save(commit=False)
+        account.updated_by = request.user
+        account.save()
+        return redirect('finance:office_payment_accounts')
+    return render(request, 'finance/office_expense_form.html', {'form': form, 'title': 'Edit Bank Account'})
+
+
+@login_required(login_url='/accounts/login/')
+@user_passes_test(lambda user: user.is_superuser)
+def office_credit_card_create(request):
+    form = OfficeCreditCardForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        card = form.save(commit=False)
+        card.created_by = card.updated_by = request.user
+        card.save()
+        return redirect('finance:office_payment_accounts')
+    return render(request, 'finance/office_expense_form.html', {'form': form, 'title': 'Add Credit Card'})
+
+
+@login_required(login_url='/accounts/login/')
+@user_passes_test(lambda user: user.is_superuser)
+def office_credit_card_edit(request, pk):
+    card = get_object_or_404(OfficeCreditCard, pk=pk)
+    form = OfficeCreditCardForm(request.POST or None, instance=card)
+    if request.method == 'POST' and form.is_valid():
+        card = form.save(commit=False)
+        card.updated_by = request.user
+        card.save()
+        return redirect('finance:office_payment_accounts')
+    return render(request, 'finance/office_expense_form.html', {'form': form, 'title': 'Edit Credit Card'})
 
 
 @login_required(login_url='/accounts/login/')
