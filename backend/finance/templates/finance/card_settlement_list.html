@@ -1,10 +1,437 @@
-{% extends "base.html" %}{% block title %}Credit-card Bill Payments{% endblock %}{% block content %}<div class="container-fluid py-3">
-{% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>{% endfor %}
-<div class="d-flex justify-content-between align-items-center mb-4"><div><h4 class="mb-1"><i class="bi bi-credit-card text-primary me-2"></i>Credit-card Bill Payments</h4><p class="text-muted small mb-0">Bank deductions used to pay card bills—not new expenses</p></div><div><a class="btn btn-outline-secondary btn-sm" href="{% url 'finance:office_expenses' %}"><i class="bi bi-arrow-left me-1"></i>Office Expenses</a> {% if perms.finance.add_creditcardsettlement %}<a class="btn btn-success btn-sm" href="{% url 'finance:card_settlement_add' %}"><i class="bi bi-plus-circle me-1"></i>Add Bill Payment</a>{% endif %}</div></div>
-<div class="card mb-4"><div class="card-header bg-light"><h6 class="mb-0"><i class="bi bi-search me-2"></i>Search & Filter</h6></div><div class="card-body"><form method="get"><div class="row g-2 align-items-end flex-lg-nowrap">
-<div class="col-lg"><label class="form-label fw-semibold small">Transaction Code</label><input class="form-control form-control-sm text-uppercase" name="transaction_code" value="{{ transaction_code }}" placeholder="e.g. CC-ABC123"></div><div class="col-lg"><label class="form-label fw-semibold small">Status</label><select class="form-select form-select-sm" name="status"><option value="">All statuses</option>{% for value,label in status_choices %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div><div class="col-lg"><label class="form-label fw-semibold small">From Date</label><input type="date" class="form-control form-control-sm date-filter" name="from_date" value="{{ from_date }}" {% if search_ignores_dates %}disabled{% endif %}></div><div class="col-lg"><label class="form-label fw-semibold small">To Date</label><input type="date" class="form-control form-control-sm date-filter" name="to_date" value="{{ to_date }}" {% if search_ignores_dates %}disabled{% endif %}></div><div class="col-lg-auto text-nowrap"><button class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>Search</button> <a class="btn btn-outline-secondary btn-sm" href="{% url 'finance:card_settlements' %}">Reset</a> <a class="btn btn-outline-success btn-sm" href="?{% if query_string %}{{ query_string }}&{% endif %}export=excel"><i class="bi bi-file-earmark-excel me-1"></i>Excel</a></div>
-</div>{% if search_ignores_dates %}<div class="alert alert-info py-2 mb-0 mt-3 small">Transaction-code search checks all dates.</div>{% endif %}</form></div></div>
-<div class="card"><div class="card-header bg-light d-flex justify-content-between"><h6 class="mb-0"><i class="bi bi-table me-2"></i>Card Bill Payment Records</h6><span class="badge bg-primary">{{ total_count }} Records</span></div><div class="px-3 py-2 border-bottom bg-light-subtle text-muted small"><i class="bi bi-calendar3 me-1"></i>{% if search_ignores_dates %}Showing exact transaction-code result across all dates{% else %}Showing bank deductions from {{ from_date }} to {{ to_date }}{% endif %}</div><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0 table-sm"><thead class="custom-thead"><tr><th class="text-center small">ID</th><th class="text-center small">Bank Deduction Date</th><th class="text-center small">Credit Card Paid</th><th class="text-center small">Bank Account Charged</th><th class="text-center small">Amount Deducted</th><th class="text-center small">Expense Total</th><th class="text-center small">Comparison</th><th class="text-center small">Status</th><th class="text-center small">Updated At</th><th class="text-center small">Updated By</th><th class="text-center small">Created At</th><th class="text-center small">Created By</th><th class="text-center small">Actions</th></tr></thead><tbody>
-{% for item in settlements %}<tr><td class="text-center fw-semibold"><a class="text-decoration-none" href="{% url 'finance:card_settlement_detail' item.pk %}">{{ item.transaction_code }}</a></td><td class="text-center">{{ item.settlement_date|date:"Y-m-d" }}</td><td class="text-center">{{ item.credit_card }}</td><td class="text-center">{{ item.bank_account }}</td><td class="text-center"><strong>¥{{ item.amount|floatformat:0 }}</strong></td><td class="text-center">¥{{ item.calculated_expense_total|floatformat:0 }}</td><td class="text-center">{% if item.is_amount_matched %}<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Matched</span>{% else %}<span class="badge bg-warning text-dark" title="Difference ¥{{ item.amount_difference|floatformat:0 }}"><i class="bi bi-exclamation-triangle me-1"></i>Not Matched</span>{% endif %}</td><td class="text-center"><span class="badge {% if item.approval_status == 'APPROVED' %}bg-success{% elif item.approval_status == 'REJECTED' %}bg-danger{% else %}bg-warning text-dark{% endif %}">{{ item.get_approval_status_display }}</span></td><td class="text-center">{{ item.updated_at|date:"Y-m-d H:i" }}</td><td class="text-center">{{ item.updated_by.first_name|default:'-' }}</td><td class="text-center">{{ item.created_at|date:"Y-m-d H:i" }}</td><td class="text-center">{{ item.created_by.first_name|default:'-' }}</td><td class="text-center">{% if item.approval_status == 'PENDING' and perms.finance.change_creditcardsettlement %}<a class="btn btn-outline-warning btn-sm" href="{% url 'finance:card_settlement_edit' item.pk %}" title="Edit"><i class="bi bi-pencil"></i></a> <a class="btn btn-outline-primary btn-sm" href="{% url 'finance:card_settlement_decide' item.pk %}" title="Review"><i class="bi bi-check2-square"></i></a>{% else %}<button class="btn btn-outline-secondary btn-sm" type="button" disabled title="Approved or rejected records cannot be edited"><i class="bi bi-pencil"></i></button>{% endif %}</td></tr>{% empty %}<tr><td colspan="13" class="text-center py-5 text-muted">No credit-card bill payments found.</td></tr>{% endfor %}</tbody>{% if total_count %}<tfoot class="table-light"><tr class="fw-bold"><td colspan="4" class="text-end">This Page Total:</td><td class="text-center text-info">¥{{ page_total|floatformat:0 }}</td><td colspan="8"></td></tr><tr class="fw-bold border-top"><td colspan="4" class="text-end">Overall Filtered Total (All Pages):</td><td class="text-center text-success">¥{{ overall_total|floatformat:0 }}</td><td colspan="8"></td></tr></tfoot>{% endif %}</table></div></div>{% if page_obj.has_other_pages %}<div class="card-footer bg-light d-flex justify-content-between"><span class="small text-muted">Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ total_count }}</span><nav><ul class="pagination pagination-sm mb-0">{% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a></li>{% endif %}<li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>{% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a></li>{% endif %}</ul></nav></div>{% endif %}</div>
-</div><script>document.addEventListener('DOMContentLoaded',function(){const code=document.querySelector('[name="transaction_code"]'),dates=document.querySelectorAll('.date-filter');function sync(){dates.forEach(el=>el.disabled=Boolean(code.value.trim()))}code.addEventListener('input',sync);sync()});</script>
-<script>document.addEventListener('DOMContentLoaded',function(){function disableReview(url,message){const link=document.querySelector('a[href="'+url+'"]');if(!link)return;const button=document.createElement('button');button.type='button';button.disabled=true;button.className='btn btn-outline-secondary btn-sm';button.title=message;button.innerHTML='<i class="bi bi-check2-square"></i>';link.replaceWith(button)}{% for item in settlements %}{% if item.approval_status == 'PENDING' %}{% if item.created_by_id == user.id %}disableReview('{% url "finance:card_settlement_decide" item.pk %}','You cannot review a transaction you created');{% elif not item.is_amount_matched %}disableReview('{% url "finance:card_settlement_decide" item.pk %}','Bank deduction and approved expense total must match before review');{% endif %}{% endif %}{% endfor %}});</script>{% endblock %}
+{% extends "base.html" %}
+
+{% block title %}
+    Credit-card Bill Payments
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid py-3">
+
+    <!-- Messages -->
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }}">
+            {{ message }}
+        </div>
+    {% endfor %}
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1">
+                <i class="bi bi-credit-card text-primary me-2"></i>
+                Credit-card Bill Payments
+            </h4>
+            <p class="text-muted small mb-0">
+                Bank deductions used to pay card bills—not new expenses
+            </p>
+        </div>
+
+        <div>
+            <a class="btn btn-outline-secondary btn-sm"
+               href="{% urlow-left me-1"></i>
+                Office Expenses
+            </a>
+
+            {% if perms.finance.add_creditcardsettlement %}
+                <a class="btn btn-success btn-sm"
+                   href="{% url 'finance:card_settlement_add'/i>
+                    Add Bill Payment
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Search Filter -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h6 class="mb-0">
+                <i class="bi bi-search me-2"></i>
+                Search & Filter
+            </h6>
+        </div>
+
+        <div class="card-body">
+            <form method="get">
+
+                <div class="row g-2 align-items-end flex-lg-nowrap">
+
+                    <div class="col-lg">
+                        <label class="form-label fw-semibold small">
+                            Transaction Code
+                        </label>
+                        <input type="text"
+                               class="form-control form-control-sm text-uppercase"
+                               name="transaction_code"
+                               value="{{ transaction_code }}"
+                               placeholder="e.g. CC-ABC123">
+                    </div>
+
+                    <div class="col-lg">
+                        <label class="form-label fw-semibold small">
+                            Status
+                        </label>
+                        <select class="form-select form-select-sm" name="status">
+                            <option value="">All statuses</option>
+
+                            {% for value, label in status_choices %}
+                                <option value="{{ value }}"
+                                        {% if status == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-lg">
+                        <label class="form-label fw-semibold small">
+                            From Date
+                        </label>
+                        <input type="date"
+                               class="form-control form-control-sm date-filter"
+                               name="from_date"
+                               value="{{ from_date }}"
+                               {% if search_ignores_dates %}disabled{% endif %}>
+                    </div>
+
+                    <div class="col-lg">
+                        <label class="form-label fw-semibold small">
+                            To Date
+                        </label>
+                        <input type="date"
+                               class="form-control form-control-sm date-filter"
+                               name="to_date"
+                               value="{{ to_date }}"
+                               {% if search_ignores_dates %}disabled{% endif %}>
+                    </div>
+
+                    <div class="col-lg-auto text-nowrap">
+                        <button class="btn btn-primary btn-sm">
+                            <i class="bi bi-search me-1"></i>
+                            Search
+                        </button>
+
+                        {% url 'finance:card_settlements' %}
+                            Reset
+                        </a>
+
+                        ?{% if query_string %}{{ query_string }}&{% endif %}export=excel
+                            <i class="bi bi-file-earmark-excel me-1"></i>
+                            Excel
+                        </a>
+                    </div>
+
+                </div>
+
+                {% if search_ignores_dates %}
+                    <div class="alert alert-info py-2 mb-0 mt-3 small">
+                        Transaction-code search checks all dates.
+                    </div>
+                {% endif %}
+
+            </form>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="card">
+
+        <div class="card-header bg-light d-flex justify-content-between">
+            <h6 class="mb-0">
+                <i class="bi bi-table me-2"></i>
+                Card Bill Payment Records
+            </h6>
+
+            <span class="badge bg-primary">
+                {{ total_count }} Records
+            </span>
+        </div>
+
+        <div class="px-3 py-2 border-bottom bg-light-subtle text-muted small">
+            <i class="bi bi-calendar3 me-1"></i>
+
+            {% if search_ignores_dates %}
+                Showing exact transaction-code result across all dates
+            {% else %}
+                Showing bank deductions from {{ from_date }} to {{ to_date }}
+            {% endif %}
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+
+                <table class="table table-hover mb-0 table-sm">
+
+                    <thead class="custom-thead">
+                        <tr>
+                            <th class="text-center small">ID</th>
+                            <th class="text-center small">Bank Deduction Date</th>
+                            <th class="text-center small">Credit Card Paid</th>
+                            <th class="text-center small">Bank Account Charged</th>
+                            <th class="text-center small">Amount Deducted</th>
+                            <th class="text-center small">Expense Total</th>
+                            <th class="text-center small">Comparison</th>
+                            <th class="text-center small">Status</th>
+                            <th class="text-center small">Updated At</th>
+                            <th class="text-center small">Updated By</th>
+                            <th class="text-center small">Created At</th>
+                            <th class="text-center small">Created By</th>
+                            <th class="text-center small">Actions</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for item in settlements %}
+                        <tr>
+
+                            <td class="text-center fw-semibold">
+                                {% url 'finance:card_settlement_detail' item.pk %}
+                                    {{ item.transaction_code }}
+                                </a>
+                            </td>
+
+                            <td class="text-center">
+                                {{ item.settlement_date|date:"Y-m-d" }}
+                            </td>
+
+                            <td class="text-center">
+                                {{ item.credit_card }}
+                            </td>
+
+                            <td class="text-center">
+                                {{ item.bank_account }}
+                            </td>
+
+                            <td class="text-center">
+                                <strong>
+                                    ¥{{ item.amount|floatformat:0 }}
+                                </strong>
+                            </td>
+
+                            <td class="text-center">
+                                ¥{{ item.calculated_expense_total|floatformat:0 }}
+                            </td>
+
+                            <td class="text-center">
+                                {% if item.is_amount_matched %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle me-1"></i>
+                                        Matched
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark"
+                                          title="Difference ¥{{ item.amount_difference|floatformat:0 }}">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>
+                                        Not Matched
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <td class="text-center">
+                                <span class="badge
+                                    {% if item.approval_status == 'APPROVED' %}
+                                        bg-success
+                                    {% elif item.approval_status == 'REJECTED' %}
+                                        bg-danger
+                                    {% else %}
+                                        bg-warning text-dark
+                                    {% endif %}">
+                                    {{ item.get_approval_status_display }}
+                                </span>
+                            </td>
+
+                            <td class="text-center">
+                                {{ item.updated_at|date:"Y-m-d H:i" }}
+                            </td>
+
+                            <td class="text-center">
+                                {{ item.updated_by.first_name|default:'-' }}
+                            </td>
+
+                            <td class="text-center">
+                                {{ item.created_at|date:"Y-m-d H:i" }}
+                            </td>
+
+                            <td class="text-center">
+                                {{ item.created_by.first_name|default:'-' }}
+                            </td>
+
+                            <td class="text-center">
+
+                                {% if item.approval_status == 'PENDING' and perms.finance.change_creditcardsettlement %}
+
+                                    {% url 'finance:card_settlement_edit' item.pk %}
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+
+                                    {% url 'finance:card_settlement_decide' item.pk %}
+                                        <i class="bi bi-check2-square"></i>
+                                    </a>
+
+                                {% else %}
+
+                                    <button class="btn btn-outline-secondary btn-sm"
+                                            type="button"
+                                            disabled
+                                            title="Approved or rejected records cannot be edited">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+
+                                {% endif %}
+
+                            </td>
+
+                        </tr>
+
+                        {% empty %}
+
+                        <tr>
+                            <td colspan="13"
+                                class="text-center py-5 text-muted">
+                                No credit-card bill payments found.
+                            </td>
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                    {% if total_count %}
+                    <tfoot class="table-light">
+
+                        <tr class="fw-bold">
+                            <td colspan="4" class="text-end">
+                                This Page Total:
+                            </td>
+                            <td class="text-center text-info">
+                                ¥{{ page_total|floatformat:0 }}
+                            </td>
+                            <td colspan="8"></td>
+                        </tr>
+
+                        <tr class="fw-bold border-top">
+                            <td colspan="4" class="text-end">
+                                Overall Filtered Total (All Pages):
+                            </td>
+                            <td class="text-center text-success">
+                                ¥{{ overall_total|floatformat:0 }}
+                            </td>
+                            <td colspan="8"></td>
+                        </tr>
+
+                    </tfoot>
+                    {% endif %}
+
+                </table>
+
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="card-footer bg-light d-flex justify-content-between">
+
+            <span class="small text-muted">
+                Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}
+                of {{ total_count }}
+            </span>
+
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            ?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}
+                                Previous
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item disabled">
+                        <span class="page-link">
+                            Page {{ page_obj.number }}
+                            of
+                            {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            ?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}
+                                Next
+                            </a>
+                        </li>
+                    {% endif %}
+
+                </ul>
+            </nav>
+
+        </div>
+        {% endif %}
+
+    </div>
+
+</div>
+
+<!-- Date Filter Toggle -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const code = document.querySelector('[name="transaction_code"]');
+    const dates = document.querySelectorAll('.date-filter');
+
+    function sync() {
+        dates.forEach(el => {
+            el.disabled = Boolean(code.value.trim());
+        });
+    }
+
+    code.addEventListener('input', sync);
+    sync();
+
+});
+</script>
+
+<!-- Review Button Restrictions -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    function disableReview(url, message) {
+
+        const link = document.querySelector(`a[href="${url}"]`);
+
+        if (!link) return;
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.disabled = true;
+        button.className = 'btn btn-outline-secondary btn-sm';
+        button.title = message;
+        button.innerHTML = '<i class="bi bi-check2-square"></i>';
+
+        link.replaceWith(button);
+    }
+
+    {% for item in settlements %}
+        {% if item.approval_status == 'PENDING' %}
+
+            {% if item.created_by_id == user.id %}
+                disableReview(
+                    '{% url "finance:card_settlement_decide" item.pk %}',
+                    'You cannot review a transaction you created'
+                );
+            {% elif not item.is_amount_matched %}
+                disableReview(
+                    '{% url "finance:card_settlement_decide" item.pk %}',
+                    'Bank deduction and approved expense total must match before review'
+                );
+            {% endif %}
+
+        {% endif %}
+    {% endfor %}
+
+});
+</script>
+
+{% endblock %}
