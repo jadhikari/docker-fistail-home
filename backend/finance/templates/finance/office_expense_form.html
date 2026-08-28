@@ -1,51 +1,126 @@
 {% extends "base.html" %}
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
-<style>
-.office-form .section-card{border:1px solid #e9ecef;border-radius:.75rem;background:#fff}.office-form .section-title{color:#495057;font-size:.82rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase}.office-form .section-icon{width:2rem;height:2rem;display:inline-flex;align-items:center;justify-content:center;border-radius:.55rem;background:rgba(13,110,253,.1);color:#0d6efd}.office-form .required-mark{color:#dc3545;margin-left:.15rem}.office-form .amount-wrap{position:relative}.office-form .amount-wrap:before{content:"¥";position:absolute;left:.75rem;top:50%;transform:translateY(-50%);z-index:2;color:#6c757d;font-weight:600}.office-form .amount-wrap input{padding-left:1.8rem}.office-form .smart-note{background:#f8f9fa;border-left:3px solid #0d6efd}
-</style>
-<div class="container-fluid py-3 office-form">
-  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-4">
-    <div><h4 class="mb-1"><i class="bi bi-receipt-cutoff text-primary me-2"></i>{{ title }}</h4><p class="text-muted small mb-0">{% if form.transaction_kind %}Record an office purchase or refund for approval.{% elif form.settlement_date %}Record money deducted from the bank to pay a credit-card bill. This is not another expense.{% else %}Configure an office payment account for future transactions.{% endif %}</p></div>
-    <a class="btn btn-outline-secondary btn-sm" href="{% if form.settlement_date %}{% url 'finance:card_settlements' %}{% elif form.transaction_kind %}{% url 'finance:office_expenses' %}{% else %}{% url 'finance:office_payment_accounts' %}{% endif %}"><i class="bi bi-arrow-left me-1"></i>Back</a>
-  </div>
-  <form method="post" novalidate>{% csrf_token %}
-    {% if form.non_field_errors %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>{{ form.non_field_errors }}</div>{% endif %}
-    {% if form.transaction_kind %}
-      <div class="section-card p-3 p-md-4 mb-3"><div class="d-flex align-items-center gap-2 mb-3"><span class="section-icon"><i class="bi bi-card-checklist"></i></span><span class="section-title">Transaction</span></div><div class="row g-3">
-      {% for field in form %}{% if field.name == 'transaction_kind' or field.name == 'expense_date' %}{% include "finance/office_form_field.html" with width="col-md-4" %}{% endif %}{% endfor %}
-      {{ form.original_expense }}
-      <div class="col-md-8 d-none" id="refund-original-search">
-        <label class="form-label fw-semibold small" for="original-transaction-code">Original approved expense ID<span class="required-mark">*</span></label>
-        <div class="input-group input-group-sm"><input type="text" class="form-control text-uppercase" id="original-transaction-code" value="{% if form.instance.original_expense %}{{ form.instance.original_expense.transaction_code }}{% endif %}" placeholder="e.g. OE-ABC123" autocomplete="off"><button class="btn btn-outline-primary" type="button" id="find-original-expense"><i class="bi bi-search me-1"></i>Find Expense</button></div>
-        <div class="form-text">Enter an approved expense ID. Transactions are not displayed in a list.</div>
-        <div class="small mt-1" id="original-expense-result"></div>
-        {% if form.original_expense.errors %}<div class="text-danger small mt-1">{{ form.original_expense.errors|striptags }}</div>{% endif %}
-      </div>
-      </div></div>
-      <div class="section-card p-3 p-md-4 mb-3"><div class="d-flex align-items-center gap-2 mb-3"><span class="section-icon"><i class="bi bi-shop"></i></span><span class="section-title">Expense details</span></div><div class="row g-3">
-      {% for field in form %}{% if field.name == 'category' or field.name == 'other_category' or field.name == 'vendor' or field.name == 'description' or field.name == 'amount' %}{% include "finance/office_form_field.html" with width="col-md-4" %}{% endif %}{% endfor %}
-      </div></div>
-      <div class="section-card p-3 p-md-4 mb-3"><div class="d-flex align-items-center gap-2 mb-3"><span class="section-icon"><i class="bi bi-wallet2"></i></span><span class="section-title">Payment</span></div><div class="smart-note rounded p-2 small text-muted mb-3" id="payment-guidance"><i class="bi bi-info-circle me-1"></i><span></span></div><div class="row g-3">
-      {% for field in form %}{% if field.name == 'payment_mode' or field.name == 'bank_account' or field.name == 'credit_card' %}{% include "finance/office_form_field.html" with width="col-md-4" %}{% endif %}{% endfor %}
-      </div></div>
-      <div class="section-card p-3 p-md-4 mb-3"><div class="d-flex align-items-center gap-2 mb-3"><span class="section-icon"><i class="bi bi-calendar3"></i></span><span class="section-title">Schedule and notes</span></div><div class="row g-3">
-      {% for field in form %}{% if field.name == 'frequency' or field.name == 'service_period_start' or field.name == 'service_period_end' or field.name == 'memo' %}{% if field.name == 'memo' %}{% include "finance/office_form_field.html" with width="col-12" %}{% else %}{% include "finance/office_form_field.html" with width="col-md-4" %}{% endif %}{% endif %}{% endfor %}
-      </div></div>
-    {% elif form.settlement_date %}
-      <div class="alert alert-primary d-flex align-items-start"><i class="bi bi-shield-check fs-5 me-2"></i><div><strong>Paying the card bill</strong><div class="small">Use this when the card company deducts the monthly bill from your bank. The individual card purchases are already expenses, so this payment is not counted as a new expense.</div></div></div>
-      <div class="section-card p-3 p-md-4 mb-3"><div class="d-flex align-items-center gap-2 mb-3"><span class="section-icon"><i class="bi bi-credit-card"></i></span><span class="section-title">Settlement details</span></div><div class="row g-3">{% for field in form %}{% if field.name == 'memo' %}{% include "finance/office_form_field.html" with width="col-12" %}{% else %}{% include "finance/office_form_field.html" with width="col-md-4" %}{% endif %}{% endfor %}</div></div>
-      <div class="section-card p-3 p-md-4 mb-3" id="card-bill-comparison"><div class="d-flex align-items-center gap-2 mb-3"><span class="section-icon"><i class="bi bi-calculator"></i></span><span class="section-title">Card bill comparison</span></div><div id="comparison-message" class="alert alert-secondary mb-0"><i class="bi bi-info-circle me-1"></i>Select the card, bank deduction date, and required bill period to calculate approved card expenses.</div><div class="table-responsive d-none mt-3" id="comparison-transactions"><table class="table table-sm table-hover mb-0"><thead class="custom-thead"><tr><th>ID</th><th>Expense Date</th><th>Kind</th><th class="text-end">Amount</th></tr></thead><tbody></tbody></table></div></div>
-    {% else %}
-      <div class="alert alert-light border d-flex align-items-start"><i class="bi bi-shield-lock text-primary fs-5 me-2"></i><div><strong class="small">Store identification details only</strong><div class="text-muted small">Enter only the last four digits—never enter a complete account or card number.</div></div></div>
-      <div class="section-card p-3 p-md-4 mb-3"><div class="d-flex align-items-center gap-2 mb-3"><span class="section-icon"><i class="bi {% if form.issuer %}bi-credit-card-2-front{% else %}bi-bank{% endif %}"></i></span><span class="section-title">{% if form.issuer %}Card identification{% else %}Bank identification{% endif %}</span></div><div class="row g-3">{% for field in form %}{% if field.name == 'name' or field.name == 'bank_name' or field.name == 'issuer' or field.name == 'last_four_digits' %}{% include "finance/office_form_field.html" with width="col-md-4" %}{% endif %}{% endfor %}</div></div>
-      {% if form.issuer %}<div class="section-card p-3 p-md-4 mb-3"><div class="d-flex align-items-center gap-2 mb-3"><span class="section-icon"><i class="bi bi-calendar-check"></i></span><span class="section-title">Monthly card payment setup</span></div><div class="row g-3">{% for field in form %}{% if field.name == 'settlement_bank_account' or field.name == 'closing_day' or field.name == 'payment_day' %}{% include "finance/office_form_field.html" with width="col-md-4" %}{% endif %}{% endfor %}</div></div>{% endif %}
-      <div class="section-card p-3 p-md-4 mb-3"><div class="d-flex align-items-center gap-2 mb-3"><span class="section-icon"><i class="bi bi-toggle-on"></i></span><span class="section-title">Availability</span></div>{% for field in form %}{% if field.name == 'is_active' %}{% include "finance/office_form_field.html" with width="col-12" %}{% endif %}{% endfor %}</div>
-    {% endif %}
-    <div class="d-flex justify-content-end gap-2 py-2"><a class="btn btn-outline-secondary" href="{% if form.settlement_date %}{% url 'finance:card_settlements' %}{% elif form.transaction_kind %}{% url 'finance:office_expenses' %}{% else %}{% url 'finance:office_payment_accounts' %}{% endif %}">Cancel</a><button class="btn btn-primary px-4" type="submit"><i class="bi bi-check-circle me-1"></i>{% if form.instance.pk %}Update{% elif form.transaction_kind or form.settlement_date %}Save for Approval{% else %}Save{% endif %}</button></div>
-  </form>
-</div>
-<script>
+    <style>
+        .office-form .section-card{border:1px solid #e9ecef;border-radius:.75rem;background:#fff}.office-form .section-title{color:#495057;font-size:.82rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase}.office-form .section-icon{width:2rem;height:2rem;display:inline-flex;align-items:center;justify-content:center;border-radius:.55rem;background:rgba(13,110,253,.1);color:#0d6efd}.office-form .required-mark{color:#dc3545;margin-left:.15rem}.office-form .amount-wrap{position:relative}.office-form .amount-wrap:before{content:"¥";position:absolute;left:.75rem;top:50%;transform:translateY(-50%);z-index:2;color:#6c757d;font-weight:600}.office-form .amount-wrap input{padding-left:1.8rem}.office-form .smart-note{background:#f8f9fa;border-left:3px solid #0d6efd}
+    </style>
+    <div class="container-fluid py-3 office-form">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-4">
+            <div><h4 class="mb-1"><i class="bi bi-receipt-cutoff text-primary me-2"></i>{{ title }}</h4><p class="text-muted small mb-0">{% if form.transaction_kind %}Record an office purchase or refund for approval.{% elif form.settlement_date %}Record money deducted from the bank to pay a credit-card bill. This is not another expense.{% else %}Configure an office payment account for future transactions.{% endif %}</p></div>
+            <a class="btn btn-outline-secondary btn-sm"
+               href="{% if form.settlement_date %}{% url 'finance:card_settlements' %}{% elif form.transaction_kind %}{% url 'finance:office_expenses' %}{% else %}{% url 'finance:office_payment_accounts' %}{% endif %}"><i class="bi bi-arrow-left me-1"></i>Back</a>
+        </div>
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>{{ form.non_field_errors }}</div>{% endif %}
+            {% if form.transaction_kind %}
+                <div class="section-card p-3 p-md-4 mb-3">
+                    <div class="d-flex align-items-center gap-2 mb-3"><span class="section-icon"><i class="bi bi-card-checklist"></i></span><span class="section-title">Transaction</span></div>
+                    <div class="row g-3">
+                        {% for field in form %}
+                            {% if field.name == 'transaction_kind' or field.name == 'expense_date' %}
+                                {% include "finance/office_form_field.html" with width="col-md-4" %}
+                            {% endif %}
+                        {% endfor %}
+                        {{ form.original_expense }}
+                        <div class="col-md-8 d-none" id="refund-original-search">
+                            <label class="form-label fw-semibold small" for="original-transaction-code">Original approved expense ID<span class="required-mark">*</span></label>
+                            <div class="input-group input-group-sm"><input type="text"
+       class="form-control text-uppercase"
+       id="original-transaction-code"
+       value="{% if form.instance.original_expense %}{{ form.instance.original_expense.transaction_code }}{% endif %}"
+       placeholder="e.g. OE-ABC123"
+       autocomplete="off"><button class="btn btn-outline-primary"
+        type="button"
+        id="find-original-expense"><i class="bi bi-search me-1"></i>Find Expense</button></div>
+                            <div class="form-text">Enter an approved expense ID. Transactions are not displayed in a list.</div>
+                            <div class="small mt-1" id="original-expense-result"></div>
+                            {% if form.original_expense.errors %}<div class="text-danger small mt-1">{{ form.original_expense.errors|striptags }}</div>{% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="section-card p-3 p-md-4 mb-3">
+                    <div class="d-flex align-items-center gap-2 mb-3"><span class="section-icon"><i class="bi bi-shop"></i></span><span class="section-title">Expense details</span></div>
+                    <div class="row g-3">
+                        {% for field in form %}
+                            {% if field.name == 'category' or field.name == 'other_category' or field.name == 'vendor' or field.name == 'description' or field.name == 'amount' %}
+                                {% include "finance/office_form_field.html" with width="col-md-4" %}
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="section-card p-3 p-md-4 mb-3">
+                    <div class="d-flex align-items-center gap-2 mb-3"><span class="section-icon"><i class="bi bi-wallet2"></i></span><span class="section-title">Payment</span></div>
+                    <div class="smart-note rounded p-2 small text-muted mb-3"
+                         id="payment-guidance">
+                        <i class="bi bi-info-circle me-1"></i><span></span>
+                    </div>
+                    <div class="row g-3">
+                        {% for field in form %}
+                            {% if field.name == 'payment_mode' or field.name == 'bank_account' or field.name == 'credit_card' %}
+                                {% include "finance/office_form_field.html" with width="col-md-4" %}
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="section-card p-3 p-md-4 mb-3">
+                    <div class="d-flex align-items-center gap-2 mb-3"><span class="section-icon"><i class="bi bi-calendar3"></i></span><span class="section-title">Schedule and notes</span></div>
+                    <div class="row g-3">
+                        {% for field in form %}
+                            {% if field.name == 'frequency' or field.name == 'service_period_start' or field.name == 'service_period_end' or field.name == 'memo' %}
+                                {% if field.name == 'memo' %}
+                                    {% include "finance/office_form_field.html" with width="col-12" %}
+                                {% else %}
+                                    {% include "finance/office_form_field.html" with width="col-md-4" %}
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            {% elif form.settlement_date %}
+                <div class="alert alert-primary d-flex align-items-start">
+                    <i class="bi bi-shield-check fs-5 me-2"></i>
+                    <div>
+                        <strong>Paying the card bill</strong>
+                        <div class="small">Use this when the card company deducts the monthly bill from your bank. The individual card purchases are already expenses, so this payment is not counted as a new expense.</div>
+                    </div>
+                </div>
+                <div class="section-card p-3 p-md-4 mb-3"><div class="d-flex align-items-center gap-2 mb-3"><span class="section-icon"><i class="bi bi-credit-card"></i></span><span class="section-title">Settlement details</span></div><div class="row g-3">{% for field in form %}{% if field.name == 'memo' %}{% include "finance/office_form_field.html" with width="col-12" %}{% else %}{% include "finance/office_form_field.html" with width="col-md-4" %}{% endif %}{% endfor %}</div></div>
+                <div class="section-card p-3 p-md-4 mb-3" id="card-bill-comparison">
+                    <div class="d-flex align-items-center gap-2 mb-3"><span class="section-icon"><i class="bi bi-calculator"></i></span><span class="section-title">Card bill comparison</span></div>
+                    <div id="comparison-message" class="alert alert-secondary mb-0"><i class="bi bi-info-circle me-1"></i>Select the card, bank deduction date, and required bill period to calculate approved card expenses.</div>
+                    <div class="table-responsive d-none mt-3" id="comparison-transactions">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="custom-thead">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Expense Date</th>
+                                    <th>Kind</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% else %}
+                <div class="alert alert-light border d-flex align-items-start">
+                    <i class="bi bi-shield-lock text-primary fs-5 me-2"></i>
+                    <div>
+                        <strong class="small">Store identification details only</strong>
+                        <div class="text-muted small">Enter only the last four digits—never enter a complete account or card number.</div>
+                    </div>
+                </div>
+                <div class="section-card p-3 p-md-4 mb-3"><div class="d-flex align-items-center gap-2 mb-3"><span class="section-icon"><i class="bi {% if form.issuer %}bi-credit-card-2-front{% else %}bi-bank{% endif %}"></i></span><span class="section-title">{% if form.issuer %}Card identification{% else %}Bank identification{% endif %}</span></div><div class="row g-3">{% for field in form %}{% if field.name == 'name' or field.name == 'bank_name' or field.name == 'issuer' or field.name == 'last_four_digits' %}{% include "finance/office_form_field.html" with width="col-md-4" %}{% endif %}{% endfor %}</div></div>
+                {% if form.issuer %}<div class="section-card p-3 p-md-4 mb-3"><div class="d-flex align-items-center gap-2 mb-3"><span class="section-icon"><i class="bi bi-calendar-check"></i></span><span class="section-title">Monthly card payment setup</span></div><div class="row g-3">{% for field in form %}{% if field.name == 'settlement_bank_account' or field.name == 'closing_day' or field.name == 'payment_day' %}{% include "finance/office_form_field.html" with width="col-md-4" %}{% endif %}{% endfor %}</div></div>{% endif %}
+                <div class="section-card p-3 p-md-4 mb-3"><div class="d-flex align-items-center gap-2 mb-3"><span class="section-icon"><i class="bi bi-toggle-on"></i></span><span class="section-title">Availability</span></div>{% for field in form %}{% if field.name == 'is_active' %}{% include "finance/office_form_field.html" with width="col-12" %}{% endif %}{% endfor %}</div>
+            {% endif %}
+            <div class="d-flex justify-content-end gap-2 py-2"><a class="btn btn-outline-secondary"
+   href="{% if form.settlement_date %}{% url 'finance:card_settlements' %}{% elif form.transaction_kind %}{% url 'finance:office_expenses' %}{% else %}{% url 'finance:office_payment_accounts' %}{% endif %}">Cancel</a><button class="btn btn-primary px-4" type="submit"><i class="bi bi-check-circle me-1"></i>{% if form.instance.pk %}Update{% elif form.transaction_kind or form.settlement_date %}Save for Approval{% else %}Save{% endif %}</button></div>
+        </form>
+    </div>
+    <script>
 document.addEventListener('DOMContentLoaded',function(){
  const byId=id=>document.getElementById(id),toggle=(id,show)=>{const el=byId(id);if(el)el.classList.toggle('d-none',!show)},required=(id,on)=>{const el=byId(id);if(el){el.required=on;el.setAttribute('aria-required',on?'true':'false')}},clear=id=>{const el=byId(id);if(el)el.value=''};
  const kind=byId('id_transaction_kind'); function updateKind(){if(!kind)return;const refund=kind.value==='REFUND';toggle('refund-original-search',refund);required('original-transaction-code',refund);if(!refund){clear('id_original_expense');clear('original-transaction-code');const result=byId('original-expense-result');if(result)result.textContent=''}}
@@ -62,5 +137,5 @@ document.addEventListener('DOMContentLoaded',function(){
  function scheduleComparison(){clearTimeout(comparisonTimer);comparisonTimer=setTimeout(loadCardExpenses,250)}
  [settlementCard,deductionDate,periodStart,periodEnd].forEach(el=>{if(el)el.addEventListener('change',scheduleComparison)});if(deductedAmount)deductedAmount.addEventListener('input',compareAmount);if(settlementCard)loadCardExpenses();
 });
-</script>
+    </script>
 {% endblock %}
