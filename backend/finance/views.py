@@ -102,18 +102,18 @@ def _cash_flow_entries(start_date, end_date):
         )
 
     for expense in HostelExpense.objects.filter(
-        status="approved", created_at__date__range=(start_date, end_date),
+        status="approved", purchased_date__range=(start_date, end_date),
     ):
         add_entry(
-            local_date(expense.created_at), "Hostel Expense", "Hostel Expense",
+            expense.purchased_date, "Hostel Expense", "Hostel Expense",
             expense.transaction_code, expense.memo, outflow=expense.amount,
         )
     for expense in UtilityExpense.objects.select_related("hostel").filter(
         approval_status=UtilityExpense.ApprovalStatus.APPROVED,
-        created_at__date__range=(start_date, end_date),
+        paid_date__range=(start_date, end_date),
     ):
         add_entry(
-            local_date(expense.created_at), "Utility Expense", expense.get_expense_type_display(),
+            expense.paid_date, "Utility Expense", expense.get_expense_type_display(),
             f"UTIL-{expense.pk:06d}", str(expense.hostel), outflow=expense.amount,
         )
     for expense in StaffExpense.objects.filter(
