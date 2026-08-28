@@ -57,15 +57,14 @@ def _cash_flow_entries(start_date, end_date):
         })
 
     hostel_revenues = HostelRevenue.objects.select_related("customer").filter(
-        year__gte=start_date.year, year__lte=end_date.year,
+        created_at__date__range=(start_date, end_date),
     )
     for revenue in hostel_revenues:
-        revenue_date = date(revenue.year, revenue.month, 1)
-        if start_date <= revenue_date <= end_date:
-            add_entry(
-                revenue_date, "Hostel Revenue", revenue.get_title_display(),
-                f"HR-{revenue.pk}", str(revenue.customer), inflow=revenue.collected_amount,
-            )
+        revenue_date = timezone.localtime(revenue.created_at).date()
+        add_entry(
+            revenue_date, "Hostel Revenue", revenue.get_title_display(),
+            f"HR-{revenue.pk}", str(revenue.customer), inflow=revenue.collected_amount,
+        )
 
     contracts = RentalContract.objects.filter(contract_date__range=(start_date, end_date))
     for contract in contracts:
