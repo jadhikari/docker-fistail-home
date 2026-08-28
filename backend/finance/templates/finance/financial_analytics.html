@@ -40,12 +40,12 @@
         </div>
         <div class="row g-2 mb-3">
             <div class="col-xl col-md-4 col-6">
-                <div class="metric-card metric-inflow"><small>Cash Inflow</small><strong>¥{{ total_inflow|floatformat:0 }}</strong><span>{{ entries_count }} cash movements</span></div>
+                <div class="metric-card metric-inflow"><small>Cash Inflow</small><strong>¥{{ total_inflow_display }}</strong><span>100% revenue base · {{ entries_count_display }} cash movements</span></div>
             </div>
             <div class="col-xl col-md-4 col-6">
-                <div class="metric-card metric-outflow"><small>Cash Outflow</small><strong>¥{{ total_outflow|floatformat:0 }}</strong><span>Approved expenses only</span></div>
+                <div class="metric-card metric-outflow"><small>Cash Outflow</small><strong>¥{{ total_outflow_display }}</strong><span>{{ outflow_percentage|floatformat:1 }}% of cash inflow</span></div>
             </div>
-            <div class="col-xl col-md-4 col-6"><div class="metric-card {% if net_cash_flow < 0 %}metric-loss{% else %}metric-profit{% endif %}"><small>Net Profit</small><strong>¥{{ net_cash_flow|floatformat:0 }}</strong><span>{% if net_cash_flow < 0 %}Loss{% else %}Profit{% endif %} for selected period</span></div></div>
+            <div class="col-xl col-md-4 col-6"><div class="metric-card {% if net_cash_flow < 0 %}metric-loss{% else %}metric-profit{% endif %}"><small>Net Profit</small><strong>¥{{ net_cash_flow_display }}</strong><span>{{ profit_margin|floatformat:1 }}% profit margin</span></div></div>
             <div class="col-xl col-md-6 col-6">
                 <div class="metric-card metric-hostel"><small>Hostel Movement</small><strong><i class="bi bi-arrow-up-short"></i>{{ new_hostels }} <span class="metric-divider">/</span> <i class="bi bi-arrow-down-short"></i>{{ inactive_hostels }}</strong><span>Added / inactive</span></div>
             </div>

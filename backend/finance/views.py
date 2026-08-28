@@ -237,6 +237,8 @@ def financial_analytics(request):
     total_inflow = sum((entry["inflow"] for entry in entries), Decimal("0"))
     total_outflow = sum((entry["outflow"] for entry in entries), Decimal("0"))
     net_cash_flow = total_inflow - total_outflow
+    outflow_percentage = (total_outflow / total_inflow * Decimal("100")) if total_inflow else Decimal("0")
+    profit_margin = (net_cash_flow / total_inflow * Decimal("100")) if total_inflow else Decimal("0")
 
     revenue_sources = {}
     expense_sources = {}
@@ -295,6 +297,11 @@ def financial_analytics(request):
         "start_date": start_date, "end_date": end_date, "error": error,
         "entries_count": len(entries), "total_inflow": total_inflow,
         "total_outflow": total_outflow, "net_cash_flow": net_cash_flow,
+        "entries_count_display": f"{len(entries):,}",
+        "total_inflow_display": f"{total_inflow:,.0f}",
+        "total_outflow_display": f"{total_outflow:,.0f}",
+        "net_cash_flow_display": f"{net_cash_flow:,.0f}",
+        "outflow_percentage": outflow_percentage, "profit_margin": profit_margin,
         "previous_net": previous_net, "comparison_percent": comparison_percent,
         "comparison_label": comparison_label, "new_hostels": new_hostels,
         "inactive_hostels": inactive_hostels, "new_customers": new_customers,
