@@ -250,17 +250,9 @@ def financial_analytics(request):
             label = entry["date"].strftime("%b %Y")
         bucket = timeline.setdefault(key, {
             "label": label, "inflow": Decimal("0"), "outflow": Decimal("0"),
-            "hostel_rent": Decimal("0"), "hostel_registration": Decimal("0"),
-            "other_inflow": Decimal("0"),
         })
         bucket["inflow"] += entry["inflow"]
         bucket["outflow"] += entry["outflow"]
-        if entry["source"] == "Hostel Revenue" and entry["category"] == "Rent":
-            bucket["hostel_rent"] += entry["inflow"]
-        elif entry["source"] == "Hostel Revenue" and entry["category"] == "Registration Fee":
-            bucket["hostel_registration"] += entry["inflow"]
-        else:
-            bucket["other_inflow"] += entry["inflow"]
         if entry["inflow"]:
             revenue_label = (
                 "Hostel Registration"
@@ -280,9 +272,6 @@ def financial_analytics(request):
             "inflow": [float(item["inflow"]) for item in sorted_timeline],
             "outflow": [float(item["outflow"]) for item in sorted_timeline],
             "net": [float(item["inflow"] - item["outflow"]) for item in sorted_timeline],
-            "hostelRent": [float(item["hostel_rent"]) for item in sorted_timeline],
-            "hostelRegistration": [float(item["hostel_registration"]) for item in sorted_timeline],
-            "otherInflow": [float(item["other_inflow"]) for item in sorted_timeline],
         },
         "revenue": {"labels": list(revenue_sources), "values": [float(value) for value in revenue_sources.values()]},
         "expense": {"labels": list(expense_sources), "values": [float(value) for value in expense_sources.values()]},
