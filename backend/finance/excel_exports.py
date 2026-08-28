@@ -18,6 +18,27 @@ def export_to_excel(sheet_title, headers, rows, filename):
     return response
 
 
+def export_cash_flow_to_excel(entries, start_date, end_date):
+    headers = [
+        "Date", "Source", "Category", "Reference", "Description",
+        "Cash Inflow", "Cash Outflow", "Running Balance",
+    ]
+    rows = [[
+        entry["date"].strftime("%Y-%m-%d"), entry["source"], entry["category"],
+        entry["reference"], entry["description"], float(entry["inflow"]),
+        float(entry["outflow"]), float(entry["balance"]),
+    ] for entry in entries]
+    total_inflow = sum((entry["inflow"] for entry in entries), 0)
+    total_outflow = sum((entry["outflow"] for entry in entries), 0)
+    rows.append([
+        "", "", "", "", "Period Total", float(total_inflow),
+        float(total_outflow), float(total_inflow - total_outflow),
+    ])
+    return export_to_excel(
+        "Cash Flow", headers, rows, f"cash_flow_{start_date}_{end_date}.xlsx"
+    )
+
+
 def _user_display_name(user):
     if not user:
         return ""

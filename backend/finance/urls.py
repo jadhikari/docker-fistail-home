@@ -4,6 +4,8 @@ from . import views
 app_name = 'finance'
 
 urlpatterns = [
+    path('reports/cash-flow/', views.cash_flow_report, name='cash_flow_report'),
+    path('reports/financial-analytics/', views.financial_analytics, name='financial_analytics'),
     path('office-expenses/', views.office_expense_list, name='office_expenses'),
     path('office-expenses/add/', views.office_expense_create, name='office_expense_add'),
     path('office-expenses/lookup/', views.office_expense_lookup, name='office_expense_lookup'),

@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}Financial Analytics{% endblock %}
+{% block content %}
+    <div class="container-fluid py-2 analytics-dashboard">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+                <h4 class="mb-1"><i class="bi bi-graph-up-arrow text-primary me-2"></i>Financial Analytics</h4>
+                <p class="text-muted small mb-0">Financial performance and business growth at a glance</p>
+            </div>
+            <span class="badge bg-light text-dark border px-3 py-2">{% if all_data %}All Available Data{% else %}{{ start_date|date:"M d, Y" }} – {{ end_date|date:"M d, Y" }}{% endif %}</span>
+        </div>
+        <div class="card mb-3 shadow-sm">
+            <div class="card-body py-2">
+                <form method="get" class="row g-2 align-items-end" id="analytics-search">
+                    <div class="col-md-3"><label for="period_type" class="form-label fw-semibold small mb-1">Report Type</label><select name="period_type"
+        id="period_type"
+        class="form-select form-select-sm"><option value="">All available data</option><option value="monthly" {% if period_type == 'monthly' %}selected{% endif %}>Monthly</option><option value="yearly" {% if period_type == 'yearly' %}selected{% endif %}>Yearly</option></select></div>
+                    <div class="col-md-3" id="month-group">
+                        <label for="month" class="form-label fw-semibold small mb-1">Month</label><input type="month"
+       name="month"
+       id="month"
+       class="form-control form-control-sm"
+       value="{{ month_value }}">
+                    </div>
+                    <div class="col-md-3" id="year-group">
+                        <label for="year" class="form-label fw-semibold small mb-1">Year</label><input type="number"
+       name="year"
+       id="year"
+       class="form-control form-control-sm"
+       min="1900"
+       max="9999"
+       value="{{ year_value }}"
+       placeholder="e.g. 2026">
+                    </div>
+                    <div class="col-md-auto"><button class="btn btn-primary btn-sm"><i class="bi bi-funnel me-1"></i>Apply</button> <a href="{% url 'finance:financial_analytics' %}"
+    class="btn btn-outline-secondary btn-sm">All Data</a></div>
+                </form>
+                {% if error %}<div class="alert alert-warning py-2 small mt-2 mb-0">{{ error }}</div>{% endif %}
+            </div>
+        </div>
+        <div class="row g-2 mb-3">
+            <div class="col-xl col-md-4 col-6">
+                <div class="metric-card metric-inflow"><small>Cash Inflow</small><strong>¥{{ total_inflow|floatformat:0 }}</strong><span>{{ entries_count }} cash movements</span></div>
+            </div>
+            <div class="col-xl col-md-4 col-6">
+                <div class="metric-card metric-outflow"><small>Cash Outflow</small><strong>¥{{ total_outflow|floatformat:0 }}</strong><span>Approved expenses only</span></div>
+            </div>
+            <div class="col-xl col-md-4 col-6"><div class="metric-card {% if net_cash_flow < 0 %}metric-loss{% else %}metric-profit{% endif %}"><small>Net Cash Flow</small><strong>¥{{ net_cash_flow|floatformat:0 }}</strong><span>{% if net_cash_flow < 0 %}Loss{% else %}Profit{% endif %} for selected period</span></div></div>
+            <div class="col-xl col-md-6 col-6">
+                <div class="metric-card metric-hostel"><small>Hostel Movement</small><strong><i class="bi bi-arrow-up-short"></i>{{ new_hostels }} <span class="metric-divider">/</span> <i class="bi bi-arrow-down-short"></i>{{ inactive_hostels }}</strong><span>Added / inactive</span></div>
+            </div>
+            <div class="col-xl col-md-6 col-6">
+                <div class="metric-card metric-customer"><small>Customer Movement</small><strong><i class="bi bi-person-plus"></i> {{ new_customers }} <span class="metric-divider">/</span> <i class="bi bi-person-dash"></i> {{ inactive_customers }}</strong><span>Added / inactive</span></div>
+            </div>
+        </div>
+        {% if comparison_label %}
+            <div class="comparison-strip mb-3 {% if comparison_percent is not None and comparison_percent < 0 %}comparison-down{% else %}comparison-up{% endif %}">
+                <div>
+                    <i class="bi {% if comparison_percent is not None and comparison_percent < 0 %}bi-graph-down-arrow{% else %}bi-graph-up-arrow{% endif %}"></i>
+                </div>
+                <div><small>Performance vs {{ comparison_label }}</small><strong>{% if comparison_percent is not None %}{{ comparison_percent|floatformat:1 }}%{% else %}No percentage available{% endif %}</strong></div>
+                <div class="ms-auto text-end"><small>Previous net cash flow</small><strong>¥{{ previous_net|default:"0"|floatformat:0 }}</strong></div>
+            </div>
+        {% endif %}
+        <div class="row g-3 mb-3">
+            <div class="col-xl-8">
+                <div class="card chart-card h-100">
+                    <div class="card-header">
+                        <div>
+                            <h6>Financial Performance</h6>
+                            <small>Cash inflow, outflow and net movement over time</small>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-wrap chart-wide">
+                            <canvas id="performanceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-4">
+                <div class="card chart-card h-100">
+                    <div class="card-header">
+                        <div>
+                            <h6>Financial Position</h6>
+                            <small>Overall inflow versus outflow</small>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-wrap">
+                            <canvas id="positionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <div class="card chart-card">
+                    <div class="card-header">
+                        <div>
+                            <h6>Revenue Composition</h6>
+                            <small>Where company cash is coming from</small>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-wrap">
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card chart-card">
+                    <div class="card-header">
+                        <div>
+                            <h6>Expense Composition</h6>
+                            <small>Where approved company cash is being spent</small>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-wrap">
+                            <canvas id="expenseChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <p class="text-muted small mt-3 mb-0"><i class="bi bi-info-circle me-1"></i>Inactive hostel and customer counts use their latest update date because a separate status-change date is not stored.</p>
+    </div>
+    {{ chart_data|json_script:"financial-chart-data" }}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+.analytics-dashboard { --analytics-green:#198754; --analytics-red:#dc3545; --analytics-blue:#0d6efd; }
+.metric-card { min-height:108px; padding:14px 16px; border:1px solid #e4e9ef; border-left:4px solid #6c757d; border-radius:10px; background:#fff; box-shadow:0 2px 8px rgba(20,33,61,.06); display:flex; flex-direction:column; }
+.metric-card small { color:#6c757d; font-weight:600; }
+.metric-card strong { display:block; margin:5px 0 2px; font-size:1.18rem; color:#24324a; }
+.metric-card > span { color:#8b96a7; font-size:.72rem; margin-top:auto; }
+.metric-inflow { border-left-color:var(--analytics-green); } .metric-inflow strong { color:var(--analytics-green); }
+.metric-outflow,.metric-loss { border-left-color:var(--analytics-red); } .metric-outflow strong,.metric-loss strong { color:var(--analytics-red); }
+.metric-profit { border-left-color:var(--analytics-blue); } .metric-profit strong { color:var(--analytics-blue); }
+.metric-hostel { border-left-color:#6f42c1; } .metric-customer { border-left-color:#0dcaf0; } .metric-divider { color:#adb5bd; font-weight:400; }
+.comparison-strip { display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:10px; border:1px solid #dce5df; background:#f5fbf7; }
+.comparison-strip > div:first-child { font-size:1.5rem; } .comparison-strip small,.comparison-strip strong { display:block; } .comparison-strip small { color:#6c757d; font-size:.72rem; } .comparison-up { color:#198754; } .comparison-down { color:#dc3545; background:#fff7f7; border-color:#f1d6d8; }
+.chart-card { border:1px solid #e4e9ef; box-shadow:0 2px 10px rgba(20,33,61,.05); }
+.chart-card .card-header { padding:10px 14px; background:#fff; border-bottom:1px solid #edf0f4; }
+.chart-card h6 { margin:0; font-weight:700; color:#24324a; } .chart-card .card-header small { color:#8b96a7; }
+.chart-card .card-body { padding:12px; } .chart-wrap { position:relative; height:280px; } .chart-wide { height:310px; }
+@media (max-width:767px) { .metric-card { min-height:96px; padding:10px; } .metric-card strong { font-size:1rem; } .chart-wrap,.chart-wide { height:250px; } }
+    </style>
+    <script>
+document.addEventListener('DOMContentLoaded', function () {
+  const type = document.getElementById('period_type');
+  const monthGroup = document.getElementById('month-group');
+  const yearGroup = document.getElementById('year-group');
+  function updateFields() {
+    monthGroup.classList.toggle('d-none', type.value !== 'monthly');
+    yearGroup.classList.toggle('d-none', type.value !== 'yearly');
+  }
+  type.addEventListener('change', updateFields); updateFields();
+  const data = JSON.parse(document.getElementById('financial-chart-data').textContent);
+  const yen = value => '¥' + new Intl.NumberFormat('ja-JP', {maximumFractionDigits:0}).format(value);
+  const colors = ['#0d6efd','#198754','#6f42c1','#fd7e14','#0dcaf0','#d63384','#ffc107','#20c997'];
+  const common = { responsive:true, maintainAspectRatio:false, plugins:{ legend:{labels:{usePointStyle:true,boxWidth:8}}, tooltip:{callbacks:{label:context => `${context.dataset.label || context.label}: ${yen(context.raw)}`}}} };
+  new Chart(document.getElementById('performanceChart'), {type:'bar',data:{labels:data.timeline.labels,datasets:[{label:'Inflow',data:data.timeline.inflow,backgroundColor:'rgba(25,135,84,.72)',borderRadius:3},{label:'Outflow',data:data.timeline.outflow,backgroundColor:'rgba(220,53,69,.68)',borderRadius:3},{label:'Net',data:data.timeline.net,type:'line',borderColor:'#0d6efd',backgroundColor:'#0d6efd',pointRadius:2,tension:.3}]},options:{...common,scales:{y:{ticks:{callback:yen},grid:{color:'rgba(0,0,0,.05)'}},x:{grid:{display:false}}}}});
+  new Chart(document.getElementById('positionChart'), {type:'doughnut',data:{labels:['Cash Inflow','Cash Outflow'],datasets:[{data:data.position,backgroundColor:['#198754','#dc3545'],borderWidth:0}]},options:{...common,cutout:'68%'}});
+  const pie = (id, dataset, label) => new Chart(document.getElementById(id), {type:'doughnut',data:{labels:dataset.labels,datasets:[{label:label,data:dataset.values,backgroundColor:colors,borderColor:'#fff',borderWidth:2}]},options:{...common,cutout:'55%'}});
+  pie('revenueChart', data.revenue, 'Revenue'); pie('expenseChart', data.expense, 'Expense');
+});
+    </script>
+{% endblock %}

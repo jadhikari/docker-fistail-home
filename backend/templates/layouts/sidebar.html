@@ -90,10 +90,30 @@
         
 
         {% if user.is_superuser %}
-            <li class="nav-item">
-                <a href="{% url 'targets:management' %}" class="nav-link {% if request.resolver_match.app_name == 'targets' and request.resolver_match.url_name == 'management' %}active{% endif %}">
-                    ⚙️ <span class="link-text">Settings</span>
-                </a>
+            <li class="nav-item sidebar-flyout-menu">
+                <button class="nav-link w-100 border-0 {% if request.resolver_match.url_name == 'cash_flow_report' or request.resolver_match.url_name == 'financial_analytics' or request.resolver_match.app_name == 'targets' and request.resolver_match.url_name == 'management' %}active{% endif %}"
+                        type="button" data-bs-toggle="collapse" data-bs-target="#settingsSubmenu"
+                        aria-expanded="false" aria-controls="settingsSubmenu">
+                    ⚙️ <span class="link-text flex-grow-1">Settings</span>
+                    <i class="bi bi-chevron-right submenu-chevron"></i>
+                </button>
+                <ul id="settingsSubmenu" class="nav flex-column collapse sidebar-submenu">
+                    <li class="nav-item">
+                        <a href="{% url 'targets:management' %}" class="nav-link {% if request.resolver_match.app_name == 'targets' and request.resolver_match.url_name == 'management' %}active{% endif %}">
+                            <i class="bi bi-bullseye"></i><span class="link-text">Targets</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'finance:cash_flow_report' %}" class="nav-link {% if request.resolver_match.url_name == 'cash_flow_report' %}active{% endif %}">
+                            <i class="bi bi-cash-stack"></i><span class="link-text">Cash Flow</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'finance:financial_analytics' %}" class="nav-link {% if request.resolver_match.url_name == 'financial_analytics' %}active{% endif %}">
+                            <i class="bi bi-graph-up-arrow"></i><span class="link-text">Analytics</span>
+                        </a>
+                    </li>
+                </ul>
             </li>
         {% endif %}
     </ul>

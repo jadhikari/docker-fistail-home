@@ -8,7 +8,8 @@ from django.http import HttpResponse, JsonResponse
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.views.decorators.csrf import csrf_exempt
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
+from calendar import monthrange
 from decimal import Decimal, InvalidOperation
 import json
 from .models import (HostelRevenue, HostelExpense, UtilityExpense, StaffExpense, ThirdPartyServiceRecord,
@@ -28,10 +29,260 @@ from .excel_exports import (
     export_third_party_services_to_excel,
     export_office_expenses_to_excel,
     export_card_settlements_to_excel,
+    export_cash_flow_to_excel,
 )
 from .finance_helpers.rent_defaulters import get_rent_defaulters
-from hostel.models import Bed
+from hostel.models import Bed, Hostel
+from customer.models import Customer
 from targets.models import RentalContract
+
+
+def _cash_flow_entries(start_date, end_date):
+    """Return normalized cash movements for the requested inclusive period."""
+    entries = []
+
+    def add_entry(entry_date, source, category, reference, description, inflow=Decimal("0"), outflow=Decimal("0")):
+        inflow = inflow or Decimal("0")
+        outflow = outflow or Decimal("0")
+        if inflow == 0 and outflow == 0:
+            return
+        entries.append({
+            "date": entry_date,
+            "source": source,
+            "category": category,
+            "reference": reference,
+            "description": description,
+            "inflow": inflow,
+            "outflow": outflow,
+        })
+
+    hostel_revenues = HostelRevenue.objects.select_related("customer").filter(
+        year__gte=start_date.year, year__lte=end_date.year,
+    )
+    for revenue in hostel_revenues:
+        revenue_date = date(revenue.year, revenue.month, 1)
+        if start_date <= revenue_date <= end_date:
+            add_entry(
+                revenue_date, "Hostel Revenue", revenue.get_title_display(),
+                f"HR-{revenue.pk}", str(revenue.customer), inflow=revenue.collected_amount,
+            )
+
+    contracts = RentalContract.objects.filter(contract_date__range=(start_date, end_date))
+    for contract in contracts:
+        add_entry(
+            contract.contract_date, "Real Estate Revenue", "Agent Fee",
+            f"RC-{contract.pk}", contract.customer_name, inflow=contract.agent_fee,
+        )
+    confirmed_ad_fees = RentalContract.objects.filter(
+        ad_fee_confirmed_at__isnull=False,
+        ad_fee_received_date__range=(start_date, end_date),
+    )
+    for contract in confirmed_ad_fees:
+        add_entry(
+            contract.ad_fee_received_date, "Real Estate Revenue", "AD Fee",
+            f"RC-{contract.pk}", contract.customer_name,
+            inflow=contract.ad_fee_received_amount,
+        )
+
+    services = ThirdPartyServiceRecord.objects.filter(collected_date__range=(start_date, end_date))
+    for service in services:
+        add_entry(
+            service.collected_date, "Third-party Service", service.get_service_type_display(),
+            service.transaction_code, service.applicant_name, inflow=service.collected_amount,
+        )
+    remittances = ThirdPartyServiceRecord.objects.filter(
+        remitted_date__range=(start_date, end_date), remitted_amount__gt=0,
+    )
+    for service in remittances:
+        add_entry(
+            service.remitted_date, "Third-party Service", f"{service.get_service_type_display()} Remittance",
+            service.transaction_code, service.company_name, outflow=service.remitted_amount,
+        )
+
+    for expense in HostelExpense.objects.filter(status="approved", purchased_date__range=(start_date, end_date)):
+        add_entry(
+            expense.purchased_date, "Hostel Expense", "Hostel Expense",
+            expense.transaction_code, expense.memo, outflow=expense.amount,
+        )
+    for expense in UtilityExpense.objects.select_related("hostel").filter(
+        approval_status=UtilityExpense.ApprovalStatus.APPROVED,
+        paid_date__range=(start_date, end_date),
+    ):
+        add_entry(
+            expense.paid_date, "Utility Expense", expense.get_expense_type_display(),
+            f"UTIL-{expense.pk:06d}", str(expense.hostel), outflow=expense.amount,
+        )
+    for expense in StaffExpense.objects.filter(
+        approval_status=StaffExpense.ApprovalStatus.APPROVED,
+        end_date__range=(start_date, end_date),
+    ):
+        add_entry(
+            expense.end_date, "Staff Expense", expense.get_expense_type_display(),
+            expense.transaction_code, expense.memo, outflow=expense.amount,
+        )
+    for expense in OfficeExpense.objects.filter(
+        approval_status=OfficeExpense.ApprovalStatus.APPROVED,
+        expense_date__range=(start_date, end_date),
+    ):
+        amount_field = "inflow" if expense.transaction_kind == OfficeExpense.TransactionKind.REFUND else "outflow"
+        add_entry(
+            expense.expense_date, "Office Expense", expense.get_category_display(),
+            expense.transaction_code, expense.description, **{amount_field: expense.amount},
+        )
+
+    entries.sort(key=lambda item: (item["date"], item["source"], item["reference"]))
+    running_balance = Decimal("0")
+    for entry in entries:
+        running_balance += entry["inflow"] - entry["outflow"]
+        entry["balance"] = running_balance
+    return entries
+
+
+@login_required(login_url="/accounts/login/")
+def cash_flow_report(request):
+    if not request.user.is_superuser:
+        raise PermissionDenied
+    period_type = request.GET.get("period_type", "")
+    month_value = request.GET.get("month", "")
+    year_value = request.GET.get("year", "")
+    entries = None
+    start_date = end_date = None
+    error = ""
+
+    if period_type == "monthly":
+        try:
+            selected_month = datetime.strptime(month_value, "%Y-%m")
+            start_date = date(selected_month.year, selected_month.month, 1)
+            end_date = date(selected_month.year, selected_month.month, monthrange(selected_month.year, selected_month.month)[1])
+        except (TypeError, ValueError):
+            error = "Select a valid month."
+    elif period_type == "yearly":
+        try:
+            selected_year = int(year_value)
+            if selected_year < 2000 or selected_year > 9999:
+                raise ValueError
+            start_date, end_date = date(selected_year, 1, 1), date(selected_year, 12, 31)
+        except (TypeError, ValueError):
+            error = "Enter a valid year."
+    elif period_type:
+        error = "Select monthly or yearly reporting."
+
+    if start_date and end_date:
+        entries = _cash_flow_entries(start_date, end_date)
+        if request.GET.get("export") == "excel":
+            return export_cash_flow_to_excel(entries, start_date, end_date)
+
+    total_inflow = sum((item["inflow"] for item in entries or []), Decimal("0"))
+    total_outflow = sum((item["outflow"] for item in entries or []), Decimal("0"))
+    return render(request, "finance/cash_flow_report.html", {
+        "period_type": period_type, "month_value": month_value, "year_value": year_value,
+        "entries": entries, "start_date": start_date, "end_date": end_date, "error": error,
+        "total_inflow": total_inflow, "total_outflow": total_outflow,
+        "net_cash_flow": total_inflow - total_outflow,
+    })
+
+
+@login_required(login_url="/accounts/login/")
+def financial_analytics(request):
+    if not request.user.is_superuser:
+        raise PermissionDenied
+
+    period_type = request.GET.get("period_type", "")
+    month_value = request.GET.get("month", "")
+    year_value = request.GET.get("year", "")
+    today = timezone.localdate()
+    error = ""
+    comparison_label = ""
+    previous_start = previous_end = None
+
+    if period_type == "monthly":
+        try:
+            selected = datetime.strptime(month_value, "%Y-%m")
+            start_date = date(selected.year, selected.month, 1)
+            end_date = date(selected.year, selected.month, monthrange(selected.year, selected.month)[1])
+            previous_end = start_date - timedelta(days=1)
+            previous_start = date(previous_end.year, previous_end.month, 1)
+            comparison_label = "previous month"
+        except (TypeError, ValueError):
+            error = "Select a valid month. Showing all available data."
+            period_type = ""
+    elif period_type == "yearly":
+        try:
+            selected_year = int(year_value)
+            if selected_year < 1900 or selected_year > 9999:
+                raise ValueError
+            start_date, end_date = date(selected_year, 1, 1), date(selected_year, 12, 31)
+            previous_start, previous_end = date(selected_year - 1, 1, 1), date(selected_year - 1, 12, 31)
+            comparison_label = "previous year"
+        except (TypeError, ValueError):
+            error = "Enter a valid year. Showing all available data."
+            period_type = ""
+    elif period_type:
+        error = "Select monthly or yearly reporting. Showing all available data."
+        period_type = ""
+
+    if not period_type:
+        start_date, end_date = date(1900, 1, 1), date(9999, 12, 31)
+
+    entries = _cash_flow_entries(start_date, end_date)
+    total_inflow = sum((entry["inflow"] for entry in entries), Decimal("0"))
+    total_outflow = sum((entry["outflow"] for entry in entries), Decimal("0"))
+    net_cash_flow = total_inflow - total_outflow
+
+    revenue_sources = {}
+    expense_sources = {}
+    timeline = {}
+    for entry in entries:
+        if period_type == "monthly":
+            key = entry["date"].isoformat()
+            label = entry["date"].strftime("%b %d")
+        else:
+            key = entry["date"].strftime("%Y-%m")
+            label = entry["date"].strftime("%b %Y")
+        bucket = timeline.setdefault(key, {"label": label, "inflow": Decimal("0"), "outflow": Decimal("0")})
+        bucket["inflow"] += entry["inflow"]
+        bucket["outflow"] += entry["outflow"]
+        if entry["inflow"]:
+            revenue_sources[entry["source"]] = revenue_sources.get(entry["source"], Decimal("0")) + entry["inflow"]
+        if entry["outflow"]:
+            expense_sources[entry["source"]] = expense_sources.get(entry["source"], Decimal("0")) + entry["outflow"]
+
+    sorted_timeline = [timeline[key] for key in sorted(timeline)]
+    chart_data = {
+        "timeline": {
+            "labels": [item["label"] for item in sorted_timeline],
+            "inflow": [float(item["inflow"]) for item in sorted_timeline],
+            "outflow": [float(item["outflow"]) for item in sorted_timeline],
+            "net": [float(item["inflow"] - item["outflow"]) for item in sorted_timeline],
+        },
+        "revenue": {"labels": list(revenue_sources), "values": [float(value) for value in revenue_sources.values()]},
+        "expense": {"labels": list(expense_sources), "values": [float(value) for value in expense_sources.values()]},
+        "position": [float(total_inflow), float(total_outflow)],
+    }
+
+    previous_net = comparison_percent = None
+    if previous_start and previous_end:
+        previous_entries = _cash_flow_entries(previous_start, previous_end)
+        previous_net = sum((entry["inflow"] - entry["outflow"] for entry in previous_entries), Decimal("0"))
+        if previous_net:
+            comparison_percent = ((net_cash_flow - previous_net) / abs(previous_net)) * Decimal("100")
+
+    new_hostels = Hostel.objects.filter(created_at__date__range=(start_date, end_date)).count()
+    inactive_hostels = Hostel.objects.filter(status=False, updated_at__date__range=(start_date, end_date)).count()
+    new_customers = Customer.objects.filter(created_at__date__range=(start_date, end_date)).count()
+    inactive_customers = Customer.objects.filter(status=False, updated_at__date__range=(start_date, end_date)).count()
+
+    return render(request, "finance/financial_analytics.html", {
+        "period_type": period_type, "month_value": month_value, "year_value": year_value,
+        "start_date": start_date, "end_date": end_date, "error": error,
+        "entries_count": len(entries), "total_inflow": total_inflow,
+        "total_outflow": total_outflow, "net_cash_flow": net_cash_flow,
+        "previous_net": previous_net, "comparison_percent": comparison_percent,
+        "comparison_label": comparison_label, "new_hostels": new_hostels,
+        "inactive_hostels": inactive_hostels, "new_customers": new_customers,
+        "inactive_customers": inactive_customers, "chart_data": chart_data,
+        "all_data": not period_type,
+    })
 
 
 def _credit_card_period_expenses(credit_card_id, period_start, period_end):

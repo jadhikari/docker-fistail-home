@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Cash Flow Report{% endblock %}
+{% block content %}
+    <div class="container-fluid py-2">
+        <div class="mb-3">
+            <h4 class="mb-1"><i class="bi bi-cash-stack text-primary me-2"></i>Cash Flow Report</h4>
+            <p class="text-muted mb-0">Company-wide cash inflows and approved cash outflows</p>
+        </div>
+        <div class="card mb-3">
+            <div class="card-header bg-light py-2">
+                <h6 class="mb-0"><i class="bi bi-calendar3 me-2"></i>Report Period</h6>
+            </div>
+            <div class="card-body py-2">
+                <form method="get" class="row g-2 align-items-end" id="cash-flow-search">
+                    <div class="col-md-3">
+                        <label for="period_type" class="form-label fw-semibold small mb-1">Report Type</label>
+                        <select name="period_type"
+                                id="period_type"
+                                class="form-select form-select-sm"
+                                required>
+                            <option value="">Select report type</option>
+                            <option value="monthly" {% if period_type == 'monthly' %}selected{% endif %}>Monthly</option>
+                            <option value="yearly" {% if period_type == 'yearly' %}selected{% endif %}>Yearly</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3" id="month-group">
+                        <label for="month" class="form-label fw-semibold small mb-1">Month</label>
+                        <input type="month"
+                               name="month"
+                               id="month"
+                               class="form-control form-control-sm"
+                               value="{{ month_value }}">
+                    </div>
+                    <div class="col-md-3" id="year-group">
+                        <label for="year" class="form-label fw-semibold small mb-1">Year</label>
+                        <input type="number"
+                               name="year"
+                               id="year"
+                               class="form-control form-control-sm"
+                               min="2000"
+                               max="9999"
+                               value="{{ year_value }}"
+                               placeholder="e.g. 2026">
+                    </div>
+                    <div class="col-md-auto">
+                        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>Generate Report</button>
+                        <a href="{% url 'finance:cash_flow_report' %}"
+                           class="btn btn-outline-secondary btn-sm">Reset</a>
+                    </div>
+                </form>
+                {% if error %}<div class="alert alert-danger mt-3 mb-0">{{ error }}</div>{% endif %}
+            </div>
+        </div>
+        {% if entries is not None %}
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">{{ start_date|date:"F j, Y" }} – {{ end_date|date:"F j, Y" }}</h6>
+                <div>
+                    <span class="badge bg-primary me-1">{{ entries|length }} Transactions</span>
+                    <a class="btn btn-success btn-sm"
+                       href="?period_type={{ period_type }}&month={{ month_value }}&year={{ year_value }}&export=excel"><i class="bi bi-file-earmark-excel me-1"></i>Download Excel</a>
+                </div>
+            </div>
+            <div class="row g-2 mb-3 cash-flow-summary">
+                <div class="col-md-4">
+                    <div class="card border-success h-100">
+                        <div class="card-body px-3 py-2">
+                            <small class="text-muted">Total Cash Inflow</small>
+                            <h6 class="text-success fw-bold mb-0">¥{{ total_inflow|floatformat:0 }}</h6>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-danger h-100">
+                        <div class="card-body px-3 py-2">
+                            <small class="text-muted">Total Cash Outflow</small>
+                            <h6 class="text-danger fw-bold mb-0">¥{{ total_outflow|floatformat:0 }}</h6>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4"><div class="card border-primary h-100"><div class="card-body px-3 py-2"><small class="text-muted">Net Cash Flow</small><h6 class="{% if net_cash_flow < 0 %}text-danger{% else %}text-primary{% endif %} fw-bold mb-0">¥{{ net_cash_flow|floatformat:0 }}</h6></div></div></div>
+            </div>
+            <div class="card">
+                <div class="table-responsive cash-flow-table-scroll">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead class="custom-thead">
+                            <tr>
+                                <th>Date</th>
+                                <th>Source</th>
+                                <th>Category</th>
+                                <th>Reference</th>
+                                <th>Description</th>
+                                <th class="text-end">Inflow</th>
+                                <th class="text-end">Outflow</th>
+                                <th class="text-end">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in entries %}
+                                <tr><td class="text-nowrap">{{ entry.date|date:"M d, Y" }}</td><td>{{ entry.source }}</td><td>{{ entry.category }}</td><td class="text-nowrap">{{ entry.reference }}</td><td>{{ entry.description|truncatechars:60 }}</td><td class="text-end text-success">{% if entry.inflow %}¥{{ entry.inflow|floatformat:0 }}{% else %}-{% endif %}</td><td class="text-end text-danger">{% if entry.outflow %}¥{{ entry.outflow|floatformat:0 }}{% else %}-{% endif %}</td><td class="text-end fw-semibold">¥{{ entry.balance|floatformat:0 }}</td></tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-5"><i class="bi bi-inbox fs-2 d-block mb-2"></i>No cash movements were found for this period.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr class="fw-bold">
+                                <td colspan="5">Period Total</td>
+                                <td class="text-end text-success">¥{{ total_inflow|floatformat:0 }}</td>
+                                <td class="text-end text-danger">¥{{ total_outflow|floatformat:0 }}</td>
+                                <td class="text-end">¥{{ net_cash_flow|floatformat:0 }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    <style>
+    .cash-flow-table-scroll {
+        max-height: 65vh;
+        overflow: auto;
+    }
+
+    .cash-flow-table-scroll thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
+    .cash-flow-table-scroll tfoot td {
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+        background-color: var(--bs-light);
+    }
+    </style>
+    <script>
+document.addEventListener('DOMContentLoaded', function () {
+  const type = document.getElementById('period_type');
+  const monthGroup = document.getElementById('month-group');
+  const yearGroup = document.getElementById('year-group');
+  const month = document.getElementById('month');
+  const year = document.getElementById('year');
+  function updatePeriodFields() {
+    monthGroup.classList.toggle('d-none', type.value !== 'monthly');
+    yearGroup.classList.toggle('d-none', type.value !== 'yearly');
+    month.required = type.value === 'monthly';
+    year.required = type.value === 'yearly';
+  }
+  type.addEventListener('change', updatePeriodFields);
+  updatePeriodFields();
+});
+    </script>
+{% endblock %}
