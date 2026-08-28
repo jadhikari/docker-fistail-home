@@ -293,8 +293,9 @@ def export_third_party_services_to_excel(queryset, from_date, to_date):
     headers = [
         "Transaction ID", "Service", "Applicant Name", "Applicant Phone", "Applicant Address",
         "Insurance For", "Insurance Address", "Guarantor / Insurance Company", "Company Phone",
-        "Collected Amount", "Collected Date", "Remittance Amount", "Remittance Date",
-        "Commission Amount", "Remittance Status", "Memo", "Created By", "Created At",
+        "Collected Date", "Collected Amount This Period",
+        "Sent Date", "Sent Amount This Period", "Commission Earned",
+        "Remittance Status", "Memo", "Created By", "Created At",
     ]
     rows = []
     for record in queryset:
@@ -308,11 +309,11 @@ def export_third_party_services_to_excel(queryset, from_date, to_date):
             record.service_subject_address if record.service_type == "INSURANCE" else "",
             record.company_name,
             record.company_phone_number,
-            float(record.collected_amount) if record.collected_amount is not None else "",
-            record.collected_date.strftime("%Y-%m-%d") if record.collected_date else "",
-            float(record.remitted_amount) if record.remitted_amount is not None else "",
+            record.collected_date.strftime("%Y-%m-%d") if record.period_collected else "",
+            float(record.period_collected) if record.period_collected else "",
             record.remitted_date.strftime("%Y-%m-%d") if record.remitted_date else "",
-            float(record.commission_amount),
+            float(record.period_remitted) if record.period_remitted else "",
+            float(record.period_commission) if record.period_commission else "",
             record.get_remittance_status_display(),
             record.memo,
             _user_display_name(record.created_by),

@@ -41,6 +41,9 @@ def _cash_flow_entries(start_date, end_date):
     """Return normalized cash movements for the requested inclusive period."""
     entries = []
 
+    def local_date(value):
+        return timezone.localtime(value).date() if timezone.is_aware(value) else value.date()
+
     def add_entry(entry_date, source, category, reference, description, inflow=Decimal("0"), outflow=Decimal("0")):
         inflow = inflow or Decimal("0")
         outflow = outflow or Decimal("0")
@@ -60,7 +63,7 @@ def _cash_flow_entries(start_date, end_date):
         created_at__date__range=(start_date, end_date),
     )
     for revenue in hostel_revenues:
-        revenue_date = timezone.localtime(revenue.created_at).date()
+        revenue_date = local_date(revenue.created_at)
         add_entry(
             revenue_date, "Hostel Revenue", revenue.get_title_display(),
             f"HR-{revenue.pk}", str(revenue.customer), inflow=revenue.collected_amount,
@@ -98,34 +101,36 @@ def _cash_flow_entries(start_date, end_date):
             service.transaction_code, service.company_name, outflow=service.remitted_amount,
         )
 
-    for expense in HostelExpense.objects.filter(status="approved", purchased_date__range=(start_date, end_date)):
+    for expense in HostelExpense.objects.filter(
+        status="approved", created_at__date__range=(start_date, end_date),
+    ):
         add_entry(
-            expense.purchased_date, "Hostel Expense", "Hostel Expense",
+            local_date(expense.created_at), "Hostel Expense", "Hostel Expense",
             expense.transaction_code, expense.memo, outflow=expense.amount,
         )
     for expense in UtilityExpense.objects.select_related("hostel").filter(
         approval_status=UtilityExpense.ApprovalStatus.APPROVED,
-        paid_date__range=(start_date, end_date),
+        created_at__date__range=(start_date, end_date),
     ):
         add_entry(
-            expense.paid_date, "Utility Expense", expense.get_expense_type_display(),
+            local_date(expense.created_at), "Utility Expense", expense.get_expense_type_display(),
             f"UTIL-{expense.pk:06d}", str(expense.hostel), outflow=expense.amount,
         )
     for expense in StaffExpense.objects.filter(
         approval_status=StaffExpense.ApprovalStatus.APPROVED,
-        end_date__range=(start_date, end_date),
+        updated_at__date__range=(start_date, end_date),
     ):
         add_entry(
-            expense.end_date, "Staff Expense", expense.get_expense_type_display(),
+            local_date(expense.updated_at), "Staff Expense", expense.get_expense_type_display(),
             expense.transaction_code, expense.memo, outflow=expense.amount,
         )
     for expense in OfficeExpense.objects.filter(
         approval_status=OfficeExpense.ApprovalStatus.APPROVED,
-        expense_date__range=(start_date, end_date),
+        updated_at__date__range=(start_date, end_date),
     ):
         amount_field = "inflow" if expense.transaction_kind == OfficeExpense.TransactionKind.REFUND else "outflow"
         add_entry(
-            expense.expense_date, "Office Expense", expense.get_category_display(),
+            local_date(expense.updated_at), "Office Expense", expense.get_category_display(),
             expense.transaction_code, expense.description, **{amount_field: expense.amount},
         )
 
@@ -1464,7 +1469,10 @@ def third_party_services(request):
     except ValueError:
         to_date = today
 
-    records = ThirdPartyServiceRecord.objects.select_related('created_by', 'updated_by').filter(collected_date__range=(from_date, to_date))
+    records = ThirdPartyServiceRecord.objects.select_related('created_by', 'updated_by').filter(
+        Q(collected_date__range=(from_date, to_date)) |
+        Q(remitted_date__range=(from_date, to_date))
+    ).distinct()
     if service_type in dict(ThirdPartyServiceRecord.ServiceType.choices):
         records = records.filter(service_type=service_type)
     if status in dict(ThirdPartyServiceRecord.RemittanceStatus.choices):
@@ -1473,18 +1481,50 @@ def third_party_services(request):
         records = records.filter(Q(applicant_name__icontains=applicant) | Q(phone_number__icontains=applicant))
 
     records = records.order_by('-collected_date', '-created_at')
+    for record in records:
+        record.period_collected = record.collected_amount if from_date <= record.collected_date <= to_date else Decimal('0')
+        record.period_remitted = (
+            record.remitted_amount
+            if record.remitted_date and from_date <= record.remitted_date <= to_date
+            else Decimal('0')
+        )
+        record.period_commission = record.commission_amount if record.period_remitted else Decimal('0')
+
     if request.GET.get('export') == 'excel':
         return export_third_party_services_to_excel(records, from_date, to_date)
 
-    total_collected = records.aggregate(total=Sum('collected_amount'))['total'] or Decimal('0')
-    total_remitted = records.aggregate(total=Sum('remitted_amount'))['total'] or Decimal('0')
-    total_commission = total_collected - total_remitted
+    total_collected = sum((record.period_collected for record in records), Decimal('0'))
+    total_remitted = sum((record.period_remitted for record in records), Decimal('0'))
+    total_commission = sum((record.period_commission for record in records), Decimal('0'))
 
     paginator = Paginator(records, 25)
     page_obj = paginator.get_page(request.GET.get('page'))
-    page_total_collected = page_obj.object_list.aggregate(total=Sum('collected_amount'))['total'] or Decimal('0')
-    page_total_remitted = page_obj.object_list.aggregate(total=Sum('remitted_amount'))['total'] or Decimal('0')
-    page_total_commission = page_total_collected - page_total_remitted
+    page_total_collected = sum((record.period_collected for record in page_obj.object_list), Decimal('0'))
+    page_total_remitted = sum((record.period_remitted for record in page_obj.object_list), Decimal('0'))
+    page_total_commission = sum((record.period_commission for record in page_obj.object_list), Decimal('0'))
+
+    overdue_cutoff = from_date.replace(day=1)
+    overdue_remittances = ThirdPartyServiceRecord.objects.filter(
+        remittance_status=ThirdPartyServiceRecord.RemittanceStatus.PENDING,
+        collected_date__lt=overdue_cutoff,
+    )
+    if service_type in dict(ThirdPartyServiceRecord.ServiceType.choices):
+        overdue_remittances = overdue_remittances.filter(service_type=service_type)
+    if applicant:
+        overdue_remittances = overdue_remittances.filter(
+            Q(applicant_name__icontains=applicant) | Q(phone_number__icontains=applicant)
+        )
+    if status == ThirdPartyServiceRecord.RemittanceStatus.REMITTED:
+        overdue_remittances = overdue_remittances.none()
+    overdue_remittances = overdue_remittances.order_by('collected_date', 'created_at')
+    overdue_remittance_count = overdue_remittances.count()
+    overdue_collected_total = overdue_remittances.aggregate(total=Sum('collected_amount'))['total'] or Decimal('0')
+    overdue_remittances = overdue_remittances[:20]
+    for record in overdue_remittances:
+        if record.collected_date.month == 12:
+            record.remittance_due_date = date(record.collected_date.year + 1, 1, 1)
+        else:
+            record.remittance_due_date = date(record.collected_date.year, record.collected_date.month + 1, 1)
 
     query_params = request.GET.copy()
     if 'page' in query_params:
@@ -1507,6 +1547,9 @@ def third_party_services(request):
         'page_total_collected': page_total_collected,
         'page_total_remitted': page_total_remitted,
         'page_total_commission': page_total_commission,
+        'overdue_remittances': overdue_remittances,
+        'overdue_remittance_count': overdue_remittance_count,
+        'overdue_collected_total': overdue_collected_total,
         'query_string': query_params.urlencode(),
     })
 
