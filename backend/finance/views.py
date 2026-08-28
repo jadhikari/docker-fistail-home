@@ -64,9 +64,14 @@ def _cash_flow_entries(start_date, end_date):
     )
     for revenue in hostel_revenues:
         revenue_date = local_date(revenue.created_at)
+        revenue_amount = (
+            revenue.total_amount
+            if revenue.title == 'registration_fee'
+            else revenue.collected_amount
+        )
         add_entry(
             revenue_date, "Hostel Revenue", revenue.get_title_display(),
-            f"HR-{revenue.pk}", str(revenue.customer), inflow=revenue.collected_amount,
+            f"HR-{revenue.pk}", str(revenue.customer), inflow=revenue_amount,
         )
 
     contracts = RentalContract.objects.filter(contract_date__range=(start_date, end_date))
@@ -243,11 +248,28 @@ def financial_analytics(request):
         else:
             key = entry["date"].strftime("%Y-%m")
             label = entry["date"].strftime("%b %Y")
-        bucket = timeline.setdefault(key, {"label": label, "inflow": Decimal("0"), "outflow": Decimal("0")})
+        bucket = timeline.setdefault(key, {
+            "label": label, "inflow": Decimal("0"), "outflow": Decimal("0"),
+            "hostel_rent": Decimal("0"), "hostel_registration": Decimal("0"),
+            "other_inflow": Decimal("0"),
+        })
         bucket["inflow"] += entry["inflow"]
         bucket["outflow"] += entry["outflow"]
+        if entry["source"] == "Hostel Revenue" and entry["category"] == "Rent":
+            bucket["hostel_rent"] += entry["inflow"]
+        elif entry["source"] == "Hostel Revenue" and entry["category"] == "Registration Fee":
+            bucket["hostel_registration"] += entry["inflow"]
+        else:
+            bucket["other_inflow"] += entry["inflow"]
         if entry["inflow"]:
-            revenue_sources[entry["source"]] = revenue_sources.get(entry["source"], Decimal("0")) + entry["inflow"]
+            revenue_label = (
+                "Hostel Registration"
+                if entry["source"] == "Hostel Revenue" and entry["category"] == "Registration Fee"
+                else "Hostel Rent"
+                if entry["source"] == "Hostel Revenue"
+                else entry["source"]
+            )
+            revenue_sources[revenue_label] = revenue_sources.get(revenue_label, Decimal("0")) + entry["inflow"]
         if entry["outflow"]:
             expense_sources[entry["source"]] = expense_sources.get(entry["source"], Decimal("0")) + entry["outflow"]
 
@@ -258,6 +280,9 @@ def financial_analytics(request):
             "inflow": [float(item["inflow"]) for item in sorted_timeline],
             "outflow": [float(item["outflow"]) for item in sorted_timeline],
             "net": [float(item["inflow"] - item["outflow"]) for item in sorted_timeline],
+            "hostelRent": [float(item["hostel_rent"]) for item in sorted_timeline],
+            "hostelRegistration": [float(item["hostel_registration"]) for item in sorted_timeline],
+            "otherInflow": [float(item["other_inflow"]) for item in sorted_timeline],
         },
         "revenue": {"labels": list(revenue_sources), "values": [float(value) for value in revenue_sources.values()]},
         "expense": {"labels": list(expense_sources), "values": [float(value) for value in expense_sources.values()]},
