@@ -129,7 +129,12 @@ def _cash_flow_entries(start_date, end_date):
             local_date(expense.updated_at), "Staff Expense", expense.get_expense_type_display(),
             expense.transaction_code, expense.memo, outflow=expense.amount,
         )
-    for expense in OfficeExpense.objects.filter(
+    # Credit-card purchases are recognized as expenses when entered, but they do
+    # not move money out of a bank account at that point.  Their cash movement is
+    # recorded once, below, when the card bill is actually paid.
+    for expense in OfficeExpense.objects.exclude(
+        payment_mode=OfficeExpense.PaymentMode.CREDIT_CARD,
+    ).filter(
         approval_status=OfficeExpense.ApprovalStatus.APPROVED,
         updated_at__date__range=(start_date, end_date),
     ):
@@ -137,6 +142,21 @@ def _cash_flow_entries(start_date, end_date):
         add_entry(
             local_date(expense.updated_at), "Office Expense", expense.get_category_display(),
             expense.transaction_code, expense.description, **{amount_field: expense.amount},
+        )
+
+    for settlement in CreditCardSettlement.objects.select_related(
+        "credit_card", "bank_account",
+    ).filter(
+        approval_status=CreditCardSettlement.ApprovalStatus.APPROVED,
+        settlement_date__range=(start_date, end_date),
+    ):
+        add_entry(
+            settlement.settlement_date,
+            "Credit-card Bill Payment",
+            "Card bill settlement",
+            settlement.transaction_code,
+            f"{settlement.credit_card} paid from {settlement.bank_account}",
+            outflow=settlement.amount,
         )
 
     entries.sort(key=lambda item: (item["date"], item["source"], item["reference"]))
@@ -240,6 +260,36 @@ def financial_analytics(request):
     outflow_percentage = (total_outflow / total_inflow * Decimal("100")) if total_inflow else Decimal("0")
     profit_margin = (net_cash_flow / total_inflow * Decimal("100")) if total_inflow else Decimal("0")
 
+    # Card purchases are liabilities until the bank pays the statement.  Show
+    # the selected month's approved net card spend as the following month's
+    # expected bill, without adding it to this period's cash outflow.
+    if period_type == "monthly":
+        card_bill_start, card_bill_end = start_date, end_date
+    else:
+        card_bill_start = date(today.year, today.month, 1)
+        card_bill_end = date(today.year, today.month, monthrange(today.year, today.month)[1])
+    next_bill_month = (card_bill_end + timedelta(days=1)).strftime("%B %Y")
+    card_due_sources = {}
+    card_transactions = OfficeExpense.objects.select_related("credit_card").filter(
+        payment_mode=OfficeExpense.PaymentMode.CREDIT_CARD,
+        approval_status=OfficeExpense.ApprovalStatus.APPROVED,
+        expense_date__range=(card_bill_start, card_bill_end),
+    )
+    for expense in card_transactions:
+        card_label = str(expense.credit_card)
+        signed_amount = (
+            -expense.amount
+            if expense.transaction_kind == OfficeExpense.TransactionKind.REFUND
+            else expense.amount
+        )
+        card_due_sources[card_label] = card_due_sources.get(card_label, Decimal("0")) + signed_amount
+    card_due_sources = {
+        label: max(amount, Decimal("0"))
+        for label, amount in card_due_sources.items()
+        if amount > 0
+    }
+    next_card_bill_total = sum(card_due_sources.values(), Decimal("0"))
+
     revenue_sources = {}
     expense_sources = {}
     timeline = {}
@@ -277,6 +327,7 @@ def financial_analytics(request):
         },
         "revenue": {"labels": list(revenue_sources), "values": [float(value) for value in revenue_sources.values()]},
         "expense": {"labels": list(expense_sources), "values": [float(value) for value in expense_sources.values()]},
+        "card_due": {"labels": list(card_due_sources), "values": [float(value) for value in card_due_sources.values()]},
         "position": [float(total_inflow), float(total_outflow)],
     }
 
@@ -302,6 +353,10 @@ def financial_analytics(request):
         "total_outflow_display": f"{total_outflow:,.0f}",
         "net_cash_flow_display": f"{net_cash_flow:,.0f}",
         "outflow_percentage": outflow_percentage, "profit_margin": profit_margin,
+        "next_card_bill_total": next_card_bill_total,
+        "next_card_bill_display": f"{next_card_bill_total:,.0f}",
+        "next_bill_month": next_bill_month,
+        "card_bill_start": card_bill_start, "card_bill_end": card_bill_end,
         "previous_net": previous_net, "comparison_percent": comparison_percent,
         "comparison_label": comparison_label, "new_hostels": new_hostels,
         "inactive_hostels": inactive_hostels, "new_customers": new_customers,

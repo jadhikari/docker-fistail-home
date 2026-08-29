@@ -45,12 +45,15 @@
             <div class="col-xl col-md-4 col-6">
                 <div class="metric-card metric-outflow"><small>Cash Outflow</small><strong>¥{{ total_outflow_display }}</strong><span>{{ outflow_percentage|floatformat:1 }}% of cash inflow</span></div>
             </div>
-            <div class="col-xl col-md-4 col-6"><div class="metric-card {% if net_cash_flow < 0 %}metric-loss{% else %}metric-profit{% endif %}"><small>Net Profit</small><strong>¥{{ net_cash_flow_display }}</strong><span>{{ profit_margin|floatformat:1 }}% profit margin</span></div></div>
+            <div class="col-xl col-md-4 col-6"><div class="metric-card {% if net_cash_flow < 0 %}metric-loss{% else %}metric-profit{% endif %}"><small>Net Cash Flow</small><strong>¥{{ net_cash_flow_display }}</strong><span>{{ profit_margin|floatformat:1 }}% of cash inflow</span></div></div>
             <div class="col-xl col-md-6 col-6">
                 <div class="metric-card metric-hostel"><small>Hostel Movement</small><strong><i class="bi bi-arrow-up-short"></i>{{ new_hostels }} <span class="metric-divider">/</span> <i class="bi bi-arrow-down-short"></i>{{ inactive_hostels }}</strong><span>Added / inactive</span></div>
             </div>
             <div class="col-xl col-md-6 col-6">
                 <div class="metric-card metric-customer"><small>Customer Movement</small><strong><i class="bi bi-person-plus"></i> {{ new_customers }} <span class="metric-divider">/</span> <i class="bi bi-person-dash"></i> {{ inactive_customers }}</strong><span>Added / inactive</span></div>
+            </div>
+            <div class="col-xl col-md-6 col-6">
+                <div class="metric-card metric-card-due"><small>Credit Card Due Next Month</small><strong>¥{{ next_card_bill_display }}</strong><span class="card-due-caption">Estimated {{ next_bill_month }} bill from approved net card spend</span></div>
             </div>
         </div>
         {% if comparison_label %}
@@ -59,7 +62,7 @@
                     <i class="bi {% if comparison_percent is not None and comparison_percent < 0 %}bi-graph-down-arrow{% else %}bi-graph-up-arrow{% endif %}"></i>
                 </div>
                 <div><small>Performance vs {{ comparison_label }}</small><strong>{% if comparison_percent is not None %}{{ comparison_percent|floatformat:1 }}%{% else %}No percentage available{% endif %}</strong></div>
-                <div class="ms-auto text-end"><small>Previous net profit</small><strong>¥{{ previous_net|default:"0"|floatformat:0 }}</strong></div>
+                <div class="ms-auto text-end"><small>Previous net cash flow</small><strong>¥{{ previous_net|default:"0"|floatformat:0 }}</strong></div>
             </div>
         {% endif %}
         <div class="row g-3 mb-3">
@@ -95,7 +98,7 @@
             </div>
         </div>
         <div class="row g-3">
-            <div class="col-lg-6">
+            <div class="col-xl-4 col-md-6">
                 <div class="card chart-card">
                     <div class="card-header">
                         <div>
@@ -110,17 +113,32 @@
                     </div>
                 </div>
             </div>
-            <div class="col-lg-6">
+            <div class="col-xl-4 col-md-6">
                 <div class="card chart-card">
                     <div class="card-header">
                         <div>
-                            <h6>Expense Composition</h6>
-                            <small>Where approved company cash is being spent</small>
+                            <h6>Cash Outflow Composition</h6>
+                            <small>Where approved company cash moved out</small>
                         </div>
                     </div>
                     <div class="card-body">
                         <div class="chart-wrap">
                             <canvas id="expenseChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-4 col-md-6">
+                <div class="card chart-card">
+                    <div class="card-header">
+                        <div>
+                            <h6>Credit Card Due Next Month</h6>
+                            <small>Approved card purchases less refunds, {{ card_bill_start|date:"M d" }}–{{ card_bill_end|date:"M d, Y" }}</small>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-wrap">
+                            <canvas id="cardDueChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -139,7 +157,8 @@
 .metric-inflow { border-left-color:var(--analytics-green); } .metric-inflow strong { color:var(--analytics-green); }
 .metric-outflow,.metric-loss { border-left-color:var(--analytics-red); } .metric-outflow strong,.metric-loss strong { color:var(--analytics-red); }
 .metric-profit { border-left-color:var(--analytics-blue); } .metric-profit strong { color:var(--analytics-blue); }
-.metric-hostel { border-left-color:#6f42c1; } .metric-customer { border-left-color:#0dcaf0; } .metric-divider { color:#adb5bd; font-weight:400; }
+.metric-hostel { border-left-color:#6f42c1; } .metric-customer { border-left-color:#0dcaf0; } .metric-card-due { border-left-color:#fd7e14; } .metric-card-due strong { color:#fd7e14; } .metric-divider { color:#adb5bd; font-weight:400; }
+.metric-card .card-due-caption { font-size:.62rem; line-height:1.2; }
 .comparison-strip { display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:10px; border:1px solid #dce5df; background:#f5fbf7; }
 .comparison-strip > div:first-child { font-size:1.5rem; } .comparison-strip small,.comparison-strip strong { display:block; } .comparison-strip small { color:#6c757d; font-size:.72rem; } .comparison-up { color:#198754; } .comparison-down { color:#dc3545; background:#fff7f7; border-color:#f1d6d8; }
 .chart-card { border:1px solid #e4e9ef; box-shadow:0 2px 10px rgba(20,33,61,.05); }
@@ -162,10 +181,10 @@ document.addEventListener('DOMContentLoaded', function () {
   const yen = value => '¥' + new Intl.NumberFormat('ja-JP', {maximumFractionDigits:0}).format(value);
   const colors = ['#0d6efd','#198754','#6f42c1','#fd7e14','#0dcaf0','#d63384','#ffc107','#20c997'];
   const common = { responsive:true, maintainAspectRatio:false, plugins:{ legend:{labels:{usePointStyle:true,boxWidth:8}}, tooltip:{callbacks:{label:context => `${context.dataset.label || context.label}: ${yen(context.raw)}`}}} };
-  new Chart(document.getElementById('performanceChart'), {type:'bar',data:{labels:data.timeline.labels,datasets:[{label:'Total Revenue',data:data.timeline.inflow,backgroundColor:'rgba(25,135,84,.72)',borderRadius:3},{label:'Total Expenses',data:data.timeline.outflow,backgroundColor:'rgba(220,53,69,.68)',borderRadius:3},{label:'Net Profit',data:data.timeline.net,type:'line',borderColor:'#0d6efd',backgroundColor:'#0d6efd',pointRadius:2,tension:.3}]},options:{...common,scales:{y:{ticks:{callback:yen},grid:{color:'rgba(0,0,0,.05)'}},x:{grid:{display:false}}}}});
+  new Chart(document.getElementById('performanceChart'), {type:'bar',data:{labels:data.timeline.labels,datasets:[{label:'Cash Inflow',data:data.timeline.inflow,backgroundColor:'rgba(25,135,84,.72)',borderRadius:3},{label:'Cash Outflow',data:data.timeline.outflow,backgroundColor:'rgba(220,53,69,.68)',borderRadius:3},{label:'Net Cash Flow',data:data.timeline.net,type:'line',borderColor:'#0d6efd',backgroundColor:'#0d6efd',pointRadius:2,tension:.3}]},options:{...common,scales:{y:{ticks:{callback:yen},grid:{color:'rgba(0,0,0,.05)'}},x:{grid:{display:false}}}}});
   new Chart(document.getElementById('positionChart'), {type:'doughnut',data:{labels:['Cash Inflow','Cash Outflow'],datasets:[{data:data.position,backgroundColor:['#198754','#dc3545'],borderWidth:0}]},options:{...common,cutout:'68%'}});
   const pie = (id, dataset, label) => new Chart(document.getElementById(id), {type:'doughnut',data:{labels:dataset.labels,datasets:[{label:label,data:dataset.values,backgroundColor:colors,borderColor:'#fff',borderWidth:2}]},options:{...common,cutout:'55%'}});
-  pie('revenueChart', data.revenue, 'Revenue'); pie('expenseChart', data.expense, 'Expense');
+  pie('revenueChart', data.revenue, 'Revenue'); pie('expenseChart', data.expense, 'Cash Outflow'); pie('cardDueChart', data.card_due, 'Amount Due');
 });
     </script>
 {% endblock %}
